@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-05 23:09:42.647383",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier_name",
+  "date_of_invoice",
+  "net_quantiity",
+  "warehouse",
+  "column_break_fkoy",
+  "invoice_no",
+  "date_of_received",
+  "metal",
+  "hsn",
+  "section_break_wwcy",
+  "note",
+  "sku_details"
+ ],
+ "fields": [
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Link",
+   "label": "Supplier Name",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "date_of_invoice",
+   "fieldtype": "Date",
+   "label": "Date of Invoice"
+  },
+  {
+   "fieldname": "net_quantiity",
+   "fieldtype": "Float",
+   "label": "Net Quantiity"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "column_break_fkoy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_no",
+   "fieldtype": "Data",
+   "label": "Invoice No."
+  },
+  {
+   "fieldname": "date_of_received",
+   "fieldtype": "Date",
+   "label": "Date of Received"
+  },
+  {
+   "fieldname": "metal",
+   "fieldtype": "Link",
+   "label": "Metal",
+   "options": "Metal Master"
+  },
+  {
+   "fieldname": "hsn",
+   "fieldtype": "Link",
+   "label": "HSN",
+   "options": "Item"
+  },
+  {
+   "fieldname": "section_break_wwcy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Data",
+   "label": "Note"
+  },
+  {
+   "fieldname": "sku_details",
+   "fieldtype": "Table",
+   "label": "SKU details",
+   "options": "SKU Details"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-05 23:46:02.722570",
+ "modified_by": "Administrator",
+ "module": "arnav_customization",
+ "name": "SKU Master",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

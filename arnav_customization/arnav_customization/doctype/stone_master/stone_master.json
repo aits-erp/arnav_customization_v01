@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:stone_name",
+ "creation": "2026-02-05 23:41:15.923391",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "stone_code",
+  "stone_name",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "stone_code",
+   "fieldtype": "Data",
+   "label": "Stone Code"
+  },
+  {
+   "fieldname": "stone_name",
+   "fieldtype": "Data",
+   "label": "Stone Name",
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "is Active?"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-05 23:49:04.322744",
+ "modified_by": "Administrator",
+ "module": "arnav_customization",
+ "name": "Stone Master",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
