@@ -5,25 +5,30 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "transaction_type",
   "supplier_name",
+  "invoice_no",
   "date_of_invoice",
   "net_quantiity",
   "warehouse",
+  "stock_entry",
   "column_break_fkoy",
-  "invoice_no",
+  "purchase_invoices",
   "date_of_received",
   "metal",
   "hsn",
   "section_break_wwcy",
   "note",
-  "sku_details"
+  "sku_details",
+  "amended_from"
  ],
  "fields": [
   {
    "fieldname": "supplier_name",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Supplier Name",
-   "options": "Supplier"
+   "options": "Supplier",
+   "read_only": 1
   },
   {
    "fieldname": "date_of_invoice",
@@ -47,8 +52,9 @@
   },
   {
    "fieldname": "invoice_no",
-   "fieldtype": "Data",
-   "label": "Invoice No."
+   "fieldtype": "Link",
+   "label": "Invoice No.",
+   "options": "Purchase Invoice"
   },
   {
    "fieldname": "date_of_received",
@@ -65,7 +71,7 @@
    "fieldname": "hsn",
    "fieldtype": "Link",
    "label": "HSN",
-   "options": "Item"
+   "options": "GST HSN Code"
   },
   {
    "fieldname": "section_break_wwcy",
@@ -81,12 +87,45 @@
    "fieldtype": "Table",
    "label": "SKU details",
    "options": "SKU Details"
+  },
+  {
+   "fieldname": "purchase_invoices",
+   "fieldtype": "Table",
+   "label": "Purchase Invoices",
+   "options": "SKU Purchase Invoice"
+  },
+  {
+   "fieldname": "transaction_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Transaction Type",
+   "options": "\nStock In\nStock Out",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "SKU Master",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "no_copy": 1,
+   "options": "Stock Entry",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-02-05 23:46:02.722570",
+ "modified": "2026-02-09 11:32:30.706909",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",
@@ -109,5 +148,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
