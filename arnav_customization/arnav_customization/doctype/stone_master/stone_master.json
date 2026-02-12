@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:stone_name",
  "creation": "2026-02-05 23:41:15.923391",
@@ -19,7 +20,7 @@
   {
    "fieldname": "stone_name",
    "fieldtype": "Data",
-   "label": "Stone Name",
+   "label": "Stone Type",
    "unique": 1
   },
   {
@@ -32,7 +33,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-05 23:49:04.322744",
+ "modified": "2026-02-11 13:36:55.464661",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "Stone Master",

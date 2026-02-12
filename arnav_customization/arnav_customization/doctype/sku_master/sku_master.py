@@ -30,11 +30,23 @@ class SKUMaster(Document):
         if not self.sku_details:
             frappe.throw("SKU Details are mandatory for Stock In")
 
-        company = frappe.defaults.get_user_default("Company")
+        # company = frappe.defaults.get_user_default("Company")
+        
+        # se = frappe.new_doc("Stock Entry")
+        # se.stock_entry_type = "Repack"
+        # se.company = company
+
+        company = frappe.get_cached_value("Global Defaults", None, "default_company")
+
+        if not company:
+            frappe.throw("Default Company is not set in Global Defaults")
 
         se = frappe.new_doc("Stock Entry")
         se.stock_entry_type = "Repack"
         se.company = company
+        se.posting_date = frappe.utils.nowdate()
+        se.posting_time = frappe.utils.nowtime()
+
 
         # -------------------------------------------------
         # STOCK OUT — FROM PURCHASE INVOICE ITEMS
