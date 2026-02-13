@@ -5,18 +5,17 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "transaction_type",
   "supplier_name",
   "invoice_no",
-  "date_of_invoice",
   "net_quantiity",
+  "date_of_invoice",
+  "date_of_received",
   "warehouse",
-  "stock_entry",
   "column_break_fkoy",
   "purchase_invoices",
-  "date_of_received",
   "metal",
   "hsn",
+  "stock_entry",
   "section_break_wwcy",
   "note",
   "sku_details",
@@ -38,7 +37,7 @@
   {
    "fieldname": "net_quantiity",
    "fieldtype": "Float",
-   "label": "Net Quantiity"
+   "label": "Gross weight"
   },
   {
    "fieldname": "warehouse",
@@ -95,14 +94,6 @@
    "options": "SKU Purchase Invoice"
   },
   {
-   "fieldname": "transaction_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Transaction Type",
-   "options": "\nStock In\nStock Out",
-   "reqd": 1
-  },
-  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -125,7 +116,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-09 11:32:30.706909",
+ "modified": "2026-02-13 00:23:55.054599",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",

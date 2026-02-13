@@ -5,6 +5,23 @@ app_description = "many fields and doctypes with custom modifications"
 app_email = "nikhil@aitsind.com"
 app_license = "mit"
 
+
+fixtures = [
+    {"doctype": "Custom Field", "filters": [
+        ["dt", "in", ["Credit Note"]]
+    ]},
+    {"doctype": "Custom Field", "filters": [
+        ["dt", "in", ["Debit Note"]]
+    ]},
+    {
+        "dt": "Custom Field",
+        "filters": [
+            ["module", "=", "arnav_customization"]
+        ]
+    }
+]
+
+
 # Apps
 # ------------------
 
