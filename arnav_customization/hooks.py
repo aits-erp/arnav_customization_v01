@@ -5,17 +5,18 @@ app_description = "many fields and doctypes with custom modifications"
 app_email = "nikhil@aitsind.com"
 app_license = "mit"
 
+doctype_js = {
+    "Credit Note": "public/js/credit_note.js",
+    "Sales Invoice": "public/js/sales_invoice.js"
+}
 
 fixtures = [
-    {"doctype": "Custom Field", "filters": [
-        ["dt", "in", ["Credit Note"]]
-    ]},
-    {"doctype": "Custom Field", "filters": [
-        ["dt", "in", ["Debit Note"]]
-    ]},
     {
         "dt": "Custom Field",
         "filters": [
+            ["dt", "in", [
+                "Sales Invoice Item"
+            ]],
             ["module", "=", "arnav_customization"]
         ]
     }
