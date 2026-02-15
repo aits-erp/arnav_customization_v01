@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-15 19:09:52.187239",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "add_orders_section",
+  "group",
+  "billtype",
+  "column_break_vyrd",
+  "salestype",
+  "new_client",
+  "client_name",
+  "section_break_ymor",
+  "sku_details",
+  "total_discount_in_rs",
+  "handling_and_packaging_charges",
+  "total_amount_wo_tax"
+ ],
+ "fields": [
+  {
+   "fieldname": "add_orders_section",
+   "fieldtype": "Section Break",
+   "label": "Add Orders"
+  },
+  {
+   "fieldname": "group",
+   "fieldtype": "Data",
+   "label": "Group"
+  },
+  {
+   "fieldname": "billtype",
+   "fieldtype": "Data",
+   "label": "BillType"
+  },
+  {
+   "fieldname": "column_break_vyrd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salestype",
+   "fieldtype": "Select",
+   "label": "SalesType",
+   "options": "\nStore\nOnline\nWhatsapp\nExibition\nStore & Online"
+  },
+  {
+   "default": "0",
+   "fieldname": "new_client",
+   "fieldtype": "Check",
+   "label": "New Client?"
+  },
+  {
+   "fieldname": "client_name",
+   "fieldtype": "Link",
+   "label": "Client Name",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "section_break_ymor",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sku_details",
+   "fieldtype": "Table",
+   "label": "SKU Details",
+   "options": "SKU Details"
+  },
+  {
+   "fieldname": "total_discount_in_rs",
+   "fieldtype": "Float",
+   "label": "Total Discount( in Rs.)"
+  },
+  {
+   "fieldname": "handling_and_packaging_charges",
+   "fieldtype": "Float",
+   "label": "Handling and Packaging Charges"
+  },
+  {
+   "fieldname": "total_amount_wo_tax",
+   "fieldtype": "Float",
+   "label": "Total amount (w/o Tax)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-15 19:26:12.405704",
+ "modified_by": "Administrator",
+ "module": "arnav_customization",
+ "name": "POS",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
