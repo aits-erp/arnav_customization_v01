@@ -81,14 +81,33 @@ class SKUMaster(Document):
         # -------------------------------------------------
         # STOCK IN — FROM SKU DETAILS
         # -------------------------------------------------
+        # for row in self.sku_details:
+        #     if not row.product or flt(row.qty) <= 0:
+        #         continue
+
+        #     se.append("items", {
+        #         "item_code": row.product,
+        #         "qty": flt(row.qty),
+        #         "t_warehouse": self.warehouse
+        #     })
         for row in self.sku_details:
             if not row.product or flt(row.qty) <= 0:
                 continue
 
+            # Create Batch document
+            batch = frappe.new_doc("Batch")
+            batch.item = row.product
+            batch.insert(ignore_permissions=True)
+
+            # Save batch number inside child table SKU field
+            row.db_set("sku", batch.name)
+
+            # Add stock entry row with batch
             se.append("items", {
                 "item_code": row.product,
                 "qty": flt(row.qty),
-                "t_warehouse": self.warehouse
+                "t_warehouse": self.warehouse,
+                "batch_no": batch.name
             })
 
         if not se.items:
@@ -99,6 +118,26 @@ class SKUMaster(Document):
 
         self.db_set("stock_entry", se.name)
 
+        # -------------------------------------------------
+        # CREATE SKU RECORDS
+        # -------------------------------------------------
+        for row in self.sku_details:
+            if not row.sku:
+                frappe.throw(f"Batch not generated for row {row.idx}")
+
+            if not frappe.db.exists("SKU", row.sku):
+                sku = frappe.new_doc("SKU")
+                sku.sku_code = row.sku              # Batch name
+                sku.batch_no = row.sku              # Link to Batch
+                sku.product = row.product
+                sku.gross_weight = row.gross_weight
+                sku.net_weight = row.net_weight
+                sku.cost_price = row.cost_price
+                sku.qty = row.qty
+                sku.selling_price = row.selling_price
+                sku.image = row.image
+                sku.sku_master = self.name
+                sku.insert(ignore_permissions=True)
 
 # # Copyright (c) 2026, aits and contributors
 # # For license information, please see license.txt

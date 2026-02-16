@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-16 12:47:10.259701",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sku",
+  "product",
+  "hsn",
+  "price",
+  "qty",
+  "discount",
+  "final_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "sku",
+   "fieldtype": "Link",
+   "label": "SKU",
+   "options": "SKU",
+   "placeholder": "Choose SKU"
+  },
+  {
+   "fetch_from": "sku.product",
+   "fieldname": "product",
+   "fieldtype": "Data",
+   "label": "Product",
+   "placeholder": "Product"
+  },
+  {
+   "fieldname": "hsn",
+   "fieldtype": "Link",
+   "label": "HSN",
+   "options": "GST HSN Code",
+   "placeholder": "Choose HSN"
+  },
+  {
+   "fetch_from": "sku.cost_price",
+   "fieldname": "price",
+   "fieldtype": "Float",
+   "label": "Price",
+   "placeholder": "TP"
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "label": "Qty",
+   "placeholder": "Qty"
+  },
+  {
+   "fieldname": "discount",
+   "fieldtype": "Float",
+   "label": "Discount",
+   "placeholder": "Discount"
+  },
+  {
+   "fieldname": "final_amount",
+   "fieldtype": "Float",
+   "label": "Final Amount",
+   "placeholder": "SP"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-16 13:53:55.754305",
+ "modified_by": "Administrator",
+ "module": "arnav_customization",
+ "name": "POS SKU Details",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

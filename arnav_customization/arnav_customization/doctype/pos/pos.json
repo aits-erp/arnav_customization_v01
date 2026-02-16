@@ -16,7 +16,26 @@
   "sku_details",
   "total_discount_in_rs",
   "handling_and_packaging_charges",
-  "total_amount_wo_tax"
+  "total_amount_wo_tax",
+  "amended_from",
+  "add_payments_section",
+  "cash",
+  "cheque",
+  "card",
+  "old_gold",
+  "old_gold_gram",
+  "online",
+  "gift_voucher",
+  "bank_charges",
+  "advance_amount",
+  "column_break_ycux",
+  "cash_description",
+  "cheque_description",
+  "card_description",
+  "old_gold_description",
+  "online_description",
+  "voucher_description",
+  "bank_description"
  ],
  "fields": [
   {
@@ -26,13 +45,15 @@
   },
   {
    "fieldname": "group",
-   "fieldtype": "Data",
-   "label": "Group"
+   "fieldtype": "Link",
+   "label": "Group",
+   "options": "Employee"
   },
   {
    "fieldname": "billtype",
-   "fieldtype": "Data",
-   "label": "BillType"
+   "fieldtype": "Link",
+   "label": "BillType",
+   "options": "Metal Master"
   },
   {
    "fieldname": "column_break_vyrd",
@@ -64,7 +85,7 @@
    "fieldname": "sku_details",
    "fieldtype": "Table",
    "label": "SKU Details",
-   "options": "SKU Details"
+   "options": "POS SKU Details"
   },
   {
    "fieldname": "total_discount_in_rs",
@@ -80,12 +101,112 @@
    "fieldname": "total_amount_wo_tax",
    "fieldtype": "Float",
    "label": "Total amount (w/o Tax)"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "POS",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "add_payments_section",
+   "fieldtype": "Section Break",
+   "label": "Add Payments"
+  },
+  {
+   "fieldname": "cash",
+   "fieldtype": "Data",
+   "label": "Cash"
+  },
+  {
+   "fieldname": "cheque",
+   "fieldtype": "Data",
+   "label": "Cheque"
+  },
+  {
+   "fieldname": "card",
+   "fieldtype": "Data",
+   "label": "Card"
+  },
+  {
+   "fieldname": "old_gold",
+   "fieldtype": "Data",
+   "label": "Old Gold"
+  },
+  {
+   "fieldname": "old_gold_gram",
+   "fieldtype": "Data",
+   "label": "Old Gold Gram"
+  },
+  {
+   "fieldname": "online",
+   "fieldtype": "Data",
+   "label": "Online"
+  },
+  {
+   "fieldname": "gift_voucher",
+   "fieldtype": "Data",
+   "label": "Gift Voucher"
+  },
+  {
+   "fieldname": "bank_charges",
+   "fieldtype": "Data",
+   "label": "Bank Charges"
+  },
+  {
+   "fieldname": "advance_amount",
+   "fieldtype": "Float",
+   "label": "Advance Amount"
+  },
+  {
+   "fieldname": "column_break_ycux",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cash_description",
+   "fieldtype": "Data",
+   "label": "Cash Description"
+  },
+  {
+   "fieldname": "cheque_description",
+   "fieldtype": "Data",
+   "label": "Cheque Description"
+  },
+  {
+   "fieldname": "card_description",
+   "fieldtype": "Data",
+   "label": "Card Description"
+  },
+  {
+   "fieldname": "old_gold_description",
+   "fieldtype": "Small Text",
+   "label": "Old Gold Description"
+  },
+  {
+   "fieldname": "online_description",
+   "fieldtype": "Data",
+   "label": "Online Description"
+  },
+  {
+   "fieldname": "voucher_description",
+   "fieldtype": "Data",
+   "label": "Voucher Description"
+  },
+  {
+   "fieldname": "bank_description",
+   "fieldtype": "Data",
+   "label": "Bank Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-02-15 19:26:12.405704",
+ "modified": "2026-02-16 16:20:12.521530",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
@@ -108,5 +229,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
