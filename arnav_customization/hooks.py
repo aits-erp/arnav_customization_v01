@@ -21,11 +21,18 @@ fixtures = [
         ]
     }
 ]
+
 doc_events = {
-    "SKU_Master": {
+    "SKU": {
         "before_submit": "arnav_customization.sku_engine.create_sku_from_custom_doc"
     }
 }
+
+# doc_events = {
+#     "SKU_Master": {
+#         "before_submit": "arnav_customization.sku_engine.create_sku_from_custom_doc"
+#     }
+# }
 
 
 # Apps
