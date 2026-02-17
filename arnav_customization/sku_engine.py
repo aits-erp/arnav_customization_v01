@@ -2,13 +2,12 @@ import frappe
 
 def create_sku_from_custom_doc(doc, method=None):
 
-    # Child table name change karo agar alag hai
     for row in doc.sku_details:
 
         if not row.sku:
             continue
 
-        # ⭐ Batch = SKU create
+        # ⭐ Batch Create = SKU
         if not frappe.db.exists("Batch", {"batch_id": row.sku}):
 
             batch = frappe.new_doc("Batch")
@@ -16,15 +15,21 @@ def create_sku_from_custom_doc(doc, method=None):
             batch.item = row.product
             batch.insert(ignore_permissions=True)
 
-        # ⭐ Item barcode update
+        # ⭐ Item update
         item = frappe.get_doc("Item", row.product)
         item.barcode = row.sku
+
+        # ⭐ Custom flag laga do (important)
+        item.custom_is_shopify_ready = 1
+
         item.save(ignore_permissions=True)
 
-        # ⭐ Shopify auto sync
+        # ⭐ ONLY THIS ITEM SHOPIFY PUSH
         try:
             from erpnext_shopify.shopify_api import ShopifyAPI
+
             shopify = ShopifyAPI()
             shopify.sync_products(item)
+
         except Exception as e:
-            frappe.log_error(str(e), "Shopify Sync Error")
+            frappe.log_error(str(e), "Shopify Auto Sync Error")
