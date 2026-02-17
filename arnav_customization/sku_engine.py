@@ -1,5 +1,23 @@
 import frappe
 
+def assign_batch_to_items(doc, method=None):
+
+    for item in doc.items:
+
+        if frappe.get_value("Item", item.item_code, "has_batch_no"):
+            if not item.batch_no:
+
+                # SKU master se batch fetch karo
+                batch = frappe.db.get_value(
+                    "SKU",
+                    {"product": item.item_code},
+                    "batch_no"
+                )
+
+                if batch:
+                    item.batch_no = batch
+
+
 def create_sku_from_custom_doc(doc, method=None):
 
     for row in doc.sku_details:
