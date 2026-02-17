@@ -15,11 +15,15 @@ def create_sku_from_custom_doc(doc, method=None):
             batch.item = row.product
             batch.insert(ignore_permissions=True)
 
+        # ⭐⭐⭐ VERY IMPORTANT FIX ⭐⭐⭐
+        # Child table row me batch assign karo
+        row.batch_no = row.sku
+
         # ⭐ Item update
         item = frappe.get_doc("Item", row.product)
         item.barcode = row.sku
 
-        # ⭐ Custom flag laga do (important)
+        # ⭐ Custom flag
         item.custom_is_shopify_ready = 1
 
         item.save(ignore_permissions=True)
