@@ -15,25 +15,22 @@ def create_sku_from_custom_doc(doc, method=None):
             batch.item = row.product
             batch.insert(ignore_permissions=True)
 
-        # ⭐⭐⭐ VERY IMPORTANT FIX ⭐⭐⭐
-        # Child table row me batch assign karo
+        # ⭐ Child table me batch assign
         row.batch_no = row.sku
 
         # ⭐ Item update
         item = frappe.get_doc("Item", row.product)
         item.barcode = row.sku
-
-        # ⭐ Custom flag
         item.custom_is_shopify_ready = 1
-
         item.save(ignore_permissions=True)
 
-        # ⭐ ONLY THIS ITEM SHOPIFY PUSH
+        # ⭐ Shopify Update (FIXED)
         try:
-            from erpnext_shopify.shopify_api import ShopifyAPI
+            from ecommerce_integrations.shopify.utils import upload_item_to_shopify
 
-            shopify = ShopifyAPI()
-            shopify.sync_products(item)
+            upload_item_to_shopify(item.name)
+
+            frappe.msgprint(f"Shopify Updated SKU: {row.sku}")
 
         except Exception as e:
             frappe.log_error(str(e), "Shopify Auto Sync Error")
