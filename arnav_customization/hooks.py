@@ -21,6 +21,11 @@ fixtures = [
         ]
     }
 ]
+doc_events = {
+    "SKU_Master": {
+        "on_submit": "arnav_customization.sku_engine.create_sku_from_custom_doc"
+    }
+}
 
 
 # Apps
