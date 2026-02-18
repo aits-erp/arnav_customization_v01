@@ -1,10 +1,10 @@
 import frappe
 
+
 @frappe.whitelist(allow_guest=True)
 def create_sku_via_api(product=None, sku=None):
 
-    if not product or not sku:
-        return {"status": "error", "msg": "Missing product or sku"}
+    frappe.set_user("Administrator")
 
     doc = frappe.new_doc("SKU")
 
@@ -14,8 +14,10 @@ def create_sku_via_api(product=None, sku=None):
     })
 
     doc.insert(ignore_permissions=True)
-  	doc.flags.ignore_permissions = True
-	doc.submit()
 
-    return {"status": "success", "name": doc.name}
+    doc.flags.ignore_permissions = True
+    doc.submit()
+
+    return {"status": "success"}
+
 
