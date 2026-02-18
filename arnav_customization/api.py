@@ -14,7 +14,8 @@ def create_sku_via_api(product=None, sku=None):
     })
 
     doc.insert(ignore_permissions=True)
-    doc.submit()
+  	doc.flags.ignore_permissions = True
+	doc.submit()
 
     return {"status": "success", "name": doc.name}
 
