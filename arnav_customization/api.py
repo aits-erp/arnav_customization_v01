@@ -1,7 +1,10 @@
 import frappe
 
-@frappe.whitelist()
-def create_sku_via_api(product, sku):
+@frappe.whitelist(allow_guest=True)
+def create_sku_via_api(product=None, sku=None):
+
+    if not product or not sku:
+        return {"status": "error", "msg": "Missing product or sku"}
 
     doc = frappe.new_doc("SKU")
 
@@ -14,3 +17,4 @@ def create_sku_via_api(product, sku):
     doc.submit()
 
     return {"status": "success", "name": doc.name}
+
