@@ -7,15 +7,15 @@ def get_sku_master_with_details():
     masters = frappe.get_all(
         "SKU Master",
         fields=[
-            "name",
-            "supplier_name",
-            "invoice_no",
-            "warehouse",
+            # "name",
+            # "supplier_name",
+            # "invoice_no",
+            # "warehouse",
             "metal",
-            "hsn",
-            "note",
-            "date_of_invoice",
-            "date_of_received"
+            # "hsn",
+            # "note",
+            # "date_of_invoice",
+            # "date_of_received"
         ]
     )
 
