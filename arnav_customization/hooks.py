@@ -22,6 +22,14 @@ fixtures = [
     }
 ]
 
+
+doc_events = {
+    "SKU Master": {
+        "on_submit": "arnav_customization.shopify_sync.sync_to_shopify"
+    }
+}
+
+
 # doc_events = {
 #     "SKU": {
 #         "before_submit": "arnav_customization.sku_engine.create_sku_from_custom_doc"
