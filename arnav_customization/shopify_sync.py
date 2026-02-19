@@ -15,7 +15,7 @@ def sync_to_shopify(doc, method=None):
     # ✅ 1. Create Shopify Product
     product_payload = {
         "product": {
-            "title": doc.product,
+            "title": doc.sku_details[0].product,
             "status": "active"
         }
     }
