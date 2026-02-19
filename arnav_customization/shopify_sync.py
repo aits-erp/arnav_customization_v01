@@ -1,7 +1,7 @@
 import frappe
 import requests
 
-SHOP = "admin.shopify.com"
+SHOP = "jewel-box-arnav.myshopify.com"
 TOKEN = "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"
 API_VERSION = "2024-01"
 
@@ -10,12 +10,9 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+def sync_to_shopify(doc, method=None):
 
-@frappe.whitelist()
-def sync_to_shopify(docname):
-    doc = frappe.get_doc("PINV", docname)   # your doctype name
-
-    # ✅ 1. Create Product
+    # ✅ 1. Create Shopify Product
     product_payload = {
         "product": {
             "title": doc.product,
@@ -64,4 +61,4 @@ def sync_to_shopify(docname):
             headers=HEADERS
         )
 
-    return "Shopify Sync Done"
+    frappe.msgprint("✅ Shopify Sync Done")
