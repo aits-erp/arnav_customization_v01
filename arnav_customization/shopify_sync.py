@@ -2,7 +2,7 @@ import frappe
 import requests
 
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "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"   # ⚠️ must be shpat_
+TOKEN = "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"   # ⚠️ must be shpat_
 API_VERSION = "2024-01"
 
 HEADERS = {
