@@ -2,7 +2,7 @@ import frappe
 import requests
 
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "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"   # ⚠️ must start with shpat_
+TOKEN = "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"   # ⚠️ must be shpat_
 API_VERSION = "2024-01"
 
 HEADERS = {
@@ -13,44 +13,41 @@ HEADERS = {
 LOCATION_ID = 52386005145
 
 
-# ================================
-# HELPER: GET PRODUCT BY TITLE
-# ================================
-def get_shopify_product_by_title(title):
-    url = f"https://{SHOP}/admin/api/{API_VERSION}/products.json?title={title}"
-    res = requests.get(url, headers=HEADERS).json()
-
-    if res.get("products"):
-        return res["products"][0]["id"]
-    return None
-
-
-# ================================
-# HELPER: GET VARIANT BY SKU
-# ================================
-def get_variant_by_sku(sku):
-    url = f"https://{SHOP}/admin/api/{API_VERSION}/variants.json?sku={sku}"
-    res = requests.get(url, headers=HEADERS).json()
-
-    if res.get("variants"):
-        return res["variants"][0]
-    return None
-
-
-# ================================
+# ===============================
 # MAIN SYNC FUNCTION
-# ================================
+# ===============================
 def sync_to_shopify(doc, method=None):
 
     if not doc.sku_details:
         frappe.throw("No SKU Details found")
 
-    product_title = doc.sku_details[0].product
+    # 👉 ERP field may contain existing Shopify Product ID
+    shopify_product_id = doc.sku_details[0].product
 
-    # ✅ 1. CHECK PRODUCT EXISTS
-    product_id = get_shopify_product_by_title(product_title)
+    # ======================================
+    # 1️⃣ CHECK IF PRODUCT EXISTS IN SHOPIFY
+    # ======================================
+    product_id = None
 
+    if shopify_product_id:
+        # Try to fetch existing product
+        res = requests.get(
+            f"https://{SHOP}/admin/api/{API_VERSION}/products/{shopify_product_id}.json",
+            headers=HEADERS
+        )
+
+        data = res.json()
+
+        if data.get("product"):
+            product_id = shopify_product_id
+
+    # ======================================
+    # 2️⃣ IF NOT EXISTS → CREATE NEW PRODUCT
+    # ======================================
     if not product_id:
+
+        product_title = f"{doc.metal} - {doc.invoice_no}"
+
         product_payload = {
             "product": {
                 "title": product_title,
@@ -62,23 +59,48 @@ def sync_to_shopify(doc, method=None):
             f"https://{SHOP}/admin/api/{API_VERSION}/products.json",
             json=product_payload,
             headers=HEADERS
-        ).json()
+        )
 
-        if "product" not in res:
-            frappe.throw(f"Shopify Product Error: {res}")
+        print("Product Create Response:", res.text)
 
-        product_id = res["product"]["id"]
+        data = res.json()
 
-    # ✅ 2. LOOP SKU DETAILS
+        if "product" not in data:
+            frappe.throw(f"Shopify Product Error: {data}")
+
+        product_id = data["product"]["id"]
+
+    # ======================================
+    # 3️⃣ CREATE / UPDATE VARIANTS
+    # ======================================
     for d in doc.sku_details:
 
-        existing_variant = get_variant_by_sku(d.sku)
+        # Check existing variant by SKU
+        vcheck = requests.get(
+            f"https://{SHOP}/admin/api/{API_VERSION}/variants.json?sku={d.sku}",
+            headers=HEADERS
+        ).json()
 
-        # ========================
-        # CREATE VARIANT
-        # ========================
-        if not existing_variant:
+        if vcheck.get("variants"):
+            variant = vcheck["variants"][0]
+            inventory_item_id = variant["inventory_item_id"]
 
+            # Update price
+            update_payload = {
+                "variant": {
+                    "id": variant["id"],
+                    "price": d.selling_price
+                }
+            }
+
+            requests.put(
+                f"https://{SHOP}/admin/api/{API_VERSION}/variants/{variant['id']}.json",
+                json=update_payload,
+                headers=HEADERS
+            )
+
+        else:
+            # Create new variant
             variant_payload = {
                 "variant": {
                     "product_id": product_id,
@@ -95,46 +117,26 @@ def sync_to_shopify(doc, method=None):
             ).json()
 
             if "variant" not in v:
-                frappe.throw(f"Variant Create Error: {v}")
+                frappe.throw(f"Variant Error: {v}")
 
             inventory_item_id = v["variant"]["inventory_item_id"]
 
-        # ========================
-        # UPDATE EXISTING VARIANT
-        # ========================
-        else:
-
-            inventory_item_id = existing_variant["inventory_item_id"]
-
-            update_payload = {
-                "variant": {
-                    "id": existing_variant["id"],
-                    "price": d.selling_price
-                }
-            }
-
-            requests.put(
-                f"https://{SHOP}/admin/api/{API_VERSION}/variants/{existing_variant['id']}.json",
-                json=update_payload,
-                headers=HEADERS
-            )
-
-        # ========================
-        # INVENTORY UPDATE
-        # ========================
+        # ======================================
+        # 4️⃣ INVENTORY UPDATE
+        # ======================================
         inventory_payload = {
             "location_id": LOCATION_ID,
             "inventory_item_id": inventory_item_id,
             "available": d.qty
         }
 
-        inv_res = requests.post(
+        inv = requests.post(
             f"https://{SHOP}/admin/api/{API_VERSION}/inventory_levels/set.json",
             json=inventory_payload,
             headers=HEADERS
         ).json()
 
-        if inv_res.get("errors"):
-            frappe.throw(f"Inventory Error: {inv_res}")
+        if inv.get("errors"):
+            frappe.throw(f"Inventory Error: {inv}")
 
-    frappe.msgprint("✅ Shopify Sync Completed (Safe Mode)")
+    frappe.msgprint("🔥 Shopify Sync Complete (Pro Safe Mode)")
