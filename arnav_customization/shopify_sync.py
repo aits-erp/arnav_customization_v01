@@ -25,7 +25,7 @@ def get_product(product_id):
 
 
 # ===============================
-# HELPER: GET VARIANTS OF PRODUCT
+# HELPER: GET PRODUCT VARIANTS
 # ===============================
 def get_product_variants(product_id):
     res = requests.get(
@@ -43,46 +43,19 @@ def sync_to_shopify(doc, method=None):
     if not doc.sku_details:
         frappe.throw("No SKU Details found")
 
-    shopify_product_id = doc.sku_details[0].product
-    product_id = None
+    # 👉 ERP child table me jo product select hai wahi Shopify product
+    product_id = doc.sku_details[0].product
 
     # ===============================
-    # 1️⃣ CHECK EXISTING PRODUCT
+    # CHECK PRODUCT EXISTS
     # ===============================
-    if shopify_product_id:
-        data = get_product(shopify_product_id)
-        if data.get("product"):
-            product_id = shopify_product_id
+    data = get_product(product_id)
 
-    # ===============================
-    # 2️⃣ CREATE PRODUCT IF NOT EXIST
-    # ===============================
-    if not product_id:
-
-        product_title = doc.sku_details[0].product
-
-        product_payload = {
-            "product": {
-                "title": product_title,
-                "status": "active"
-            }
-        }
-
-        res = requests.post(
-            f"https://{SHOP}/admin/api/{API_VERSION}/products.json",
-            json=product_payload,
-            headers=HEADERS
-        )
-
-        data = res.json()
-
-        if "product" not in data:
-            frappe.throw(f"Shopify Product Error: {data}")
-
-        product_id = data["product"]["id"]
+    if not data.get("product"):
+        frappe.throw("Shopify product not found. Check Product ID in ERP.")
 
     # ===============================
-    # 3️⃣ AUTO UNARCHIVE PRODUCT
+    # AUTO UNARCHIVE PRODUCT
     # ===============================
     requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}.json",
@@ -91,69 +64,39 @@ def sync_to_shopify(doc, method=None):
     )
 
     # ===============================
-    # 4️⃣ GET EXISTING VARIANTS
+    # GET EXISTING VARIANT (DEFAULT TITLE)
     # ===============================
-    existing_variants = get_product_variants(product_id)
+    variants = get_product_variants(product_id)
+
+    if not variants:
+        frappe.throw("No variant found in Shopify product")
+
+    # Shopify default variant (single variant product)
+    default_variant = variants[0]
+    variant_id = default_variant["id"]
+    inventory_item_id = default_variant["inventory_item_id"]
 
     # ===============================
-    # 5️⃣ CREATE / UPDATE VARIANTS
+    # UPDATE SKU MASTER DATA INTO SHOPIFY
     # ===============================
     for d in doc.sku_details:
 
-        existing_variant = None
-
-        for v in existing_variants:
-            if v.get("sku") == d.sku:
-                existing_variant = v
-                break
-
-        # ---------------------------
-        # UPDATE VARIANT
-        # ---------------------------
-        if existing_variant:
-
-            inventory_item_id = existing_variant["inventory_item_id"]
-
-            update_payload = {
-                "variant": {
-                    "id": existing_variant["id"],
-                    "price": d.selling_price
-                }
+        # 🔥 UPDATE VARIANT (NO CREATE)
+        update_payload = {
+            "variant": {
+                "id": variant_id,
+                "sku": d.sku,
+                "price": d.selling_price
             }
+        }
 
-            requests.put(
-                f"https://{SHOP}/admin/api/{API_VERSION}/variants/{existing_variant['id']}.json",
-                json=update_payload,
-                headers=HEADERS
-            )
+        requests.put(
+            f"https://{SHOP}/admin/api/{API_VERSION}/variants/{variant_id}.json",
+            json=update_payload,
+            headers=HEADERS
+        )
 
-        # ---------------------------
-        # CREATE VARIANT
-        # ---------------------------
-        else:
-
-            variant_payload = {
-                "variant": {
-                    "sku": d.sku,
-                    "price": d.selling_price,
-                    "inventory_management": "shopify"
-                }
-            }
-
-            v = requests.post(
-                f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}/variants.json",
-                json=variant_payload,
-                headers=HEADERS
-            ).json()
-
-            if "variant" not in v:
-                frappe.throw(f"Variant Error: {v}")
-
-            inventory_item_id = v["variant"]["inventory_item_id"]
-
-        # ---------------------------
-        # INVENTORY UPDATE
-        # ---------------------------
+        # 🔥 INVENTORY UPDATE
         inventory_payload = {
             "location_id": LOCATION_ID,
             "inventory_item_id": inventory_item_id,
@@ -169,7 +112,7 @@ def sync_to_shopify(doc, method=None):
         if inv.get("errors"):
             frappe.throw(f"Inventory Error: {inv}")
 
-    frappe.msgprint("🔥 Shopify Sync Complete (FINAL SAFE VERSION)")
+    frappe.msgprint("🔥 Shopify Sync Success (FINAL CLEAN VERSION)")
 
 
 
