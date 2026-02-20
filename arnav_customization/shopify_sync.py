@@ -14,14 +14,18 @@ LOCATION_ID = 52386005145
 
 
 # ===============================
-# HELPER: GET PRODUCT
+# HELPER: FIND PRODUCT BY TITLE
 # ===============================
-def get_product(product_id):
+def find_product_by_title(title):
     res = requests.get(
-        f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}.json",
+        f"https://{SHOP}/admin/api/{API_VERSION}/products.json?title={title}",
         headers=HEADERS
-    )
-    return res.json()
+    ).json()
+
+    if res.get("products"):
+        return res["products"][0]["id"]
+
+    return None
 
 
 # ===============================
@@ -31,8 +35,9 @@ def get_product_variants(product_id):
     res = requests.get(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}/variants.json",
         headers=HEADERS
-    )
-    return res.json().get("variants", [])
+    ).json()
+
+    return res.get("variants", [])
 
 
 # ===============================
@@ -43,19 +48,38 @@ def sync_to_shopify(doc, method=None):
     if not doc.sku_details:
         frappe.throw("No SKU Details found")
 
-    # 👉 ERP child table me jo product select hai wahi Shopify product
-    product_id = doc.sku_details[0].product
+    # 👉 ERP me selected product name
+    product_title = doc.sku_details[0].product
 
     # ===============================
-    # CHECK PRODUCT EXISTS
+    # 1️⃣ FIND OR CREATE PRODUCT
     # ===============================
-    data = get_product(product_id)
+    product_id = find_product_by_title(product_title)
 
-    if not data.get("product"):
-        frappe.throw("Shopify product not found. Check Product ID in ERP.")
+    if not product_id:
+
+        product_payload = {
+            "product": {
+                "title": product_title,
+                "status": "active"
+            }
+        }
+
+        res = requests.post(
+            f"https://{SHOP}/admin/api/{API_VERSION}/products.json",
+            json=product_payload,
+            headers=HEADERS
+        )
+
+        data = res.json()
+
+        if "product" not in data:
+            frappe.throw(f"Shopify Product Error: {data}")
+
+        product_id = data["product"]["id"]
 
     # ===============================
-    # AUTO UNARCHIVE PRODUCT
+    # 2️⃣ AUTO UNARCHIVE PRODUCT
     # ===============================
     requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}.json",
@@ -64,24 +88,22 @@ def sync_to_shopify(doc, method=None):
     )
 
     # ===============================
-    # GET EXISTING VARIANT (DEFAULT TITLE)
+    # 3️⃣ GET DEFAULT VARIANT
     # ===============================
     variants = get_product_variants(product_id)
 
     if not variants:
         frappe.throw("No variant found in Shopify product")
 
-    # Shopify default variant (single variant product)
     default_variant = variants[0]
     variant_id = default_variant["id"]
     inventory_item_id = default_variant["inventory_item_id"]
 
     # ===============================
-    # UPDATE SKU MASTER DATA INTO SHOPIFY
+    # 4️⃣ UPDATE SKU MASTER DATA
     # ===============================
     for d in doc.sku_details:
 
-        # 🔥 UPDATE VARIANT (NO CREATE)
         update_payload = {
             "variant": {
                 "id": variant_id,
@@ -112,7 +134,7 @@ def sync_to_shopify(doc, method=None):
         if inv.get("errors"):
             frappe.throw(f"Inventory Error: {inv}")
 
-    frappe.msgprint("🔥 Shopify Sync Success (FINAL CLEAN VERSION)")
+    frappe.msgprint("🔥 Shopify Sync Success (FINAL VERSION)")
 
 
 
