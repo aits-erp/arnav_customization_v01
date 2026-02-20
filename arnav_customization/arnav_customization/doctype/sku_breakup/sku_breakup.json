@@ -1,0 +1,143 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-19 12:12:22.713379",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sku_master",
+  "breakup_ref",
+  "row_level",
+  "collection",
+  "primary_stone_type",
+  "stone_cut",
+  "stone_colour",
+  "metal_finish",
+  "design_style",
+  "cultural_style",
+  "primary_occasion",
+  "aesthetic",
+  "weight",
+  "price",
+  "unit"
+ ],
+ "fields": [
+  {
+   "fieldname": "sku_master",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sku Master",
+   "options": "SKU Master",
+   "reqd": 1
+  },
+  {
+   "fieldname": "breakup_ref",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Breakup Ref",
+   "reqd": 1
+  },
+  {
+   "fieldname": "collection",
+   "fieldtype": "Link",
+   "label": "COLLECTION",
+   "options": "COLLECTION"
+  },
+  {
+   "fieldname": "primary_stone_type",
+   "fieldtype": "Link",
+   "label": "PRIMARY_STONE_TYPE",
+   "options": "PRIMARY_STONE_TYPE"
+  },
+  {
+   "fieldname": "stone_cut",
+   "fieldtype": "Link",
+   "label": "STONE_CUT",
+   "options": "STONE_CUT"
+  },
+  {
+   "fieldname": "stone_colour",
+   "fieldtype": "Link",
+   "label": "STONE_COLOUR",
+   "options": "STONE_COLOUR"
+  },
+  {
+   "fieldname": "metal_finish",
+   "fieldtype": "Link",
+   "label": "METAL_FINISH",
+   "options": "METAL_FINISH"
+  },
+  {
+   "fieldname": "design_style",
+   "fieldtype": "Link",
+   "label": "DESIGN_STYLE",
+   "options": "DESIGN_STYLE"
+  },
+  {
+   "fieldname": "cultural_style",
+   "fieldtype": "Link",
+   "label": "CULTURAL_STYLE",
+   "options": "CULTURAL_STYLE"
+  },
+  {
+   "fieldname": "primary_occasion",
+   "fieldtype": "Link",
+   "label": "PRIMARY_OCCASION",
+   "options": "PRIMARY_OCCASION"
+  },
+  {
+   "fieldname": "aesthetic",
+   "fieldtype": "Link",
+   "label": "AESTHETIC",
+   "options": "AESTHETIC"
+  },
+  {
+   "fieldname": "row_level",
+   "fieldtype": "Select",
+   "label": "ROW LEVEL",
+   "options": "\nMETAL\nSTONE\nFINISH TYPE"
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "label": "WEIGHT"
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Float",
+   "label": "PRICE"
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "UNIT"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-19 23:45:05.886739",
+ "modified_by": "Administrator",
+ "module": "arnav_customization",
+ "name": "SKU Breakup",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
