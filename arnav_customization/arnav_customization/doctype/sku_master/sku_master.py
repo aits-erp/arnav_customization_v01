@@ -2,10 +2,10 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
-
 class SKUMaster(Document):
 
     def on_submit(self):
+        self.apply_supplier_margin()  
         self.create_repack_stock_entry()
 
     def on_cancel(self):
@@ -15,218 +15,239 @@ class SKUMaster(Document):
                 se.cancel()
 
     def create_repack_stock_entry(self):
+
         if getattr(self, "stock_entry", None):
-            frappe.throw("Stock Entry already created")
+            frappe.throw("Stock Entry already created against this SKU Master.")
 
         if not self.warehouse:
-            frappe.throw("Warehouse is mandatory")
-
-        if not self.net_quantiity or flt(self.net_quantiity) <= 0:
-            frappe.throw("Net Quantity must be greater than zero")
+            frappe.throw("Warehouse is mandatory before submitting.")
 
         if not self.purchase_invoices:
-            frappe.throw("Purchase Invoice selection is mandatory")
+            frappe.throw("At least one Purchase Invoice must be selected.")
 
         if not self.sku_details:
-            frappe.throw("SKU Details are mandatory for Stock In")
-
-        # company = frappe.defaults.get_user_default("Company")
-        
-        # se = frappe.new_doc("Stock Entry")
-        # se.stock_entry_type = "Repack"
-        # se.company = company
+            frappe.throw("SKU Details are mandatory for Stock In process.")
 
         company = frappe.get_cached_value("Global Defaults", None, "default_company")
-
         if not company:
-            frappe.throw("Default Company is not set in Global Defaults")
+            frappe.throw("Default Company is not set in Global Defaults.")
 
+        # ---------------------------------------------
+        # CALCULATE TOTAL OUT WEIGHT (FROM PI)
+        # ---------------------------------------------
+        total_out_weight = 0
+        pi_items_cache = []
+
+        for pi_row in self.purchase_invoices:
+            pi = frappe.get_doc("Purchase Invoice", pi_row.purchase_invoice)
+
+            for item in pi.items:
+                qty = flt(item.qty)
+                if qty > 0:
+                    total_out_weight += qty
+                    pi_items_cache.append({
+                        "item_code": item.item_code,
+                        "available_qty": qty
+                    })
+
+        if total_out_weight <= 0:
+            frappe.throw("Total available gross weight from Purchase Invoice is zero.")
+
+        # ---------------------------------------------
+        # CALCULATE TOTAL IN WEIGHT (FROM SKU DETAILS)
+        # ---------------------------------------------
+        total_in_weight = 0
+
+        for row in self.sku_details:
+            if flt(row.gross_weight) <= 0:
+                frappe.throw(f"Gross Weight must be greater than zero in row {row.idx}")
+            total_in_weight += flt(row.gross_weight)
+
+        # ---------------------------------------------
+        # VALIDATION
+        # ---------------------------------------------
+        if total_in_weight > total_out_weight:
+            frappe.throw(
+                f"""
+                Total Finished Gross Weight ({total_in_weight})
+                cannot exceed Available Gross Weight ({total_out_weight}).
+
+                Please adjust SKU Gross Weight values.
+                """
+            )
+        
+        # ---------------------------------------------
+        # CALCULATE ACTUAL ISSUE QTY
+        # ---------------------------------------------
+        actual_out_qty = total_out_weight - total_in_weight
+
+        if actual_out_qty < 0:
+            frappe.throw("Calculated Issue Quantity became negative. Check weights.")
+
+        # ---------------------------------------------
+        # CREATE STOCK ENTRY
+        # ---------------------------------------------
         se = frappe.new_doc("Stock Entry")
         se.stock_entry_type = "Repack"
         se.company = company
         se.posting_date = frappe.utils.nowdate()
         se.posting_time = frappe.utils.nowtime()
 
+        # -----------------------------
+        # STOCK OUT (ISSUE)
+        # -----------------------------
+        remaining_issue_qty = actual_out_qty
 
-        # -------------------------------------------------
-        # STOCK OUT — FROM PURCHASE INVOICE ITEMS
-        # -------------------------------------------------
-        remaining_qty = flt(self.net_quantiity)
+        for item in pi_items_cache:
 
-        for pi_row in self.purchase_invoices:
-            if remaining_qty <= 0:
+            if remaining_issue_qty <= 0:
                 break
 
-            pi = frappe.get_doc("Purchase Invoice", pi_row.purchase_invoice)
+            issue_qty = min(item["available_qty"], remaining_issue_qty)
 
-            for item in pi.items:
-                if remaining_qty <= 0:
-                    break
+            se.append("items", {
+                "item_code": item["item_code"],
+                "qty": issue_qty,
+                "s_warehouse": self.warehouse
+            })
 
-                issue_qty = min(flt(item.qty), remaining_qty)
+            remaining_issue_qty -= issue_qty
 
-                se.append("items", {
-                    "item_code": item.item_code,
-                    "qty": issue_qty,
-                    "s_warehouse": self.warehouse
-                })
-
-                remaining_qty -= issue_qty
-
-        if remaining_qty > 0:
-            frappe.throw(
-                f"Net Quantity ({self.net_quantiity}) exceeds available quantity in selected Purchase Invoices"
-            )
-
-        # -------------------------------------------------
-        # STOCK IN — FROM SKU DETAILS
-        # -------------------------------------------------
-        # for row in self.sku_details:
-        #     if not row.product or flt(row.qty) <= 0:
-        #         continue
-
-        #     se.append("items", {
-        #         "item_code": row.product,
-        #         "qty": flt(row.qty),
-        #         "t_warehouse": self.warehouse
-        #     })
+        # -----------------------------
+        # STOCK IN (RECEIPT)
+        # -----------------------------
         for row in self.sku_details:
-            if not row.product or flt(row.qty) <= 0:
-                continue
 
-            # Create Batch document
+            # Create Batch
             batch = frappe.new_doc("Batch")
             batch.item = row.product
             batch.insert(ignore_permissions=True)
 
-            # Save batch number inside child table SKU field
             row.db_set("sku", batch.name)
 
-            # Add stock entry row with batch
             se.append("items", {
                 "item_code": row.product,
-                "qty": flt(row.qty),
+                "qty": flt(row.gross_weight),   # 🔥 IMPORTANT CHANGE
                 "t_warehouse": self.warehouse,
                 "batch_no": batch.name
             })
 
         if not se.items:
-            frappe.throw("No valid items found for Stock Entry")
+            frappe.throw("No valid items found for Stock Entry.")
 
         se.insert()
         se.submit()
 
         self.db_set("stock_entry", se.name)
 
-        # -------------------------------------------------
-        # CREATE SKU RECORDS
-        # -------------------------------------------------
+        frappe.msgprint(
+            msg="Stock Entry Created Successfully",
+            title="Success",
+            indicator="green"
+        )
+    
+    def apply_supplier_margin(self):
+
+        if not self.supplier_name:
+            frappe.throw("Supplier must be selected before calculating selling price.")
+
+        margin = frappe.db.get_value(
+            "Supplier",
+            self.supplier_name,
+            "custom_supplier_margin"
+        )
+
+        if margin is None:
+            frappe.throw(
+                f"Supplier '{self.supplier_name}' does not have Supplier Margin defined."
+            )
+
+        margin = flt(margin)
+
+        if margin <= 0:
+            frappe.throw(
+                f"Supplier Margin must be greater than zero for Supplier {self.supplier_name}."
+            )
+
         for row in self.sku_details:
-            if not row.sku:
-                frappe.throw(f"Batch not generated for row {row.idx}")
+            if flt(row.cost_price) <= 0:
+                frappe.throw(f"Cost Price must be greater than zero in row {row.idx}")
 
-            if not frappe.db.exists("SKU", row.sku):
-                sku = frappe.new_doc("SKU")
-                sku.sku_code = row.sku              # Batch name
-                sku.batch_no = row.sku              # Link to Batch
-                sku.product = row.product
-                sku.gross_weight = row.gross_weight
-                sku.net_weight = row.net_weight
-                sku.cost_price = row.cost_price
-                sku.qty = row.qty
-                sku.selling_price = row.selling_price
-                sku.image = row.image
-                sku.sku_master = self.name
-                sku.insert(ignore_permissions=True)
+            row.selling_price = flt(row.cost_price) * margin
+            
 
-# # Copyright (c) 2026, aits and contributors
-# # For license information, please see license.txt
+@frappe.whitelist()
+def get_breakup_meta():
+    meta = frappe.get_meta("SKU Breakup")
 
-# import frappe
-# from frappe.model.document import Document
+    allowed_types = [
+        "Data", "Float", "Currency", "Int",
+        "Link", "Select", "Small Text", "Check"
+    ]
+
+    fields = []
+
+    for df in meta.fields:
+
+        if df.fieldname in ["sku_master", "breakup_ref"]:
+            continue
+
+        if df.fieldtype not in allowed_types:
+            continue
+
+        fields.append({
+            "fieldname": df.fieldname,
+            "label": df.label,
+            "fieldtype": df.fieldtype,
+            "options": df.options,
+            "reqd": df.reqd,
+            "columns": 0.5,   # important
+            "in_list_view": 1
+        })
+
+    return fields
 
 
-# class SKUMaster(Document):
+@frappe.whitelist()
+def get_breakup_rows(sku_master, breakup_ref):
+    return frappe.get_all(
+        "SKU Breakup",
+        filters={
+            "sku_master": sku_master,
+            "breakup_ref": breakup_ref
+        },
+        fields="*",
+        order_by="creation asc"
+    )
 
-#     def on_submit(self):
-#         self.create_stock_entry()
 
-#     def on_cancel(self):
-#         if getattr(self, "stock_entry", None):
-#             se = frappe.get_doc("Stock Entry", self.stock_entry)
-#             if se.docstatus == 1:
-#                 se.cancel()
+@frappe.whitelist()
+def save_breakup_rows(sku_master, breakup_ref, rows):
+    import json
 
-#     def create_stock_entry(self):
-#         if getattr(self, "stock_entry", None):
-#             frappe.throw("Stock Entry already created")
+    rows = json.loads(rows)
 
-#         if not self.transaction_type:
-#             frappe.throw("Transaction Type is mandatory")
+    # delete old rows
+    frappe.db.delete("SKU Breakup", {
+        "sku_master": sku_master,
+        "breakup_ref": breakup_ref
+    })
 
-#         if not self.warehouse:
-#             frappe.throw("Warehouse is mandatory")
+    meta = frappe.get_meta("SKU Breakup")
 
-#         se_type = (
-#             "Material Receipt"
-#             if self.transaction_type == "Stock In"
-#             else "Material Issue"
-#         )
+    for r in rows:
+        doc = frappe.new_doc("SKU Breakup")
+        doc.sku_master = sku_master
+        doc.breakup_ref = breakup_ref
 
-#         se = frappe.new_doc("Stock Entry")
-#         se.stock_entry_type = se_type
-#         se.company = frappe.defaults.get_user_default("Company")
-#         se.from_warehouse = self.warehouse if se_type == "Material Issue" else None
-#         se.to_warehouse = self.warehouse if se_type == "Material Receipt" else None
+        for df in meta.fields:
+            fname = df.fieldname
+            if fname in ["sku_master", "breakup_ref"]:
+                continue
+            if fname in r:
+                doc.set(fname, r.get(fname))
 
-#         for row in self.sku_details:
-#             if not row.product or not row.qty:
-#                 continue
+        doc.insert(ignore_permissions=True)
 
-#             se.append("items", {
-#                 "item_code": row.product,
-#                 "qty": row.qty,
-#                 "basic_rate": row.cost_price or 0,
-#                 "s_warehouse": self.warehouse if se_type == "Material Issue" else None,
-#                 "t_warehouse": self.warehouse if se_type == "Material Receipt" else None,
-#             })
-
-#         if not se.items:
-#             frappe.throw("No valid items found for Stock Entry")
-
-#         se.insert()
-#         se.submit()
-
-#         self.db_set("stock_entry", se.name)
-
-# @frappe.whitelist()
-# def get_remaining_qty(purchase_invoices, current_doc=None):
-#     """
-#     Returns remaining qty per Purchase Invoice
-#     """
-#     if isinstance(purchase_invoices, str):
-#         purchase_invoices = frappe.parse_json(purchase_invoices)
-
-#     result = {}
-
-#     for pinv in purchase_invoices:
-#         # 1️⃣ Total qty from Purchase Invoice
-#         total_qty = frappe.db.sql("""
-#             SELECT IFNULL(SUM(qty), 0)
-#             FROM `tabPurchase Invoice Item`
-#             WHERE parent = %s
-#         """, pinv)[0][0]
-
-#         # 2️⃣ Qty already consumed in submitted SKU Masters
-#         consumed_qty = frappe.db.sql("""
-#             SELECT IFNULL(SUM(sd.qty), 0)
-#             FROM `tabSKU Details` sd
-#             JOIN `tabSKU Master` sm ON sm.name = sd.parent
-#             WHERE sd.purchase_invoice = %s
-#               AND sm.docstatus = 1
-#               AND (%s IS NULL OR sm.name != %s)
-#         """, (pinv, current_doc, current_doc))[0][0]
-
-#         result[pinv] = float(total_qty) - float(consumed_qty)
-
-#     return result
+    frappe.db.commit()
+    return "success"

@@ -16,9 +16,15 @@
   "metal",
   "hsn",
   "stock_entry",
+  "shopify_product_id",
   "section_break_wwcy",
   "note",
   "sku_details",
+  "total_section_section",
+  "column_break_ykap",
+  "column_break_wiwx",
+  "total_net_weight",
+  "total_gross_weight",
   "amended_from"
  ],
  "fields": [
@@ -94,6 +100,42 @@
    "options": "SKU Purchase Invoice"
   },
   {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "no_copy": 1,
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_section_section",
+   "fieldtype": "Section Break",
+   "label": "Total Section"
+  },
+  {
+   "fieldname": "column_break_ykap",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_wiwx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_net_weight",
+   "fieldtype": "Float",
+   "label": "Total Net Weight"
+  },
+  {
+   "fieldname": "total_gross_weight",
+   "fieldtype": "Float",
+   "label": "Total Gross Weight"
+  },
+  {
+   "fieldname": "shopify_product_id",
+   "fieldtype": "Data",
+   "label": "Shopify Product ID"
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -102,21 +144,13 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "stock_entry",
-   "fieldtype": "Link",
-   "label": "Stock Entry",
-   "no_copy": 1,
-   "options": "Stock Entry",
-   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-13 00:23:55.054599",
+ "modified": "2026-02-20 14:12:11.302267",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",
