@@ -7,6 +7,25 @@ frappe.ui.form.on("SKU Master", {
     }
 });
 
+function calculate_weight_totals(frm) {
+
+    let total_net = 0;
+    let total_gross = 0;
+
+    (frm.doc.sku_details || []).forEach(row => {
+        total_net += flt(row.net_weight);
+        total_gross += flt(row.gross_weight);
+    });
+
+    frm.set_value("total_net_weight", total_net);
+    frm.set_value("total_gross_weight", total_gross);
+
+    frm.refresh_fields([
+        "total_net_weight",
+        "total_gross_weight"
+    ]);
+}
+
 function open_multi_invoice_dialog(frm) {
     new frappe.ui.form.MultiSelectDialog({
         doctype: "Purchase Invoice",
@@ -32,71 +51,6 @@ function open_multi_invoice_dialog(frm) {
     });
 }
 
-// function load_invoices(frm, invoice_names, replace) {
-//     if (replace) {
-//         frm.clear_table("sku_details");
-//         frm.clear_table("purchase_invoices");
-//     }
-
-//     const existing_item_keys = new Set(
-//         (frm.doc.sku_details || []).map(
-//             r => `${r.purchase_invoice}::${r.product}`
-//         )
-//     );
-
-//     let suppliers = new Set();
-//     let total_qty = 0;
-//     let pending = invoice_names.length;
-
-//     invoice_names.forEach(inv_name => {
-//         frappe.call({
-//             method: "frappe.client.get",
-//             args: {
-//                 doctype: "Purchase Invoice",
-//                 name: inv_name
-//             },
-//             callback(r) {
-//                 if (!r.message) return;
-
-//                 const inv = r.message;
-//                 suppliers.add(inv.supplier);
-
-//                 // Add invoice row
-//                 const inv_row = frm.add_child("purchase_invoices");
-//                 inv_row.purchase_invoice = inv.name;
-//                 inv_row.supplier = inv.supplier;
-//                 inv_row.posting_date = inv.posting_date;
-
-//                 // Add items
-//                 // (inv.items || []).forEach(item => {
-//                 //     const key = `${inv.name}::${item.item_code}`;
-//                 //     if (existing_item_keys.has(key)) return;
-
-//                 //     const row = frm.add_child("sku_details");
-//                 //     row.product = item.item_code;
-//                 //     row.qty = item.qty;
-//                 //     row.cost_price = item.rate;
-//                 //     row.purchase_invoice = inv.name;
-//                 //     row.purchase_invoice_item = item.name;
-
-//                 //     total_qty += flt(item.qty);
-//                 //     existing_item_keys.add(key);
-//                 // });
-
-//                 (inv.items || []).forEach(item => {
-//                     total_qty += flt(item.qty);
-//                 });
-
-//                 pending--;
-
-//                 // FINALIZE ONCE
-//                 if (pending === 0) {
-//                     finalize_form(frm, suppliers, total_qty);
-//                 }
-//             }
-//         });
-//     });
-// }
 function load_invoices(frm, invoice_names, replace) {
 
     if (!invoice_names || !invoice_names.length) return;
@@ -180,5 +134,184 @@ function finalize_form(frm, suppliers, total_qty) {
     frm.refresh_field("sku_details");
     frm.refresh_field("net_quantiity");
     frm.refresh_field("supplier_name");
+}
+
+//BREAK UP TABLE SYNC PLUS DYANMIC BEHAVIOUR
+frappe.ui.form.on("SKU Details", {
+
+    net_weight(frm, cdt, cdn) {
+        calculate_weight_totals(frm);
+    },
+
+    gross_weight(frm, cdt, cdn) {
+        calculate_weight_totals(frm);
+    },
+
+    sku_details_remove(frm) {
+        calculate_weight_totals(frm);
+    },
+
+    breakup(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (!row.breakup_ref) {
+            row.breakup_ref = frappe.utils.get_random(12);
+            frm.refresh_field("sku_details");
+        }
+
+        if (frm.is_new()) {
+            frappe.msgprint({
+                title: "Save Required",
+                message: "You must save the SKU Master before adding Breakup details.",
+                indicator: "orange"
+            });
+            return;
+        }
+
+        open_dynamic_breakup_dialog(frm, row);
+    },
+
+    cost_price(frm, cdt, cdn) {
+
+        let row = locals[cdt][cdn];
+
+        if (!frm.doc.supplier_name) {
+            frappe.msgprint({
+                title: "Supplier Required",
+                message: "Please select Supplier before entering Cost Price.",
+                indicator: "orange"
+            });
+            return;
+        }
+
+        frappe.db.get_value("Supplier", frm.doc.supplier_name, "custom_supplier_margin")
+            .then(r => {
+
+                let margin = flt(r.message.custom_supplier_margin || 0);
+
+                if (!margin) {
+                    frappe.msgprint({
+                        title: "Supplier Margin Missing",
+                        message: "Supplier Margin is not defined for selected Supplier.",
+                        indicator: "red"
+                    });
+                    return;
+                }
+
+                row.selling_price = flt(row.cost_price) * margin;
+                frm.refresh_field("sku_details");
+            });
+    } 
+    
+});
+
+
+
+
+function open_dynamic_breakup_dialog(frm, row) {
+
+    frappe.call({
+        method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_breakup_meta",
+        callback(meta_res) {
+
+            let dynamic_fields = meta_res.message || [];
+
+            let dialog = new frappe.ui.Dialog({
+                title: "Breakup - " + (row.product || ""),
+                size: "extra-large",
+                fields: [
+                    {
+                        fieldname: "breakup_table",
+                        fieldtype: "Table",
+                        label: "Breakup Details",
+                        in_place_edit: true,
+                        cannot_add_rows: false,
+                        data: [],
+                        get_data: () => {
+                            return dialog.fields_dict.breakup_table.df.data;
+                        },
+                        fields: dynamic_fields
+                    }
+                ],
+                primary_action_label: "Save",
+                primary_action(values) {
+
+                    let rows = values.breakup_table || [];
+
+                    frappe.call({
+                        method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.save_breakup_rows",
+                        args: {
+                            sku_master: frm.doc.name,
+                            breakup_ref: row.breakup_ref,
+                            rows: JSON.stringify(rows)
+                        },
+                        callback() {
+                            frappe.msgprint("Breakup saved successfully");
+                            dialog.hide();
+                        }
+                    });
+                }
+            });
+
+            // Load existing rows
+            frappe.call({
+                method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_breakup_rows",
+                args: {
+                    sku_master: frm.doc.name,
+                    breakup_ref: row.breakup_ref
+                },
+                callback(r) {
+                    if (r.message) {
+                        dialog.fields_dict.breakup_table.df.data = r.message;
+                        let grid = dialog.fields_dict.breakup_table.grid;
+                        grid.refresh();
+                        // grid.wrapper.find('.grid-body').css({
+                        //     'overflow-X': 'auto',
+                        //     'white-space': 'nowrap'
+                        // });
+                        let grid_wrapper = dialog.fields_dict.breakup_table.grid.wrapper;
+
+                        grid_wrapper.css({
+                            "min-width": "max-content"
+                        });
+
+                        grid_wrapper.find(".grid-body").css({
+                            "overflow-x": "auto"
+                        });
+                    }
+                }
+            });
+
+            dialog.show();
+            setTimeout(() => {
+
+                // Increase modal width
+                dialog.$wrapper.find('.modal-dialog').css({
+                    "max-width": "95vw",
+                    "width": "95vw"
+                });
+
+                // Increase modal height
+                dialog.$wrapper.find('.modal-content').css({
+                    "height": "90vh"
+                });
+
+                // Allow modal body to scroll normally
+                dialog.$wrapper.find('.modal-body').css({
+                    "overflow-y": "auto",
+                    "overflow-x": "auto",
+                    "height": "80vh"
+                });
+
+                // VERY IMPORTANT: allow dropdown to overflow grid
+                dialog.$wrapper.find('.grid-body').css({
+                    "overflow": "visible"
+                });
+
+            }, 200);
+
+
+        }
+    });
 }
 
