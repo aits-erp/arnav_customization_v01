@@ -15,7 +15,10 @@
   "qty",
   "net_weight",
   "breakup_ref",
-  "breakup"
+  "breakup",
+  "dealer_code",
+  "d_no",
+  "huid"
  ],
  "fields": [
   {
@@ -71,13 +74,28 @@
    "hidden": 1,
    "label": "Breakup Ref",
    "read_only": 1
+  },
+  {
+   "fieldname": "dealer_code",
+   "fieldtype": "Data",
+   "label": "Dealer Code"
+  },
+  {
+   "fieldname": "d_no",
+   "fieldtype": "Data",
+   "label": "D. No."
+  },
+  {
+   "fieldname": "huid",
+   "fieldtype": "Data",
+   "label": "HUID"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-19 12:11:30.825384",
+ "modified": "2026-02-23 11:15:54.289668",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Details",

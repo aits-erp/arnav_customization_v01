@@ -19,23 +19,9 @@
   "total_amount_wo_tax",
   "amended_from",
   "add_payments_section",
-  "cash",
-  "cheque",
-  "card",
-  "old_gold",
-  "old_gold_gram",
-  "online",
-  "gift_voucher",
-  "bank_charges",
-  "advance_amount",
-  "column_break_ycux",
-  "cash_description",
-  "cheque_description",
-  "card_description",
-  "old_gold_description",
-  "online_description",
-  "voucher_description",
-  "bank_description"
+  "payment_details",
+  "paid_amount",
+  "balance_amount"
  ],
  "fields": [
   {
@@ -90,7 +76,8 @@
   {
    "fieldname": "total_discount_in_rs",
    "fieldtype": "Float",
-   "label": "Total Discount( in Rs.)"
+   "label": "Total Discount( in Rs.)",
+   "read_only": 1
   },
   {
    "fieldname": "handling_and_packaging_charges",
@@ -100,7 +87,8 @@
   {
    "fieldname": "total_amount_wo_tax",
    "fieldtype": "Float",
-   "label": "Total amount (w/o Tax)"
+   "label": "Total amount",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",
@@ -118,95 +106,29 @@
    "label": "Add Payments"
   },
   {
-   "fieldname": "cash",
-   "fieldtype": "Data",
-   "label": "Cash"
+   "fieldname": "payment_details",
+   "fieldtype": "Table",
+   "label": "Payment details",
+   "options": "POS Payment Details"
   },
   {
-   "fieldname": "cheque",
-   "fieldtype": "Data",
-   "label": "Cheque"
-  },
-  {
-   "fieldname": "card",
-   "fieldtype": "Data",
-   "label": "Card"
-  },
-  {
-   "fieldname": "old_gold",
-   "fieldtype": "Data",
-   "label": "Old Gold"
-  },
-  {
-   "fieldname": "old_gold_gram",
-   "fieldtype": "Data",
-   "label": "Old Gold Gram"
-  },
-  {
-   "fieldname": "online",
-   "fieldtype": "Data",
-   "label": "Online"
-  },
-  {
-   "fieldname": "gift_voucher",
-   "fieldtype": "Data",
-   "label": "Gift Voucher"
-  },
-  {
-   "fieldname": "bank_charges",
-   "fieldtype": "Data",
-   "label": "Bank Charges"
-  },
-  {
-   "fieldname": "advance_amount",
+   "fieldname": "paid_amount",
    "fieldtype": "Float",
-   "label": "Advance Amount"
+   "label": "Paid Amount",
+   "read_only": 1
   },
   {
-   "fieldname": "column_break_ycux",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "cash_description",
-   "fieldtype": "Data",
-   "label": "Cash Description"
-  },
-  {
-   "fieldname": "cheque_description",
-   "fieldtype": "Data",
-   "label": "Cheque Description"
-  },
-  {
-   "fieldname": "card_description",
-   "fieldtype": "Data",
-   "label": "Card Description"
-  },
-  {
-   "fieldname": "old_gold_description",
-   "fieldtype": "Small Text",
-   "label": "Old Gold Description"
-  },
-  {
-   "fieldname": "online_description",
-   "fieldtype": "Data",
-   "label": "Online Description"
-  },
-  {
-   "fieldname": "voucher_description",
-   "fieldtype": "Data",
-   "label": "Voucher Description"
-  },
-  {
-   "fieldname": "bank_description",
-   "fieldtype": "Data",
-   "label": "Bank Description"
+   "fieldname": "balance_amount",
+   "fieldtype": "Float",
+   "label": "Balance Amount",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-16 16:20:12.521530",
+ "modified": "2026-02-23 11:56:45.636601",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
