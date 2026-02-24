@@ -35,6 +35,39 @@ frappe.ui.form.on('POS SKU Details', {
     },
     sku_details_remove: function(frm) {
         calculate_parent_totals(frm);
+    },
+
+    sku: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (!row.sku) return;
+
+        // Step 1: Get product (Item) from SKU
+        frappe.db.get_value('SKU', row.sku, 'product')
+            .then(r => {
+
+                if (r.message && r.message.product) {
+
+                    let item = r.message.product;
+
+                    // Set product field
+                    frappe.model.set_value(cdt, cdn, 'product', item);
+
+                    // Step 2: Get HSN from Item
+                    return frappe.db.get_value('Item', item, 'gst_hsn_code');
+
+                }
+            })
+            .then(r => {
+
+                if (r && r.message && r.message.gst_hsn_code) {
+                    frappe.model.set_value(cdt, cdn, 'hsn', r.message.gst_hsn_code);
+                }
+
+            });
+
+        // Recalculate
+        calculate_row(frm, cdt, cdn);
     }
 });
 
@@ -112,4 +145,9 @@ function calculate_balance(frm) {
 
 function flt(val) {
     return parseFloat(val) || 0;
+}
+
+function calculate_all(frm) {
+    calculate_parent_totals(frm);
+    calculate_payments(frm);
 }
