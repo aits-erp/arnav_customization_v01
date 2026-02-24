@@ -62,10 +62,10 @@ def sync_to_shopify(doc, method=None):
     if not doc.sku_details:
         frappe.throw("No SKU Details found")
 
-    product_title = doc.sku_details[0].product
+    product_title = doc.sku_details[0].product.strip()
 
     # ====================================================
-    # 1️⃣ FIND OR CREATE PRODUCT
+    # 1️⃣ FIND OR CREATE PRODUCT (DRAFT MODE)
     # ====================================================
     product_id = doc.get("shopify_product_id")
 
@@ -74,11 +74,25 @@ def sync_to_shopify(doc, method=None):
 
     if not product_id:
 
+        # ⭐ FIRST VARIANT PAYLOAD (IMPORTANT - NO DEFAULT TITLE)
+        first = doc.sku_details[0]
+
         product_payload = {
             "product": {
                 "title": product_title,
-                "status": "active",
-                "options": [{"name": "SKU"}]
+                "status": "draft",
+                "options": [{"name": "SKU"}],
+                "variants": [
+                    {
+                        "sku": first.sku,
+                        "price": f(first.selling_price),
+                        "compare_at_price": f(first.cost_price),
+                        "weight": f(first.net_weight),
+                        "weight_unit": "g",
+                        "inventory_management": "shopify",
+                        "option1": first.sku
+                    }
+                ]
             }
         }
 
@@ -94,20 +108,22 @@ def sync_to_shopify(doc, method=None):
         product_id = res["product"]["id"]
         doc.db_set("shopify_product_id", product_id)
 
-    # UNARCHIVE PRODUCT
+    # ====================================================
+    # 2️⃣ FORCE PRODUCT TO DRAFT (NO AUTO PUBLISH)
+    # ====================================================
     requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}.json",
-        json={"product": {"id": product_id, "status": "active"}},
+        json={"product": {"id": product_id, "status": "draft"}},
         headers=HEADERS
     )
 
     # ====================================================
-    # 2️⃣ GET EXISTING VARIANTS
+    # 3️⃣ GET EXISTING VARIANTS
     # ====================================================
     existing_variants = get_product_variants(product_id)
 
     # ====================================================
-    # 3️⃣ LOOP MULTI SKU
+    # 4️⃣ MULTI SKU LOOP
     # ====================================================
     for d in doc.sku_details:
 
@@ -128,13 +144,10 @@ def sync_to_shopify(doc, method=None):
             update_payload = {
                 "variant": {
                     "id": existing_variant["id"],
-                    "sku": d.sku,
                     "price": f(d.selling_price),
                     "compare_at_price": f(d.cost_price),
                     "weight": f(d.net_weight),
-                    "weight_unit": "g",
-                    "inventory_management": "shopify",
-                    "option1": d.sku
+                    "weight_unit": "g"
                 }
             }
 
@@ -193,26 +206,7 @@ def sync_to_shopify(doc, method=None):
         if inv.get("errors"):
             frappe.throw(f"Inventory Error: {inv}")
 
-    # ====================================================
-    # ⭐ SEO PRICE FIX (FIRST VARIANT UPDATE)
-    # ====================================================
-    variants = get_product_variants(product_id)
-
-    if variants:
-        first_price = f(doc.sku_details[0].selling_price)
-
-        requests.put(
-            f"https://{SHOP}/admin/api/{API_VERSION}/variants/{variants[0]['id']}.json",
-            json={
-                "variant": {
-                    "id": variants[0]["id"],
-                    "price": first_price
-                }
-            },
-            headers=HEADERS
-        )
-
-    frappe.msgprint("🔥 Shopify FULL Sync Success (SEO ₹0.00 FIXED)")
+    frappe.msgprint("🔥 Shopify Draft Sync Success (PRO MODE)")
 
 
 
