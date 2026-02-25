@@ -28,7 +28,11 @@ doc_events = {
         "on_submit": "arnav_customization.shopify_sync.sync_to_shopify"
     }
 }
-
+doc_events = {
+    "Sales Order": {
+        "after_insert": "arnav_customization.shopify_order_patch.smart_sku_mapper"
+    }
+}
 
 # doc_events = {
 #     "SKU": {
