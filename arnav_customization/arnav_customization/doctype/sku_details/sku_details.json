@@ -18,7 +18,8 @@
   "breakup",
   "dealer_code",
   "d_no",
-  "huid"
+  "huid",
+  "roundoff"
  ],
  "fields": [
   {
@@ -89,13 +90,18 @@
    "fieldname": "huid",
    "fieldtype": "Data",
    "label": "HUID"
+  },
+  {
+   "fieldname": "roundoff",
+   "fieldtype": "Data",
+   "label": "RoundOff"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-23 11:15:54.289668",
+ "modified": "2026-02-25 12:50:54.937689",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Details",
