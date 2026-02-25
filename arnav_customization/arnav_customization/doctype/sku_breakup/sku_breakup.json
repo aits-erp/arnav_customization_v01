@@ -7,16 +7,8 @@
  "field_order": [
   "sku_master",
   "breakup_ref",
-  "row_level",
-  "collection",
-  "primary_stone_type",
-  "stone_cut",
-  "stone_colour",
-  "metal_finish",
-  "design_style",
-  "cultural_style",
-  "primary_occasion",
-  "aesthetic",
+  "attribute_type",
+  "attribute_value",
   "weight",
   "price",
   "unit"
@@ -38,85 +30,42 @@
    "reqd": 1
   },
   {
-   "fieldname": "collection",
-   "fieldtype": "Link",
-   "label": "COLLECTION",
-   "options": "COLLECTION"
-  },
-  {
-   "fieldname": "primary_stone_type",
-   "fieldtype": "Link",
-   "label": "PRIMARY_STONE_TYPE",
-   "options": "PRIMARY_STONE_TYPE"
-  },
-  {
-   "fieldname": "stone_cut",
-   "fieldtype": "Link",
-   "label": "STONE_CUT",
-   "options": "STONE_CUT"
-  },
-  {
-   "fieldname": "stone_colour",
-   "fieldtype": "Link",
-   "label": "STONE_COLOUR",
-   "options": "STONE_COLOUR"
-  },
-  {
-   "fieldname": "metal_finish",
-   "fieldtype": "Link",
-   "label": "METAL_FINISH",
-   "options": "METAL_FINISH"
-  },
-  {
-   "fieldname": "design_style",
-   "fieldtype": "Link",
-   "label": "DESIGN_STYLE",
-   "options": "DESIGN_STYLE"
-  },
-  {
-   "fieldname": "cultural_style",
-   "fieldtype": "Link",
-   "label": "CULTURAL_STYLE",
-   "options": "CULTURAL_STYLE"
-  },
-  {
-   "fieldname": "primary_occasion",
-   "fieldtype": "Link",
-   "label": "PRIMARY_OCCASION",
-   "options": "PRIMARY_OCCASION"
-  },
-  {
-   "fieldname": "aesthetic",
-   "fieldtype": "Link",
-   "label": "AESTHETIC",
-   "options": "AESTHETIC"
-  },
-  {
-   "fieldname": "row_level",
-   "fieldtype": "Select",
-   "label": "ROW LEVEL",
-   "options": "\nMETAL\nSTONE\nFINISH TYPE"
-  },
-  {
    "fieldname": "weight",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "WEIGHT"
   },
   {
    "fieldname": "price",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "PRICE"
   },
   {
    "fieldname": "unit",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "UNIT"
+  },
+  {
+   "fieldname": "attribute_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Attribute Type",
+   "options": "COLLECTION\nPRIMARY_STONE_TYPE\nSTONE_CUT\nSTONE_COLOUR\nSTONE_CLARITY\nMETAL_FINISH\nDESIGN_STYLE\nCULTURAL_STYLE\nPRIMARY_OCCASION\nAESTHETIC"
+  },
+  {
+   "fieldname": "attribute_value",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Attribute Value",
+   "options": "attribute_type"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-19 23:45:05.886739",
+ "modified": "2026-02-25 10:27:03.310456",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Breakup",

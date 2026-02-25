@@ -176,37 +176,90 @@ class SKUMaster(Document):
             row.selling_price = flt(row.cost_price) * margin
             
 
-@frappe.whitelist()
-def get_breakup_meta():
-    meta = frappe.get_meta("SKU Breakup")
+# @frappe.whitelist()
+# def get_breakup_meta():
+#     meta = frappe.get_meta("SKU Breakup")
 
-    allowed_types = [
-        "Data", "Float", "Currency", "Int",
-        "Link", "Select", "Small Text", "Check"
-    ]
+#     allowed_types = [
+#         "Data", "Float", "Currency", "Int",
+#         "Link", "Select", "Small Text", "Check"
+#     ]
 
-    fields = []
+#     fields = []
 
-    for df in meta.fields:
+#     for df in meta.fields:
 
-        if df.fieldname in ["sku_master", "breakup_ref"]:
-            continue
+#         if df.fieldname in ["sku_master", "breakup_ref"]:
+#             continue
 
-        if df.fieldtype not in allowed_types:
-            continue
+#         if df.fieldtype not in allowed_types:
+#             continue
 
-        fields.append({
-            "fieldname": df.fieldname,
-            "label": df.label,
-            "fieldtype": df.fieldtype,
-            "options": df.options,
-            "reqd": df.reqd,
-            "columns": 0.5,   # important
-            "in_list_view": 1
-        })
+#         fields.append({
+#             "fieldname": df.fieldname,
+#             "label": df.label,
+#             "fieldtype": df.fieldtype,
+#             "options": df.options,
+#             "reqd": df.reqd,
+#             "columns": 0.5,   # important
+#             "in_list_view": 1
+#         })
 
-    return fields
+#     return fields
 
+# @frappe.whitelist()
+# def get_breakup_meta():
+
+#     attribute_doctypes = [
+#         "Collection",
+#         "Primary Stone Type",
+#         "Stone Cut",
+#         "Stone Colour",
+#         "Stone Clarity",
+#         "Metal Finish",
+#         "Design Style",
+#         "Cultural Style",
+#         "Primary Occasion",
+#         "Aesthetic"
+#     ]
+
+#     return [
+#         {
+#             "fieldname": "attribute_type",
+#             "label": "Attribute Type",
+#             "fieldtype": "Select",
+#             "options": "\n".join(attribute_doctypes),
+#             "in_list_view": 1,
+#             "reqd": 1
+#         },
+#         {
+#             "fieldname": "attribute_value",
+#             "label": "Attribute Value",
+#             "fieldtype": "Link",
+#             "options": "Collection",  # default
+#             "in_list_view": 1,
+#             "reqd": 1
+#         },
+#         {
+#             "fieldname": "weight",
+#             "label": "Weight",
+#             "fieldtype": "Float",
+#             "in_list_view": 1
+#         },
+#         {
+#             "fieldname": "price",
+#             "label": "Price",
+#             "fieldtype": "Currency",
+#             "in_list_view": 1
+#         },
+#         {
+#             "fieldname": "unit",
+#             "label": "Unit",
+#             "fieldtype": "Link",
+#             "options": "UOM",
+#             "in_list_view": 1
+#         }
+#     ]
 
 @frappe.whitelist()
 def get_breakup_rows(sku_master, breakup_ref):

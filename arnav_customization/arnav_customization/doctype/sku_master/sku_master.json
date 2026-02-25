@@ -96,6 +96,7 @@
   {
    "fieldname": "purchase_invoices",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Purchase Invoices",
    "options": "SKU Purchase Invoice"
   },
@@ -150,7 +151,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-20 14:12:11.302267",
+ "modified": "2026-02-25 11:47:47.074615",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",
