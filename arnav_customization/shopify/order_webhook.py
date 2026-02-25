@@ -4,13 +4,15 @@ import json
 @frappe.whitelist(allow_guest=True)
 def create_order():
 
-    data = frappe.request.get_json()
-
-    if not data:
-        return {"status": "no data"}
+    # ⭐ UNIVERSAL PAYLOAD READER (Fix for Unsupported Media Type)
+    try:
+        raw = frappe.request.data
+        data = json.loads(raw)
+    except:
+        return {"status": "invalid payload"}
 
     # ===============================
-    # CUSTOMER CREATE / FIND
+    # CUSTOMER
     # ===============================
     email = data.get("email") or "guest@shopify.com"
     customer_name = data.get("customer", {}).get("first_name", "Shopify Customer")
@@ -18,17 +20,17 @@ def create_order():
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
     if not customer:
-        doc = frappe.get_doc({
+        c = frappe.get_doc({
             "doctype": "Customer",
             "customer_name": customer_name,
             "customer_type": "Individual",
             "email_id": email
         })
-        doc.insert(ignore_permissions=True)
-        customer = doc.name
+        c.insert(ignore_permissions=True)
+        customer = c.name
 
     # ===============================
-    # SALES ORDER CREATE
+    # SALES ORDER
     # ===============================
     so = frappe.get_doc({
         "doctype": "Sales Order",
@@ -41,9 +43,10 @@ def create_order():
 
         sku = li.get("sku")
         qty = li.get("quantity", 1)
-        rate = li.get("price", 0)
 
-        # SKU → Item mapping
+        # ⭐ UNIVERSAL PRICE SUPPORT (2024/2025/2026)
+        rate = li.get("price") or li.get("price_set", {}).get("shop_money", {}).get("amount", 0)
+
         item_code = frappe.db.get_value(
             "SKU Details",
             {"sku": sku},
@@ -59,6 +62,9 @@ def create_order():
             "rate": rate,
             "sku": sku
         })
+
+    if not so.items:
+        return {"status": "no items matched"}
 
     so.insert(ignore_permissions=True)
     so.submit()
@@ -104,7 +110,4 @@ def create_order():
 
     frappe.db.commit()
 
-    return {
-        "status": "success",
-        "sales_order": so.name
-    }
+    return {"status": "success", "sales_order": so.name}
