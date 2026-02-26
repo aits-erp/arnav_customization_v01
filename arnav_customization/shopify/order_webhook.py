@@ -40,8 +40,8 @@ def sync_existing_orders_full():
         # ===============================
         customer_data = data.get("customer") or {}
 
-        email = data.get("email") or "guest@shopify.com"
-        customer_name = customer_data.get("first_name") or "Shopify Customer"
+        # email = data.get("email") or "guest@shopify.com"
+        # customer_name = customer_data.get("first_name") or "Shopify Customer"
 
         customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -157,8 +157,8 @@ def create_order():
     # ===============================
     customer_data = data.get("customer") or {}
 
-    email = data.get("email") or "guest@shopify.com"
-    customer_name = customer_data.get("first_name") or "Shopify Customer"
+    # email = data.get("email") or "guest@shopify.com"
+    # customer_name = customer_data.get("first_name") or "Shopify Customer"
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
