@@ -12,7 +12,7 @@ from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 def sync_existing_orders_full():
 
     SHOP = "jewel-box-arnav.myshopify.com"
-    TOKEN = "PUT_NEW_TOKEN_HERE"
+    TOKEN = "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"
     API_VERSION = "2025-04"
 
     HEADERS = {
