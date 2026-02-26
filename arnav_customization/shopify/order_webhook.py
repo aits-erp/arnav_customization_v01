@@ -2,9 +2,10 @@ import frappe
 from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 import json
+import requests
 
 
-@frappe.whitelist()
+@frappe.whitelist(import requests)
 def sync_existing_orders_full():
 
     SHOP = "jewel-box-arnav.myshopify.com"
