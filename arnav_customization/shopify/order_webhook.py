@@ -5,7 +5,7 @@ import json
 import requests
 
 
-@frappe.whitelist(import requests)
+@frappe.whitelist(allow_guest=True)
 def sync_existing_orders_full():
 
     SHOP = "jewel-box-arnav.myshopify.com"
