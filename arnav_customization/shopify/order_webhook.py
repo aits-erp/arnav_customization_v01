@@ -134,6 +134,20 @@ def create_documents(so):
     dn = make_delivery_note(so.name)
     for d in dn.items:
         d.warehouse = WAREHOUSE
+		if d.get("sku"):
+
+        # Batch exist nahi to create
+        if not frappe.db.exists("Batch", d.sku):
+
+            batch = frappe.get_doc({
+                "doctype": "Batch",
+                "batch_id": d.sku,
+                "item": d.item_code
+            })
+            batch.insert(ignore_permissions=True)
+
+        d.batch_no = d.sku
+		
     dn.insert(ignore_permissions=True)
     dn.submit()
 
