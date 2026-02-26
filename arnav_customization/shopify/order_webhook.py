@@ -1,11 +1,14 @@
 import frappe
-from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
-from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 import json
 import requests
+from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
+from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 
 
-@frappe.whitelist(allow_guest=True)
+# =====================================================
+# OLD SHOPIFY ORDERS IMPORT (FULL SAFE VERSION)
+# =====================================================
+@frappe.whitelist()
 def sync_existing_orders_full():
 
     SHOP = "jewel-box-arnav.myshopify.com"
@@ -26,12 +29,19 @@ def sync_existing_orders_full():
 
         shopify_id = data.get("id")
 
-        # ⭐ Duplicate prevent
+        # ===============================
+        # DUPLICATE PREVENT
+        # ===============================
         if frappe.db.exists("Sales Order", {"po_no": shopify_id}):
             continue
 
+        # ===============================
+        # CUSTOMER SAFE READ
+        # ===============================
+        customer_data = data.get("customer") or {}
+
         email = data.get("email") or "guest@shopify.com"
-        customer_name = data.get("customer", {}).get("first_name", "Shopify Customer")
+        customer_name = customer_data.get("first_name") or "Shopify Customer"
 
         customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -61,7 +71,9 @@ def sync_existing_orders_full():
             sku = li.get("sku")
             qty = li.get("quantity", 1)
 
-            rate = li.get("price") or li.get("price_set", {}).get("shop_money", {}).get("amount", 0)
+            rate = li.get("price") or li.get(
+                "price_set", {}
+            ).get("shop_money", {}).get("amount", 0)
 
             item_code = frappe.db.get_value(
                 "SKU Details",
@@ -76,7 +88,7 @@ def sync_existing_orders_full():
                 "item_code": item_code,
                 "qty": qty,
                 "rate": rate,
-                "warehouse": "Arnav & Co - AAC",  # change if needed
+                "warehouse": "Arnav & Co - AAC",  # ⭐ IMPORTANT
                 "sku": sku
             })
 
@@ -87,21 +99,25 @@ def sync_existing_orders_full():
         so.submit()
 
         # ===============================
-        # DELIVERY NOTE (SAFE)
+        # DELIVERY NOTE (ERP SAFE)
         # ===============================
         dn = make_delivery_note(so.name)
+
+        for d in dn.items:
+            d.warehouse = "Arnav & Co - AAC"
+
         dn.insert(ignore_permissions=True)
         dn.submit()
 
         # ===============================
-        # SALES INVOICE (SAFE)
+        # SALES INVOICE (ERP SAFE)
         # ===============================
         si = make_sales_invoice(so.name)
         si.insert(ignore_permissions=True)
         si.submit()
 
         # ===============================
-        # PAYMENT ENTRY (LINKED)
+        # PAYMENT ENTRY SAFE
         # ===============================
         pe = frappe.get_doc({
             "doctype": "Payment Entry",
@@ -124,21 +140,25 @@ def sync_existing_orders_full():
 
     return "🔥 FULL Existing Shopify Orders Synced"
 
+
+# =====================================================
+# NEW SHOPIFY ORDER WEBHOOK (FULL SAFE VERSION)
+# =====================================================
 @frappe.whitelist(allow_guest=True)
 def create_order():
 
-    # ⭐ UNIVERSAL PAYLOAD READER (Fix for Unsupported Media Type)
     try:
-        raw = frappe.request.data
-        data = json.loads(raw)
+        data = json.loads(frappe.request.data)
     except:
         return {"status": "invalid payload"}
 
     # ===============================
-    # CUSTOMER
+    # CUSTOMER SAFE READ
     # ===============================
+    customer_data = data.get("customer") or {}
+
     email = data.get("email") or "guest@shopify.com"
-    customer_name = data.get("customer", {}).get("first_name", "Shopify Customer")
+    customer_name = customer_data.get("first_name") or "Shopify Customer"
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -167,8 +187,9 @@ def create_order():
         sku = li.get("sku")
         qty = li.get("quantity", 1)
 
-        # ⭐ UNIVERSAL PRICE SUPPORT (2024/2025/2026)
-        rate = li.get("price") or li.get("price_set", {}).get("shop_money", {}).get("amount", 0)
+        rate = li.get("price") or li.get(
+            "price_set", {}
+        ).get("shop_money", {}).get("amount", 0)
 
         item_code = frappe.db.get_value(
             "SKU Details",
@@ -183,6 +204,7 @@ def create_order():
             "item_code": item_code,
             "qty": qty,
             "rate": rate,
+            "warehouse": "Arnav & Co - AAC",
             "sku": sku
         })
 
@@ -192,40 +214,33 @@ def create_order():
     so.insert(ignore_permissions=True)
     so.submit()
 
-    # ===============================
-    # DELIVERY NOTE
-    # ===============================
-    dn = frappe.get_doc({
-        "doctype": "Delivery Note",
-        "customer": customer,
-        "items": so.items
-    })
+    # DELIVERY NOTE SAFE
+    dn = make_delivery_note(so.name)
+
+    for d in dn.items:
+        d.warehouse = "Arnav & Co - AAC"
 
     dn.insert(ignore_permissions=True)
     dn.submit()
 
-    # ===============================
-    # SALES INVOICE
-    # ===============================
-    si = frappe.get_doc({
-        "doctype": "Sales Invoice",
-        "customer": customer,
-        "items": so.items
-    })
-
+    # SALES INVOICE SAFE
+    si = make_sales_invoice(so.name)
     si.insert(ignore_permissions=True)
     si.submit()
 
-    # ===============================
-    # PAYMENT ENTRY
-    # ===============================
+    # PAYMENT ENTRY SAFE
     pe = frappe.get_doc({
         "doctype": "Payment Entry",
         "payment_type": "Receive",
         "party_type": "Customer",
         "party": customer,
         "paid_amount": si.grand_total,
-        "received_amount": si.grand_total
+        "received_amount": si.grand_total,
+        "references": [{
+            "reference_doctype": "Sales Invoice",
+            "reference_name": si.name,
+            "allocated_amount": si.grand_total
+        }]
     })
 
     pe.insert(ignore_permissions=True)
