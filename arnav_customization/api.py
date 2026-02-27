@@ -1,67 +1,114 @@
 import frappe
 
 @frappe.whitelist(allow_guest=True)
-def get_sku_master_with_details():
+def get_location_master_list():
 
-    masters = frappe.get_all(
-        "SKU Master",
-        fields=[
-            "name",        # ⭐ backend ke liye required
-            "warehouse",
-            "metal"
-        ]
+    locations = frappe.get_all(
+        "Warehouse",
+        fields=["name"]
     )
 
-    result = []
+    # Return only list of names
+    return [loc["name"] for loc in locations]
 
-    for m in masters:
 
-        # 🔹 Fetch Warehouse Address
-        address = frappe.db.sql("""
-            SELECT
-                a.address_line1,
-                a.city,
-                a.state,
-                a.pincode,
-                a.country
-            FROM `tabAddress` a
-            LEFT JOIN `tabDynamic Link` dl
-                ON dl.parent = a.name
-            WHERE dl.link_doctype = 'Warehouse'
-            AND dl.link_name = %s
-            LIMIT 1
-        """, (m["warehouse"],), as_dict=True)
 
-        # 🔹 Child Table fetch
-        details = frappe.db.sql("""
-            SELECT
-                sd.sku,
-                sd.product,
-                i.item_name,
-                sd.qty,
-                sd.selling_price,
-                sd.gross_weight,
-                sd.net_weight,
-                sd.image
-            FROM `tabSKU Details` sd
-            LEFT JOIN `tabItem` i
-                ON i.name = sd.product
-            WHERE sd.parent = %s
-        """, (m["name"],), as_dict=True)
+@frappe.whitelist(allow_guest=True)
+def get_sku_details_by_location(location):
 
-        # ⭐ Attach data
-        m["warehouse_address"] = address[0] if address else {}
-        m["sku_details"] = details
+    if not location:
+        return {
+            "sku_details": []
+        }
 
-        # ⭐ REMOVE name from response
-        m.pop("name", None)
-
-        result.append(m)
+    details = frappe.db.sql("""
+        SELECT
+            sd.sku,
+            sd.product,
+            i.item_name,
+            sd.qty,
+            sd.selling_price,
+            sd.gross_weight,
+            sd.net_weight,
+            sd.image
+        FROM `tabSKU Details` sd
+        LEFT JOIN `tabItem` i
+            ON i.name = sd.product
+        LEFT JOIN `tabSKU Master` sm
+            ON sm.name = sd.parent
+        WHERE sm.warehouse = %s
+    """, (location,), as_dict=True)
 
     return {
-        "status": "success",
-        "data": result
+        "sku_details": details
     }
+
+
+
+# import frappe
+
+# @frappe.whitelist(allow_guest=True)
+# def get_sku_master_with_details():
+
+#     masters = frappe.get_all(
+#         "SKU Master",
+#         fields=[
+#             "name",        # ⭐ backend ke liye required
+#             "warehouse",
+#             "metal"
+#         ]
+#     )
+
+#     result = []
+
+#     for m in masters:
+
+#         # 🔹 Fetch Warehouse Address
+#         address = frappe.db.sql("""
+#             SELECT
+#                 a.address_line1,
+#                 a.city,
+#                 a.state,
+#                 a.pincode,
+#                 a.country
+#             FROM `tabAddress` a
+#             LEFT JOIN `tabDynamic Link` dl
+#                 ON dl.parent = a.name
+#             WHERE dl.link_doctype = 'Warehouse'
+#             AND dl.link_name = %s
+#             LIMIT 1
+#         """, (m["warehouse"],), as_dict=True)
+
+#         # 🔹 Child Table fetch
+#         details = frappe.db.sql("""
+#             SELECT
+#                 sd.sku,
+#                 sd.product,
+#                 i.item_name,
+#                 sd.qty,
+#                 sd.selling_price,
+#                 sd.gross_weight,
+#                 sd.net_weight,
+#                 sd.image
+#             FROM `tabSKU Details` sd
+#             LEFT JOIN `tabItem` i
+#                 ON i.name = sd.product
+#             WHERE sd.parent = %s
+#         """, (m["name"],), as_dict=True)
+
+#         # ⭐ Attach data
+#         m["warehouse_address"] = address[0] if address else {}
+#         m["sku_details"] = details
+
+#         # ⭐ REMOVE name from response
+#         m.pop("name", None)
+
+#         result.append(m)
+
+#     return {
+#         "status": "success",
+#         "data": result
+#     }
 
 
 
