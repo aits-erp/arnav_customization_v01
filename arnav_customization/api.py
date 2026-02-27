@@ -13,7 +13,6 @@ def get_location_master_list():
 
 
 
-import frappe
 
 @frappe.whitelist(allow_guest=True)
 def get_sku_details():
