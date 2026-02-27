@@ -1,11 +1,10 @@
 import frappe
 import json
 import requests
-from frappe.utils import today, add_days, flt
-from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note, make_sales_invoice
+from frappe.utils import today, flt
 
 # =====================================================
-# CONFIG
+# SHOPIFY CONFIG
 # =====================================================
 SHOP = "jewel-box-arnav.myshopify.com"
 TOKEN = "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"
@@ -17,21 +16,22 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# =====================================================
-# CUSTOMER
-# =====================================================
-def get_or_create_customer(data):
 
-    customer_data = data.get("customer") or {}
-    email = data.get("email") or f"shopify_{data.get('id')}@aitsind.com"
-    name = customer_data.get("first_name") or "Shopify Customer"
+# =====================================================
+# GET OR CREATE CUSTOMER
+# =====================================================
+def get_or_create_customer(order_data):
+
+    customer_data = order_data.get("customer") or {}
+    email = order_data.get("email") or f"shopify_{order_data.get('id')}@aitsind.com"
+    customer_name = customer_data.get("first_name") or "Shopify Customer"
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
     if not customer:
         doc = frappe.get_doc({
             "doctype": "Customer",
-            "customer_name": name,
+            "customer_name": customer_name,
             "customer_type": "Individual",
             "email_id": email
         })
@@ -42,132 +42,121 @@ def get_or_create_customer(data):
 
 
 # =====================================================
-# RESOLVE ITEM (SKU → Product)
+# RESOLVE ITEM FROM SKU OR TITLE
 # =====================================================
-def resolve_item(li):
+def resolve_item(line_item):
 
-    sku = li.get("sku")
-    title = li.get("title")
+    sku = line_item.get("sku")
+    title = line_item.get("title")
 
+    # Try SKU Details first
     if sku:
-        item = frappe.db.get_value("SKU Details", {"sku": sku}, "product")
-        if item:
-            return item, sku
+        item_code = frappe.db.get_value("SKU Details", {"sku": sku}, "product")
+        if item_code:
+            return item_code, sku
 
+    # Fallback by item name
     if title:
-        item = frappe.db.get_value("Item", {"item_name": title}, "name")
-        if item:
-            return item, sku
+        item_code = frappe.db.get_value("Item", {"item_name": title}, "name")
+        if item_code:
+            return item_code, sku
 
     return None, None
 
 
 # =====================================================
-# BUILD SALES ORDER
+# BUILD SALES INVOICE (NO DELIVERY NOTE)
 # =====================================================
-def build_sales_order(data):
+def build_sales_invoice(order_data):
 
-    shopify_id = data.get("id")
+    shopify_order_id = order_data.get("id")
 
-    if frappe.db.exists("Sales Order", {"po_no": shopify_id}):
+    # Duplicate protection
+    if frappe.db.exists("Sales Invoice", {"po_no": shopify_order_id}):
         return None
 
-    customer = get_or_create_customer(data)
+    customer = get_or_create_customer(order_data)
 
-    so = frappe.get_doc({
-        "doctype": "Sales Order",
+    invoice = frappe.get_doc({
+        "doctype": "Sales Invoice",
         "customer": customer,
         "company": frappe.defaults.get_user_default("Company"),
-        "po_no": shopify_id,
-        "transaction_date": today(),
-        "delivery_date": add_days(today(), 1),
+        "po_no": shopify_order_id,
+        "posting_date": today(),
+        "set_warehouse": WAREHOUSE,
+        "update_stock": 1,   # Stock deduct directly
         "items": []
     })
 
-    for li in data.get("line_items", []):
+    for line in order_data.get("line_items", []):
 
-        qty = li.get("quantity", 1)
-        rate = li.get("price") or li.get("price_set", {}).get("shop_money", {}).get("amount", 0)
+        qty = line.get("quantity", 1)
+        rate = (
+            line.get("price")
+            or line.get("price_set", {}).get("shop_money", {}).get("amount", 0)
+        )
 
-        item_code, sku = resolve_item(li)
+        item_code, sku = resolve_item(line)
 
         if not item_code:
             continue
 
-        so.append("items", {
-            "item_code": item_code,
-            "qty": qty,
-            "rate": flt(rate),
-            "warehouse": WAREHOUSE,
-            "sku": sku
-        })
+        batch_no = None
 
-    if not so.items:
-        return None
-
-    so.insert(ignore_permissions=True)
-    so.submit()
-
-    return so
-
-
-# =====================================================
-# CREATE DN + INVOICE + PAYMENT
-# =====================================================
-def create_documents(so):
-
-    dn = make_delivery_note(so.name)
-
-    # Map SKU from SO
-    sku_map = {i.item_code: i.sku for i in so.items if i.get("sku")}
-
-    for d in dn.items:
-
-        d.warehouse = WAREHOUSE
-
-        sku = sku_map.get(d.item_code)
-
+        # Batch = SKU logic
         if sku:
 
-            # Create Batch if not exists
             if not frappe.db.exists("Batch", sku):
                 batch = frappe.get_doc({
                     "doctype": "Batch",
                     "batch_id": sku,
-                    "item": d.item_code
+                    "item": item_code
                 })
                 batch.insert(ignore_permissions=True)
 
-            d.batch_no = sku
+            batch_no = sku
 
-    dn.insert(ignore_permissions=True)
-    dn.submit()
+        invoice.append("items", {
+            "item_code": item_code,
+            "qty": qty,
+            "rate": flt(rate),
+            "warehouse": WAREHOUSE,
+            "batch_no": batch_no
+        })
 
-    # INVOICE
-    si = make_sales_invoice(so.name)
-    si.insert(ignore_permissions=True)
-    si.submit()
+    if not invoice.items:
+        return None
 
-    # PAYMENT
+    invoice.insert(ignore_permissions=True)
+    invoice.submit()
+
+    return invoice
+
+
+# =====================================================
+# CREATE PAYMENT ENTRY
+# =====================================================
+def create_payment(invoice):
+
     cash_account = frappe.db.get_single_value("Company", "default_cash_account")
 
-    pe = frappe.get_doc({
+    payment = frappe.get_doc({
         "doctype": "Payment Entry",
         "payment_type": "Receive",
         "party_type": "Customer",
-        "party": so.customer,
+        "party": invoice.customer,
         "paid_to": cash_account,
-        "paid_amount": si.grand_total,
-        "received_amount": si.grand_total,
+        "paid_amount": invoice.grand_total,
+        "received_amount": invoice.grand_total,
         "references": [{
             "reference_doctype": "Sales Invoice",
-            "reference_name": si.name,
-            "allocated_amount": si.grand_total
+            "reference_name": invoice.name,
+            "allocated_amount": invoice.grand_total
         }]
     })
 
-    pe.insert(ignore_permissions=True)
-    pe.submit()
+    payment.insert(ignore_permissions=True)
+    payment.submit()
 
 
 # =====================================================
@@ -176,46 +165,46 @@ def create_documents(so):
 @frappe.whitelist()
 def sync_existing_orders_full():
 
-    res = requests.get(
+    response = requests.get(
         f"https://{SHOP}/admin/api/{API_VERSION}/orders.json?status=any&limit=100",
         headers=HEADERS
     ).json()
 
     count = 0
 
-    for order in res.get("orders", []):
+    for order in response.get("orders", []):
 
-        so = build_sales_order(order)
+        invoice = build_sales_invoice(order)
 
-        if not so:
+        if not invoice:
             continue
 
-        create_documents(so)
+        create_payment(invoice)
         count += 1
 
     frappe.db.commit()
 
-    return f"🔥 Imported {count} Shopify Orders Successfully"
+    return f"🔥 Imported {count} Orders (Invoice + Payment)"
 
 
 # =====================================================
-# NEW ORDER WEBHOOK
+# SHOPIFY WEBHOOK (NEW ORDERS)
 # =====================================================
 @frappe.whitelist(allow_guest=True)
 def create_order():
 
     try:
-        data = json.loads(frappe.request.data)
+        order_data = json.loads(frappe.request.data)
     except:
         return {"status": "invalid payload"}
 
-    so = build_sales_order(data)
+    invoice = build_sales_invoice(order_data)
 
-    if not so:
+    if not invoice:
         return {"status": "skipped"}
 
-    create_documents(so)
+    create_payment(invoice)
 
     frappe.db.commit()
 
-    return {"status": "success", "sales_order": so.name}
+    return {"status": "success", "invoice": invoice.name}
