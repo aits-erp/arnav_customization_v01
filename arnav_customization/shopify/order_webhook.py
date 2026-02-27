@@ -8,7 +8,7 @@ from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note, 
 # CONFIG
 # =====================================================
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "PUT_YOUR_NEW_SHPAT_TOKEN"
+TOKEN = "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"
 API_VERSION = "2025-04"
 WAREHOUSE = "Arnav & Co - AAC"
 
