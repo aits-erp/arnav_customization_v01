@@ -2,7 +2,10 @@ import frappe
 import json
 import requests
 from frappe.utils import today, add_days, flt
-from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note, make_sales_invoice
+from erpnext.selling.doctype.sales_order.sales_order import (
+    make_delivery_note,
+    make_sales_invoice
+)
 
 # =====================================================
 # GLOBAL CONFIG
@@ -17,7 +20,6 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-
 # =====================================================
 # SAFE CUSTOMER CREATOR
 # =====================================================
@@ -26,7 +28,11 @@ def get_or_create_customer(data):
     customer_data = data.get("customer") or {}
 
     email = data.get("email") or f"shopify_{data.get('id')}@aitsind.com"
-    customer_name = customer_data.get("first_name") or "Shopify Customer"
+    customer_name = (
+        customer_data.get("first_name")
+        or customer_data.get("last_name")
+        or "Shopify Customer"
+    )
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -44,40 +50,46 @@ def get_or_create_customer(data):
 
 
 # =====================================================
-# 🔥 ULTRA JEWELLERY SKU MAPPER (MAIN MAGIC)
+# SKU RESOLVER (JEWELLERY SAFE)
 # =====================================================
 def resolve_item_code(li):
 
     sku = li.get("sku")
     title = li.get("title")
 
-    # 1️⃣ TRY EXACT SKU MATCH
+    # 1️⃣ Exact SKU match from SKU Details
     if sku:
-        item_code = frappe.db.get_value("SKU Details", {"sku": sku}, "product")
+        item_code = frappe.db.get_value(
+            "SKU Details",
+            {"sku": sku},
+            "product"
+        )
         if item_code:
             return item_code, sku
 
-    # 2️⃣ FALLBACK → ITEM NAME MATCH (JEWELLERY CASE)
+    # 2️⃣ Fallback → Item Name match
     if title:
-        item_code = frappe.db.get_value("Item", {"item_name": title}, "name")
+        item_code = frappe.db.get_value(
+            "Item",
+            {"item_name": title},
+            "name"
+        )
         if item_code:
             return item_code, sku
 
-    # 3️⃣ LAST FALLBACK → DEFAULT ITEM (NO SKIP)
-    default_item = frappe.db.get_value("Item", {}, "name")
-    frappe.log_error(f"ULTRA FALLBACK USED FOR {title}", "Shopify Ultra Mapper")
-
-    return default_item, sku
+    # 3️⃣ Skip if not found
+    frappe.log_error(f"Item not found for {title}", "SKU Mapping Failed")
+    return None, None
 
 
 # =====================================================
-# CREATE SALES ORDER CORE ENGINE
+# CREATE SALES ORDER
 # =====================================================
 def build_sales_order(data):
 
     shopify_id = data.get("id")
 
-    # DUPLICATE SAFE
+    # Duplicate protection
     if frappe.db.exists("Sales Order", {"po_no": shopify_id}):
         return None
 
@@ -96,7 +108,6 @@ def build_sales_order(data):
     for li in data.get("line_items", []):
 
         qty = li.get("quantity", 1)
-
         rate = (
             li.get("price")
             or li.get("price_set", {}).get("shop_money", {}).get("amount", 0)
@@ -116,7 +127,10 @@ def build_sales_order(data):
         })
 
     if not so.items:
-        frappe.log_error(f"No items matched for Order {shopify_id}", "Shopify Ultra Skip")
+        frappe.log_error(
+            f"No valid items for Order {shopify_id}",
+            "Order Skipped"
+        )
         return None
 
     so.insert(ignore_permissions=True)
@@ -126,41 +140,18 @@ def build_sales_order(data):
 
 
 # =====================================================
-# CREATE DN + INVOICE + PAYMENT
+# INVOICE ONLY (SAFE)
 # =====================================================
-def create_documents(so):
+def create_invoice_only(so):
 
-    # DELIVERY NOTE
-    dn = make_delivery_note(so.name)
-
-    for d in dn.items:
-        d.warehouse = WAREHOUSE
-
-        # 🔥 Batch = SKU Logic
-        if d.get("sku"):
-
-            # Batch exist nahi to create
-            if not frappe.db.exists("Batch", d.sku):
-
-                batch = frappe.get_doc({
-                    "doctype": "Batch",
-                    "batch_id": d.sku,
-                    "item": d.item_code
-                })
-                batch.insert(ignore_permissions=True)
-
-            d.batch_no = d.sku
-
-    dn.insert(ignore_permissions=True)
-    dn.submit()
-
-    # SALES INVOICE
     si = make_sales_invoice(so.name)
     si.insert(ignore_permissions=True)
     si.submit()
 
-    # PAYMENT ENTRY SAFE
-    cash_account = frappe.db.get_single_value("Company", "default_cash_account")
+    cash_account = frappe.db.get_single_value(
+        "Company",
+        "default_cash_account"
+    )
 
     pe = frappe.get_doc({
         "doctype": "Payment Entry",
@@ -182,7 +173,80 @@ def create_documents(so):
 
 
 # =====================================================
-# IMPORT OLD SHOPIFY ORDERS
+# DELIVERY NOTE + INVOICE (JEWELLERY SAFE)
+# =====================================================
+def create_documents(so):
+
+    try:
+        dn = make_delivery_note(so.name)
+
+        for d in dn.items:
+            d.warehouse = WAREHOUSE
+
+            item_doc = frappe.get_doc("Item", d.item_code)
+
+            # ==========================
+            # 🔥 BATCH LOGIC
+            # ==========================
+            if item_doc.has_batch_no:
+
+                sku = d.get("sku")
+
+                if sku:
+
+                    batch_name = frappe.db.get_value(
+                        "Batch",
+                        {
+                            "batch_id": sku,
+                            "item": d.item_code
+                        },
+                        "name"
+                    )
+
+                    if not batch_name:
+                        if frappe.db.exists("Batch", sku):
+                            batch_name = sku
+
+                    if not batch_name:
+                        batch = frappe.get_doc({
+                            "doctype": "Batch",
+                            "batch_id": sku,
+                            "item": d.item_code
+                        })
+                        batch.insert(ignore_permissions=True)
+                        batch_name = batch.name
+
+                    d.batch_no = batch_name
+
+                else:
+                    frappe.log_error(
+                        f"Batch required but SKU missing for {d.item_code}",
+                        "Batch Missing"
+                    )
+
+            # ==========================
+            # 🔥 SERIAL CHECK
+            # ==========================
+            if item_doc.has_serial_no:
+                frappe.log_error(
+                    f"Serial required for {d.item_code}. Skipping DN.",
+                    "Serial Required"
+                )
+                return create_invoice_only(so)
+
+        dn.insert(ignore_permissions=True)
+        dn.submit()
+
+    except Exception as e:
+        frappe.log_error(str(e), "Delivery Note Failed")
+        return create_invoice_only(so)
+
+    # If DN success → create invoice
+    create_invoice_only(so)
+
+
+# =====================================================
+# SYNC OLD ORDERS
 # =====================================================
 @frappe.whitelist()
 def sync_existing_orders_full():
@@ -195,7 +259,6 @@ def sync_existing_orders_full():
     count = 0
 
     for data in res.get("orders", []):
-
         so = build_sales_order(data)
 
         if not so:
@@ -206,11 +269,11 @@ def sync_existing_orders_full():
 
     frappe.db.commit()
 
-    return f"🔥 ULTRA IMPORT DONE → {count} Orders"
+    return f"✅ IMPORT DONE → {count} Orders"
 
 
 # =====================================================
-# NEW ORDER WEBHOOK
+# SHOPIFY WEBHOOK
 # =====================================================
 @frappe.whitelist(allow_guest=True)
 def create_order():
@@ -229,8 +292,10 @@ def create_order():
 
     frappe.db.commit()
 
-    return {"status": "success", "sales_order": so.name}
-
+    return {
+        "status": "success",
+        "sales_order": so.name
+    }
 
 
 # import frappe
