@@ -13,13 +13,10 @@ def get_location_master_list():
 
 
 
-@frappe.whitelist(allow_guest=True)
-def get_sku_details_by_location(location):
+import frappe
 
-    if not location:
-        return {
-            "sku_details": []
-        }
+@frappe.whitelist(allow_guest=True)
+def get_sku_details():
 
     details = frappe.db.sql("""
         SELECT
@@ -34,10 +31,7 @@ def get_sku_details_by_location(location):
         FROM `tabSKU Details` sd
         LEFT JOIN `tabItem` i
             ON i.name = sd.product
-        LEFT JOIN `tabSKU Master` sm
-            ON sm.name = sd.parent
-        WHERE sm.warehouse = %s
-    """, (location,), as_dict=True)
+    """, as_dict=True)
 
     return {
         "sku_details": details
