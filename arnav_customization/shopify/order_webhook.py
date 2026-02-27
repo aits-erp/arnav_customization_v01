@@ -84,7 +84,7 @@ def build_sales_invoice(order_data):
         "po_no": shopify_order_id,
         "posting_date": today(),
         "set_warehouse": WAREHOUSE,
-        "update_stock": 1,   # Stock deduct directly
+        "update_stock": 0,   # Stock deduct directly
         "items": []
     })
 
