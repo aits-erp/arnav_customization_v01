@@ -85,6 +85,11 @@ def build_sales_invoice(order_data):
         "posting_date": today(),
         "set_warehouse": WAREHOUSE,
         "update_stock": 0,   # Stock deduct directly
+		"currency": "INR",
+    	"conversion_rate": 1,
+    	"selling_price_list": "Standard Selling",
+    	"price_list_currency": "INR",
+    	"plc_conversion_rate": 1,
         "items": []
     })
 
