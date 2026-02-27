@@ -143,16 +143,35 @@ def build_sales_invoice(order_data):
 # =====================================================
 def create_payment(invoice):
 
-    cash_account = frappe.db.get_single_value("Company", "default_cash_account")
+    company = frappe.defaults.get_user_default("Company")
+    company_currency = frappe.db.get_value("Company", company, "default_currency")
+
+    cash_account = frappe.db.get_value(
+        "Account",
+        {"account_type": "Cash", "company": company},
+        "name"
+    )
 
     payment = frappe.get_doc({
         "doctype": "Payment Entry",
         "payment_type": "Receive",
+        "company": company,
+        "posting_date": today(),
+
+        # 🔥 Currency Fix
+        "currency": company_currency,
+        "target_exchange_rate": 1,
+        "paid_from_account_currency": company_currency,
+        "paid_to_account_currency": company_currency,
+
         "party_type": "Customer",
         "party": invoice.customer,
+
         "paid_to": cash_account,
+
         "paid_amount": invoice.grand_total,
         "received_amount": invoice.grand_total,
+
         "references": [{
             "reference_doctype": "Sales Invoice",
             "reference_name": invoice.name,
