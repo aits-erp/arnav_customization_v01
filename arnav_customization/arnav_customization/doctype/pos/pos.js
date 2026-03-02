@@ -6,6 +6,17 @@ frappe.ui.form.on('POS', {
         calculate_all(frm);
     },
 
+    // before_submit: function(frm) {
+
+    //     let balance = flt(frm.doc.balance_amount);
+
+    //     if (Math.abs(balance) > 0.01) {
+    //         frappe.throw({
+    //             title: __("Submission Not Allowed"),
+    //             message: __("Cannot submit POS because Balance Amount must be 0.00. Current Balance: ") + balance
+    //         });
+    //     }
+    // }
     before_submit: function(frm) {
 
         let balance = flt(frm.doc.balance_amount);
@@ -16,6 +27,49 @@ frappe.ui.form.on('POS', {
                 message: __("Cannot submit POS because Balance Amount must be 0.00. Current Balance: ") + balance
             });
         }
+
+        // ===============================
+        // CASH LIMIT VALIDATION
+        // ===============================
+
+        const CASH_LIMIT = 195000;
+        let total_cash = 0;
+
+        (frm.doc.payment_details || []).forEach(row => {
+
+            if (row.payment_type === "Cash") {
+
+                let row_amount = flt(row.amount);
+
+                // Individual row validation
+                if (row_amount > CASH_LIMIT) {
+                    frappe.throw({
+                        title: __("Cash Limit Exceeded"),
+                        message: __("Single Cash entry cannot exceed ₹") + CASH_LIMIT +
+                                __(". Current Row Amount: ₹") + row_amount
+                    });
+                }
+
+                total_cash += row_amount;
+            }
+        });
+
+        // Total cash validation (handles split rows)
+        if (total_cash > CASH_LIMIT) {
+            frappe.throw({
+                title: __("Cash Limit Exceeded"),
+                message: __("Total Cash payment cannot exceed ₹") + CASH_LIMIT +
+                        __(". Total Cash Entered: ₹") + total_cash
+            });
+        }
+    },
+
+    setup: function(frm) {
+        frm.set_query("client_name", function() {
+            return {
+                query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
+            };
+        });
     }
 });
 
