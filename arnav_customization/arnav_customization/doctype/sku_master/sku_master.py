@@ -1,5 +1,6 @@
 import frappe
 from frappe.model.document import Document
+from frappe.utils import getdate
 from frappe.utils import flt
 
 class SKUMaster(Document):
@@ -22,9 +23,6 @@ class SKUMaster(Document):
         if not self.warehouse:
             frappe.throw("Warehouse is mandatory before submitting.")
 
-        if not self.purchase_invoices:
-            frappe.throw("At least one Purchase Invoice must be selected.")
-
         if not self.sku_details:
             frappe.throw("SKU Details are mandatory for Stock In process.")
 
@@ -33,25 +31,12 @@ class SKUMaster(Document):
             frappe.throw("Default Company is not set in Global Defaults.")
 
         # ---------------------------------------------
-        # CALCULATE TOTAL OUT WEIGHT (FROM PI)
+        # CALCULATE TOTAL OUT WEIGHT (FROM NET QUANTITY)
         # ---------------------------------------------
-        total_out_weight = 0
-        pi_items_cache = []
-
-        for pi_row in self.purchase_invoices:
-            pi = frappe.get_doc("Purchase Invoice", pi_row.purchase_invoice)
-
-            for item in pi.items:
-                qty = flt(item.qty)
-                if qty > 0:
-                    total_out_weight += qty
-                    pi_items_cache.append({
-                        "item_code": item.item_code,
-                        "available_qty": qty
-                    })
+        total_out_weight = flt(self.net_quantiity)
 
         if total_out_weight <= 0:
-            frappe.throw("Total available gross weight from Purchase Invoice is zero.")
+            frappe.throw("Net Quantity must be greater than zero.")
 
         # ---------------------------------------------
         # CALCULATE TOTAL IN WEIGHT (FROM SKU DETAILS)
@@ -98,39 +83,80 @@ class SKUMaster(Document):
         # -----------------------------
         remaining_issue_qty = actual_out_qty
 
-        for item in pi_items_cache:
+        # Fetch the single selected Purchase Invoice
+        pi = frappe.get_doc("Purchase Invoice", self.invoice_no)
+
+        for item in pi.items:
 
             if remaining_issue_qty <= 0:
                 break
 
-            issue_qty = min(item["available_qty"], remaining_issue_qty)
+            available_qty = flt(item.qty)
+
+            if available_qty <= 0:
+                continue
+
+            issue_qty = min(available_qty, remaining_issue_qty)
 
             se.append("items", {
-                "item_code": item["item_code"],
+                "item_code": item.item_code,
                 "qty": issue_qty,
                 "s_warehouse": self.warehouse
             })
 
             remaining_issue_qty -= issue_qty
 
+        if remaining_issue_qty > 0:
+            frappe.throw("Not enough quantity in Purchase Invoice to complete repack.")
+
         # -----------------------------
         # STOCK IN (RECEIPT)
         # -----------------------------
         for row in self.sku_details:
 
-            # Create Batch
+            # 1️⃣ Generate Batch Name
+            batch_name = self.generate_custom_batch_name(self.date_of_invoice)
+
+            # 2️⃣ Create Batch
             batch = frappe.new_doc("Batch")
+            batch.batch_id = batch_name   # IMPORTANT
             batch.item = row.product
             batch.insert(ignore_permissions=True)
 
-            row.db_set("sku", batch.name)
+            # 3️⃣ Store SKU in child row
+            row.db_set("sku", batch_name)
 
+            # 4️⃣ Add to Stock Entry
             se.append("items", {
                 "item_code": row.product,
-                "qty": flt(row.gross_weight),   # 🔥 IMPORTANT CHANGE
+                "qty": flt(row.gross_weight),
                 "t_warehouse": self.warehouse,
-                "batch_no": batch.name
+                "batch_no": batch_name
             })
+
+        # for row in self.sku_details:
+
+        #     # Create Batch
+        #     # batch = frappe.new_doc("Batch")
+        #     # batch.item = row.product
+        #     # batch.insert(ignore_permissions=True)
+        #     batch = frappe.new_doc("Batch")
+        #     batch.item = row.product
+        #     # batch.name = generate_custom_batch_name(
+        #     #     row.product,
+        #     #     self.supplier_name,
+        #     #     self.date_of_invoice
+        #     # )
+        #     batch.insert(ignore_permissions=True)
+
+        #     row.db_set("sku", batch.name)
+
+        #     se.append("items", {
+        #         "item_code": row.product,
+        #         "qty": flt(row.gross_weight),   # 🔥 IMPORTANT CHANGE
+        #         "t_warehouse": self.warehouse,
+        #         "batch_no": batch.name
+        #     })
 
         if not se.items:
             frappe.throw("No valid items found for Stock Entry.")
@@ -175,6 +201,163 @@ class SKUMaster(Document):
 
             row.selling_price = flt(row.cost_price) * margin
             
+    def generate_custom_batch_name(self, posting_date):
+        from frappe.utils import getdate
+
+        if not self.metal:
+            frappe.throw("Metal must be selected before generating SKU.")
+
+        if not self.supplier_name:
+            frappe.throw("Supplier must be selected before generating SKU.")
+
+        if not posting_date:
+            frappe.throw("Date of Invoice is required for SKU generation.")
+
+        posting_date = getdate(posting_date)
+
+        # ----------------------------
+        # 1️⃣ METAL CODE (1 digit)
+        # ----------------------------
+        metal_code = frappe.db.get_value(
+            "Metal Master",
+            self.metal,
+            "metal_code"
+        )
+
+        if not metal_code:
+            frappe.throw(f"Metal Code not defined for Metal {self.metal}")
+
+        metal_code = str(metal_code)
+
+        # ----------------------------
+        # 2️⃣ SUPPLIER CODE (3 digit)
+        # ----------------------------
+        # Supplier ID is stored as document name
+        supplier_code = str(self.supplier_name)
+
+        # Force numeric and pad to 3 digits
+        if not supplier_code.isdigit():
+            frappe.throw(
+                f"Supplier ID must be numeric to generate SKU. Found: {supplier_code}"
+            )
+
+        supplier_code = supplier_code.zfill(3)
+
+        # ----------------------------
+        # 3️⃣ YEAR (YY) + MONTH (MM)
+        # ----------------------------
+        year = posting_date.strftime("%y")
+        month = posting_date.strftime("%m")
+
+        # ----------------------------
+        # 4️⃣ PREFIX BUILD
+        # ----------------------------
+        prefix = f"{metal_code}{year}{month}{supplier_code}"
+
+        # ----------------------------
+        # 5️⃣ GET LAST SEQUENCE SAFELY
+        # ----------------------------
+        last_batch = frappe.db.sql("""
+            SELECT name FROM `tabBatch`
+            WHERE name LIKE %s
+            ORDER BY name DESC
+            LIMIT 1
+        """, (f"{prefix}%",), as_dict=True)
+
+        if last_batch:
+            last_sequence = int(last_batch[0]["name"][-4:])
+            next_sequence = last_sequence + 1
+        else:
+            next_sequence = 1
+
+        if next_sequence > 9999:
+            frappe.throw(
+                f"Monthly SKU limit exceeded for prefix {prefix}. Max 9999 reached."
+            )
+
+        sequence_str = str(next_sequence).zfill(4)
+
+        return f"{prefix}{sequence_str}"
+        
+@frappe.whitelist()
+def get_breakup_rows(sku_master, breakup_ref):
+    return frappe.get_all(
+        "SKU Breakup",
+        filters={
+            "sku_master": sku_master,
+            "breakup_ref": breakup_ref
+        },
+        fields="*",
+        order_by="creation asc"
+    )
+
+@frappe.whitelist()
+def save_breakup_rows(sku_master, breakup_ref, rows):
+    import json
+
+    rows = json.loads(rows)
+
+    # delete old rows
+    frappe.db.delete("SKU Breakup", {
+        "sku_master": sku_master,
+        "breakup_ref": breakup_ref
+    })
+
+    meta = frappe.get_meta("SKU Breakup")
+
+    for r in rows:
+        doc = frappe.new_doc("SKU Breakup")
+        doc.sku_master = sku_master
+        doc.breakup_ref = breakup_ref
+
+        for df in meta.fields:
+            fname = df.fieldname
+            if fname in ["sku_master", "breakup_ref"]:
+                continue
+            if fname in r:
+                doc.set(fname, r.get(fname))
+
+        doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
+    return "success"
+
+
+
+    # def generate_custom_batch_name(item_code, supplier, posting_date):
+
+    #     posting_date = getdate(posting_date)
+
+    #     # 1️⃣ Metal Code
+    #     metal_code = frappe.db.get_value(
+    #         "Metal Master",
+    #         frappe.db.get_value("Item", item_code, "metal"),
+    #         "metal_code"
+    #     ) or "0"
+
+    #     # 2️⃣ Vendor Code
+    #     vendor_code = frappe.db.get_value(
+    #         "Supplier",
+    #         supplier,
+    #         "vendor_code"
+    #     ) or "00"
+
+    #     # 3️⃣ Year + Month
+    #     year = posting_date.strftime("%y")
+    #     month = posting_date.strftime("%m")
+
+    #     prefix = f"{metal_code}{year}{vendor_code}{month}"
+
+    #     # 4️⃣ Count existing batches for same prefix
+    #     existing_count = frappe.db.count(
+    #         "Batch",
+    #         {"name": ["like", f"{prefix}%"]}
+    #     )
+
+    #     sequence = str(existing_count + 1).zfill(4)
+
+    #     return f"{prefix}{sequence}"
+
 
 # @frappe.whitelist()
 # def get_breakup_meta():
@@ -260,47 +443,3 @@ class SKUMaster(Document):
 #             "in_list_view": 1
 #         }
 #     ]
-
-@frappe.whitelist()
-def get_breakup_rows(sku_master, breakup_ref):
-    return frappe.get_all(
-        "SKU Breakup",
-        filters={
-            "sku_master": sku_master,
-            "breakup_ref": breakup_ref
-        },
-        fields="*",
-        order_by="creation asc"
-    )
-
-
-@frappe.whitelist()
-def save_breakup_rows(sku_master, breakup_ref, rows):
-    import json
-
-    rows = json.loads(rows)
-
-    # delete old rows
-    frappe.db.delete("SKU Breakup", {
-        "sku_master": sku_master,
-        "breakup_ref": breakup_ref
-    })
-
-    meta = frappe.get_meta("SKU Breakup")
-
-    for r in rows:
-        doc = frappe.new_doc("SKU Breakup")
-        doc.sku_master = sku_master
-        doc.breakup_ref = breakup_ref
-
-        for df in meta.fields:
-            fname = df.fieldname
-            if fname in ["sku_master", "breakup_ref"]:
-                continue
-            if fname in r:
-                doc.set(fname, r.get(fname))
-
-        doc.insert(ignore_permissions=True)
-
-    frappe.db.commit()
-    return "success"

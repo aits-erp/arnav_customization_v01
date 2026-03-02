@@ -38,114 +38,6 @@ function calculate_weight_totals(frm) {
     ]);
 }
 
-// function load_invoices(frm, invoice_names, replace) {
-
-//     if (!invoice_names || !invoice_names.length) return;
-
-//     // Always take ONLY the first invoice (client requirement)
-//     const first_invoice = invoice_names[0];
-
-//     frappe.call({
-//         method: "frappe.client.get",
-//         args: {
-//             doctype: "Purchase Invoice",
-//             name: first_invoice
-//         },
-//         callback(r) {
-//             if (!r.message) return;
-
-//             const inv = r.message;
-
-//             // -----------------------------
-//             // 1️⃣ Add Purchase Invoice row
-//             // -----------------------------
-//             const inv_row = frm.add_child("purchase_invoices");
-//             inv_row.purchase_invoice = inv.name;
-//             inv_row.supplier = inv.supplier;
-//             inv_row.posting_date = inv.posting_date;
-
-//             frm.refresh_field("purchase_invoices");
-
-//             // -----------------------------
-//             // 2️⃣ Fetch Header Fields (Safe Version)
-//             // -----------------------------
-
-//             frm.set_value("supplier_name", inv.supplier || "");
-//             frm.set_value("invoice_no", inv.name || "");
-//             frm.set_value("date_of_invoice", inv.posting_date || "");
-//             frm.set_value("warehouse", inv.set_warehouse || inv.items?.[0]?.warehouse || "");
-
-//             // -----------------------------
-//             // ✅ Metal (Safe Handling)
-//             // -----------------------------
-//             if ("custom_metal" in inv) {
-//                 frm.set_value("metal", inv.custom_metal || "");
-//             } else {
-//                 console.warn("custom_metal field not found in Purchase Invoice");
-//                 frm.set_value("metal", "");
-//             }
-
-//             // -----------------------------
-//             // ✅ HSN From Item Master (Safe Handling)
-//             // -----------------------------
-
-//             frm.set_value("hsn", "");  // clear first
-
-//             if (inv.items && inv.items.length > 0) {
-
-//                 let first_item = inv.items[0].item_code;
-
-//                 if (!first_item) {
-//                     console.warn("First item has no item_code");
-//                     return;
-//                 }
-
-//                 frappe.db.get_value("Item", first_item, "gst_hsn_code")
-//                     .then(res => {
-
-//                         if (res && res.message && res.message.gst_hsn_code) {
-//                             frm.set_value("hsn", res.message.gst_hsn_code);
-//                         } else {
-//                             console.warn("gst_hsn_code not found on Item:", first_item);
-//                             frm.set_value("hsn", "");
-//                         }
-
-//                     })
-//                     .catch(err => {
-//                         console.error("Error fetching gst_hsn_code:", err);
-//                         frm.set_value("hsn", "");
-//                     });
-
-//             } else {
-//                 console.warn("No items found in Purchase Invoice:", inv.name);
-//             }
-
-//             // -----------------------------
-//             // 3️⃣ Calculate Net Quantity
-//             // -----------------------------
-//             let total_qty = 0;
-
-//             (inv.items || []).forEach(item => {
-//                 total_qty += flt(item.qty);
-//             });
-
-//             frm.set_value("net_quantiity", total_qty);
-
-//             // -----------------------------
-//             // 4️⃣ Refresh Header Fields
-//             // -----------------------------
-//             frm.refresh_fields([
-//                 "supplier_name",
-//                 "invoice_no",
-//                 "date_of_invoice",
-//                 "warehouse",
-//                 "metal",
-//                 "hsn",
-//                 "net_quantiity"
-//             ]);
-//         }
-//     });
-// }
 function load_invoices(frm, invoice_names, replace) {
 
     if (!invoice_names || !invoice_names.length) return;
@@ -244,7 +136,6 @@ function load_invoices(frm, invoice_names, replace) {
     });
 }
 
-
 function finalize_form(frm, suppliers, total_qty) {
     frm.set_value("net_quantiity", total_qty);
 
@@ -323,9 +214,25 @@ frappe.ui.form.on("SKU Details", {
                 }
 
                 row.selling_price = flt(row.cost_price) * margin;
+
+                // 🔥 ADD THIS LINE
+                calculate_final_amount(row);
+                
                 frm.refresh_field("sku_details");
             });
-    } 
+    },
+    
+    selling_price(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        calculate_final_amount(row);
+        frm.refresh_field("sku_details");
+    },
+
+    roundoff(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        calculate_final_amount(row);
+        frm.refresh_field("sku_details");
+    }
     
 });
 
@@ -440,6 +347,123 @@ AESTHETIC`,
     });
 }
 
+function calculate_final_amount(row) {
+    let selling = flt(row.selling_price);
+    let roundoff = flt(row.roundoff);
+
+    // This automatically handles negative roundoff
+    row.final_amount = selling + roundoff;
+}
+
+
+// function load_invoices(frm, invoice_names, replace) {
+
+//     if (!invoice_names || !invoice_names.length) return;
+
+//     // Always take ONLY the first invoice (client requirement)
+//     const first_invoice = invoice_names[0];
+
+//     frappe.call({
+//         method: "frappe.client.get",
+//         args: {
+//             doctype: "Purchase Invoice",
+//             name: first_invoice
+//         },
+//         callback(r) {
+//             if (!r.message) return;
+
+//             const inv = r.message;
+
+//             // -----------------------------
+//             // 1️⃣ Add Purchase Invoice row
+//             // -----------------------------
+//             const inv_row = frm.add_child("purchase_invoices");
+//             inv_row.purchase_invoice = inv.name;
+//             inv_row.supplier = inv.supplier;
+//             inv_row.posting_date = inv.posting_date;
+
+//             frm.refresh_field("purchase_invoices");
+
+//             // -----------------------------
+//             // 2️⃣ Fetch Header Fields (Safe Version)
+//             // -----------------------------
+
+//             frm.set_value("supplier_name", inv.supplier || "");
+//             frm.set_value("invoice_no", inv.name || "");
+//             frm.set_value("date_of_invoice", inv.posting_date || "");
+//             frm.set_value("warehouse", inv.set_warehouse || inv.items?.[0]?.warehouse || "");
+
+//             // -----------------------------
+//             // ✅ Metal (Safe Handling)
+//             // -----------------------------
+//             if ("custom_metal" in inv) {
+//                 frm.set_value("metal", inv.custom_metal || "");
+//             } else {
+//                 console.warn("custom_metal field not found in Purchase Invoice");
+//                 frm.set_value("metal", "");
+//             }
+
+//             // -----------------------------
+//             // ✅ HSN From Item Master (Safe Handling)
+//             // -----------------------------
+
+//             frm.set_value("hsn", "");  // clear first
+
+//             if (inv.items && inv.items.length > 0) {
+
+//                 let first_item = inv.items[0].item_code;
+
+//                 if (!first_item) {
+//                     console.warn("First item has no item_code");
+//                     return;
+//                 }
+
+//                 frappe.db.get_value("Item", first_item, "gst_hsn_code")
+//                     .then(res => {
+
+//                         if (res && res.message && res.message.gst_hsn_code) {
+//                             frm.set_value("hsn", res.message.gst_hsn_code);
+//                         } else {
+//                             console.warn("gst_hsn_code not found on Item:", first_item);
+//                             frm.set_value("hsn", "");
+//                         }
+
+//                     })
+//                     .catch(err => {
+//                         console.error("Error fetching gst_hsn_code:", err);
+//                         frm.set_value("hsn", "");
+//                     });
+
+//             } else {
+//                 console.warn("No items found in Purchase Invoice:", inv.name);
+//             }
+
+//             // -----------------------------
+//             // 3️⃣ Calculate Net Quantity
+//             // -----------------------------
+//             let total_qty = 0;
+
+//             (inv.items || []).forEach(item => {
+//                 total_qty += flt(item.qty);
+//             });
+
+//             frm.set_value("net_quantiity", total_qty);
+
+//             // -----------------------------
+//             // 4️⃣ Refresh Header Fields
+//             // -----------------------------
+//             frm.refresh_fields([
+//                 "supplier_name",
+//                 "invoice_no",
+//                 "date_of_invoice",
+//                 "warehouse",
+//                 "metal",
+//                 "hsn",
+//                 "net_quantiity"
+//             ]);
+//         }
+//     });
+// }
 
 // frappe.ui.form.on("SKU Master", {
 //         refresh(frm) {

@@ -1,22 +1,29 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:POS.####",
  "creation": "2026-02-15 19:09:52.187239",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "add_orders_section",
   "group",
-  "billtype",
-  "column_break_vyrd",
   "salestype",
-  "new_client",
+  "billtype",
+  "branch",
+  "column_break_vyrd",
   "client_name",
+  "mobile_number",
+  "email",
+  "pincode",
+  "address",
   "section_break_ymor",
   "sku_details",
+  "packing_materials",
   "total_discount_in_rs",
   "handling_and_packaging_charges",
   "total_amount_wo_tax",
+  "total_amount_with_gst",
   "amended_from",
   "add_payments_section",
   "payment_details",
@@ -33,7 +40,7 @@
    "fieldname": "group",
    "fieldtype": "Link",
    "label": "Group",
-   "options": "Employee"
+   "options": "Sales Person"
   },
   {
    "fieldname": "billtype",
@@ -52,16 +59,12 @@
    "options": "\nStore\nOnline\nWhatsapp\nExibition\nStore & Online"
   },
   {
-   "default": "0",
-   "fieldname": "new_client",
-   "fieldtype": "Check",
-   "label": "New Client?"
-  },
-  {
    "fieldname": "client_name",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Client Name",
-   "options": "Customer"
+   "options": "Customer",
+   "reqd": 1
   },
   {
    "fieldname": "section_break_ymor",
@@ -70,7 +73,7 @@
   {
    "fieldname": "sku_details",
    "fieldtype": "Table",
-   "label": "SKU Details",
+   "label": "Product Details",
    "options": "POS SKU Details"
   },
   {
@@ -122,16 +125,61 @@
    "fieldtype": "Float",
    "label": "Balance Amount",
    "read_only": 1
+  },
+  {
+   "fieldname": "branch",
+   "fieldtype": "Link",
+   "label": "Branch",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "mobile_number",
+   "fieldtype": "Phone",
+   "in_list_view": 1,
+   "label": "Mobile Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pincode",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Pincode",
+   "reqd": 1
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_amount_with_gst",
+   "fieldtype": "Float",
+   "label": "Total Amount with GST"
+  },
+  {
+   "fieldname": "packing_materials",
+   "fieldtype": "Table",
+   "label": "Packing Materials",
+   "options": "Packing Materials"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-23 11:56:45.636601",
+ "modified": "2026-03-02 11:38:00.684007",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

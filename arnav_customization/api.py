@@ -12,8 +12,6 @@ def get_location_master_list():
     return [loc["name"] for loc in locations]
 
 
-
-
 @frappe.whitelist(allow_guest=True)
 def get_sku_details():
 

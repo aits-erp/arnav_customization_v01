@@ -19,7 +19,8 @@
   "dealer_code",
   "d_no",
   "huid",
-  "roundoff"
+  "roundoff",
+  "final_amount"
  ],
  "fields": [
   {
@@ -95,13 +96,19 @@
    "fieldname": "roundoff",
    "fieldtype": "Data",
    "label": "RoundOff"
+  },
+  {
+   "fieldname": "final_amount",
+   "fieldtype": "Float",
+   "label": "Final Amount",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-25 12:50:54.937689",
+ "modified": "2026-03-02 16:16:04.452542",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Details",

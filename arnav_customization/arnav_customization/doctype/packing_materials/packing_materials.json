@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-02 11:33:50.728723",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "packing_material",
+  "qty",
+  "rate_optional"
+ ],
+ "fields": [
+  {
+   "fieldname": "packing_material",
+   "fieldtype": "Link",
+   "label": "Packing material",
+   "options": "Item"
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Int",
+   "label": "Qty"
+  },
+  {
+   "fieldname": "rate_optional",
+   "fieldtype": "Float",
+   "label": "Rate (optional)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-02 11:37:40.707521",
+ "modified_by": "Administrator",
+ "module": "arnav_customization",
+ "name": "Packing Materials",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

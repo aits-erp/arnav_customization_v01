@@ -12,7 +12,10 @@
   "price",
   "qty",
   "discount",
-  "final_amount"
+  "final_amount",
+  "gst_amount",
+  "net_weight",
+  "gross_weight"
  ],
  "fields": [
   {
@@ -37,7 +40,7 @@
    "placeholder": "Choose HSN"
   },
   {
-   "fetch_from": "sku.cost_price",
+   "fetch_from": "sku.selling_price",
    "fieldname": "price",
    "fieldtype": "Float",
    "label": "Price",
@@ -60,13 +63,28 @@
    "fieldtype": "Float",
    "label": "Total Amount",
    "placeholder": "SP"
+  },
+  {
+   "fieldname": "net_weight",
+   "fieldtype": "Float",
+   "label": "Net Weight"
+  },
+  {
+   "fieldname": "gross_weight",
+   "fieldtype": "Float",
+   "label": "Gross Weight"
+  },
+  {
+   "fieldname": "gst_amount",
+   "fieldtype": "Float",
+   "label": "GST Amount"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-23 11:45:00.332751",
+ "modified": "2026-03-02 11:28:22.939736",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS SKU Details",
