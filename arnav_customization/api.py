@@ -34,7 +34,7 @@ def get_sku_details(warehouse=None):
             ON i.name = sd.product
         LEFT JOIN `tabBin` b
             ON b.item_code = sd.product
-            AND b.warehouse = %s
+        WHERE b.warehouse = %s
     """, (warehouse,), as_dict=True)
 
     return {
