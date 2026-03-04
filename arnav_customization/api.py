@@ -12,15 +12,19 @@ def get_location_master_list():
     return [loc["name"] for loc in locations]
 
 
-@frappe.whitelist(allow_guest=True)
-def get_sku_details():
 
-    details = frappe.db.sql("""
+@frappe.whitelist(allow_guest=True)
+def get_sku_details(warehouse=None):
+
+    if not warehouse:
+        frappe.throw("Warehouse is required")
+
+    sku_details = frappe.db.sql("""
         SELECT
             sd.sku,
             sd.product,
             i.item_name,
-            sd.qty,
+            IFNULL(b.actual_qty,0) as qty,
             sd.selling_price,
             sd.gross_weight,
             sd.net_weight,
@@ -28,11 +32,36 @@ def get_sku_details():
         FROM `tabSKU Details` sd
         LEFT JOIN `tabItem` i
             ON i.name = sd.product
-    """, as_dict=True)
+        LEFT JOIN `tabBin` b
+            ON b.item_code = sd.product
+            AND b.warehouse = %s
+    """, (warehouse,), as_dict=True)
 
     return {
-        "sku_details": details
+        "sku_details": sku_details
     }
+
+# @frappe.whitelist(allow_guest=True)
+# def get_sku_details():
+
+#     details = frappe.db.sql("""
+#         SELECT
+#             sd.sku,
+#             sd.product,
+#             i.item_name,
+#             sd.qty,
+#             sd.selling_price,
+#             sd.gross_weight,
+#             sd.net_weight,
+#             sd.image
+#         FROM `tabSKU Details` sd
+#         LEFT JOIN `tabItem` i
+#             ON i.name = sd.product
+#     """, as_dict=True)
+
+#     return {
+#         "sku_details": details
+#     }
 
 
 
