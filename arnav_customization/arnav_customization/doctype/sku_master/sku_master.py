@@ -126,45 +126,49 @@ class SKUMaster(Document):
             # 3️⃣ Store SKU in child row
             row.db_set("sku", batch_name)
 
+            # 4️⃣ Create SKU Record
+            sku_doc = frappe.new_doc("SKU")
+
+            sku_doc.sku_code = batch_name
+            sku_doc.product = row.product
+            sku_doc.batch_no = batch_name
+            sku_doc.warehouse = self.warehouse
+
+            sku_doc.gross_weight = row.gross_weight
+            sku_doc.net_weight = row.net_weight
+            sku_doc.qty = row.qty
+
+            sku_doc.cost_price = row.cost_price
+            sku_doc.selling_price = row.selling_price
+
+            sku_doc.image_url = row.image
+
+            sku_doc.sku_master = self.name
+            sku_doc.metal = self.metal
+            sku_doc.supplier = self.supplier_name
+            sku_doc.hsn = self.hsn
+
+            sku_doc.status = "Available"
+            sku_doc.valuation_rate = row.cost_price
+            sku_doc.created_from_pi = self.invoice_no
+
+            sku_doc.insert(ignore_permissions=True)
+
             if not row.cost_price:
                 frappe.throw(f"Cost Price is required for row {row.idx}")
 
-            # 4️⃣ Add to Stock Entry
+            #5️⃣ Add to Stock Entry
             se.append("items", {
                 "item_code": row.product,
                 "qty": flt(row.gross_weight),
                 "t_warehouse": self.warehouse,
                 "batch_no": batch_name,
-
                 "is_finished_item": 1,
                 "set_basic_rate_manually": 1,
                 "basic_rate": flt(row.cost_price)
             })
 
-        # for row in self.sku_details:
-
-        #     # Create Batch
-        #     # batch = frappe.new_doc("Batch")
-        #     # batch.item = row.product
-        #     # batch.insert(ignore_permissions=True)
-        #     batch = frappe.new_doc("Batch")
-        #     batch.item = row.product
-        #     # batch.name = generate_custom_batch_name(
-        #     #     row.product,
-        #     #     self.supplier_name,
-        #     #     self.date_of_invoice
-        #     # )
-        #     batch.insert(ignore_permissions=True)
-
-        #     row.db_set("sku", batch.name)
-
-        #     se.append("items", {
-        #         "item_code": row.product,
-        #         "qty": flt(row.gross_weight),   # 🔥 IMPORTANT CHANGE
-        #         "t_warehouse": self.warehouse,
-        #         "batch_no": batch.name
-        #     })
-
+        
         if not se.items:
             frappe.throw("No valid items found for Stock Entry.")
 
