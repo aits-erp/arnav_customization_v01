@@ -8,13 +8,21 @@
   "sku_code",
   "product",
   "batch_no",
+  "warehouse",
   "gross_weight",
   "net_weight",
   "qty",
   "cost_price",
   "selling_price",
-  "image",
-  "sku_master"
+  "image_url",
+  "sku_master",
+  "metal",
+  "supplier",
+  "hsn",
+  "status",
+  "barcode",
+  "valuation_rate",
+  "created_from_pi"
  ],
  "fields": [
   {
@@ -50,11 +58,6 @@
    "label": "Selling Price"
   },
   {
-   "fieldname": "image",
-   "fieldtype": "Attach Image",
-   "label": "Image"
-  },
-  {
    "fieldname": "sku_master",
    "fieldtype": "Link",
    "label": "Sku Master",
@@ -70,12 +73,62 @@
    "fieldname": "qty",
    "fieldtype": "Float",
    "label": "Qty"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Branch",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "metal",
+   "fieldtype": "Link",
+   "label": "Metal",
+   "options": "Metal Master"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "image_url",
+   "fieldtype": "Attach Image",
+   "label": "Image"
+  },
+  {
+   "fieldname": "hsn",
+   "fieldtype": "Data",
+   "label": "HSN"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nAvailable\nSold"
+  },
+  {
+   "fieldname": "barcode",
+   "fieldtype": "Data",
+   "label": "Barcode"
+  },
+  {
+   "fieldname": "valuation_rate",
+   "fieldtype": "Float",
+   "label": "Valuation Rate"
+  },
+  {
+   "fieldname": "created_from_pi",
+   "fieldtype": "Link",
+   "label": "Created From",
+   "options": "Purchase Invoice"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-16 15:42:30.705361",
+ "modified": "2026-03-04 11:57:32.555129",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",

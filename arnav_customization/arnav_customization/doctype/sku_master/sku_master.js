@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 frappe.ui.form.on("SKU Master", {
 
     invoice_no: function(frm) {

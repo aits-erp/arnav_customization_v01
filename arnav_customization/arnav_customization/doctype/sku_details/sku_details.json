@@ -14,13 +14,18 @@
   "image",
   "qty",
   "net_weight",
+<<<<<<< Updated upstream
+  "breakup"
+=======
   "breakup_ref",
   "breakup",
   "dealer_code",
   "d_no",
   "huid",
   "roundoff",
-  "final_amount"
+  "final_amount",
+  "old_sku_ref"
+>>>>>>> Stashed changes
  ],
  "fields": [
   {
@@ -69,6 +74,8 @@
    "fieldname": "breakup",
    "fieldtype": "Button",
    "label": "Breakup"
+<<<<<<< Updated upstream
+=======
   },
   {
    "fieldname": "breakup_ref",
@@ -102,13 +109,23 @@
    "fieldtype": "Float",
    "label": "Final Amount",
    "read_only": 1
+  },
+  {
+   "fieldname": "old_sku_ref",
+   "fieldtype": "Data",
+   "label": "Old SKU Ref"
+>>>>>>> Stashed changes
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-02 16:16:04.452542",
+<<<<<<< Updated upstream
+ "modified": "2026-02-16 13:49:00.784169",
+=======
+ "modified": "2026-03-04 23:53:08.452070",
+>>>>>>> Stashed changes
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Details",
