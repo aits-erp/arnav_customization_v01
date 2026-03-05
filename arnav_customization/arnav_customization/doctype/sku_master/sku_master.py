@@ -119,19 +119,26 @@ class SKUMaster(Document):
 
             # 2️⃣ Create Batch
             batch = frappe.new_doc("Batch")
-            batch.batch_id = batch_name   # IMPORTANT
+            batch.batch_id = batch_name
             batch.item = row.product
             batch.insert(ignore_permissions=True)
 
             # 3️⃣ Store SKU in child row
             row.db_set("sku", batch_name)
 
+            if not row.cost_price:
+                frappe.throw(f"Cost Price is required for row {row.idx}")
+
             # 4️⃣ Add to Stock Entry
             se.append("items", {
                 "item_code": row.product,
                 "qty": flt(row.gross_weight),
                 "t_warehouse": self.warehouse,
-                "batch_no": batch_name
+                "batch_no": batch_name,
+
+                "is_finished_item": 1,
+                "set_basic_rate_manually": 1,
+                "basic_rate": flt(row.cost_price)
             })
 
         # for row in self.sku_details:
