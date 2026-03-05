@@ -1,14 +1,3 @@
-<<<<<<< Updated upstream
-# Copyright (c) 2026, aits and contributors
-# For license information, please see license.txt
-
-# import frappe
-from frappe.model.document import Document
-from frappe.utils import cint
-
-class POS(Document):
-	pass
-=======
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint
@@ -79,12 +68,39 @@ class POS(Document):
 
 			if not row.qty or row.qty <= 0:
 				continue
+			
+			item_code = row.packing_material
+			qty = row.qty
+			batch_no = None
+
+			has_batch = frappe.db.get_value("Item", item_code, "has_batch_no")
+
+			if has_batch:
+
+				batch = frappe.db.sql("""
+					SELECT name
+					FROM `tabBatch`
+					WHERE item = %s
+					LIMIT 1
+				""", (item_code), as_dict=True)
+
+				if not batch:
+					frappe.throw(f"No batch found for Item {item_code}")
+
+				batch_no = batch[0].name
 
 			stock_entry.append("items", {
-				"item_code": row.packing_material,
-				"qty": row.qty,
-				"s_warehouse": self.branch
+				"item_code": item_code,
+				"qty": qty,
+				"s_warehouse": self.branch,
+				"batch_no": batch_no
 			})
+			
+			# stock_entry.append("items", {
+			# 	"item_code": row.packing_material,
+			# 	"qty": row.qty,
+			# 	"s_warehouse": self.branch
+			# })
 
 		if not stock_entry.items:
 			return
@@ -215,4 +231,4 @@ def get_sku_details(sku):
 # 	def before_submit(self):
 # 		if abs(self.balance_amount) > 0.01:
 # 			frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
->>>>>>> Stashed changes
+

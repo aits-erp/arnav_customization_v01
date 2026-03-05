@@ -7,16 +7,17 @@ app_license = "mit"
 
 doctype_js = {
     "Credit Note": "public/js/credit_note.js",
-    "Sales Invoice": "public/js/sales_invoice.js"
+    "Sales Invoice": "public/js/sales_invoice.js",
+    "Stock Entry": "public/js/stock_entry.js"
 }
 
 fixtures = [
     {
         "dt": "Custom Field",
         "filters": [
-            ["dt", "in", [
-                "Sales Invoice Item"
-            ]],
+            # ["dt", "in", [
+            #     "Sales Invoice Item"
+            # ]],
             ["module", "=", "arnav_customization"]
         ]
     }

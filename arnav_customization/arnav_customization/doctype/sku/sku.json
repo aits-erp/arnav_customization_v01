@@ -114,6 +114,7 @@
    "label": "Barcode"
   },
   {
+   "fetch_from": "product.valuation_rate",
    "fieldname": "valuation_rate",
    "fieldtype": "Float",
    "label": "Valuation Rate"
@@ -128,7 +129,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-04 11:57:32.555129",
+ "modified": "2026-03-05 14:31:07.036773",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",

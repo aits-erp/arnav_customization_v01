@@ -93,6 +93,9 @@ frappe.ui.form.on('POS SKU Details', {
         let row = locals[cdt][cdn];
         if (!row.sku) return;
 
+        // IMPORTANT: SKU == Batch
+        frappe.model.set_value(cdt, cdn, "batch_no", row.sku);
+
         // STEP 1 — Get product + weights from SKU
         frappe.db.get_value("SKU", row.sku,
             ["product", "gross_weight", "net_weight"]
