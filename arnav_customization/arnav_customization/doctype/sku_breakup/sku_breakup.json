@@ -43,16 +43,17 @@
   },
   {
    "fieldname": "unit",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "UNIT"
+   "label": "UNIT",
+   "options": "\nGram\nKarat"
   },
   {
    "fieldname": "attribute_type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Attribute Type",
-   "options": "COLLECTION\nPRIMARY_STONE_TYPE\nSTONE_CUT\nSTONE_COLOUR\nSTONE_CLARITY\nMETAL_FINISH\nDESIGN_STYLE\nCULTURAL_STYLE\nPRIMARY_OCCASION\nAESTHETIC"
+   "options": "\nPRODUCT_TYPE\nPURITY\nSTONE\nCOLLECTION\nDESIGN\nVISUAL\nUSAGE\nTARGET"
   },
   {
    "fieldname": "attribute_value",
@@ -65,7 +66,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 10:27:03.310456",
+ "modified": "2026-03-06 12:31:49.358753",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Breakup",

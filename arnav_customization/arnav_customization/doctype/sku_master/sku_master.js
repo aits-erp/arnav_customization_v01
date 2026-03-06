@@ -244,16 +244,14 @@ function open_dynamic_breakup_dialog(frm, row) {
             label: "Attribute Type",
             fieldtype: "Select",
             options: `
-COLLECTION
-PRIMARY_STONE_TYPE
-STONE_CUT
-STONE_COLOUR
-STONE_CLARITY
-METAL_FINISH
-DESIGN_STYLE
-CULTURAL_STYLE
-PRIMARY_OCCASION
-AESTHETIC`,
+            PRODUCT_TYPE
+            PURITY
+            STONE
+            COLLECTION
+            DESIGN
+            VISUAL
+            USAGE
+            TARGET`,
             in_list_view: 1
         },
         {
@@ -278,7 +276,8 @@ AESTHETIC`,
         {
             fieldname: "unit",
             label: "Unit",
-            fieldtype: "Data",
+            fieldtype: "Select",
+            options: "\nGram\nKarat",
             in_list_view: 1
         }
     ];

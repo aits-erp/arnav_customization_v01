@@ -51,6 +51,8 @@ frappe.ui.form.on("Sales Invoice Item", {
                 frappe.model.set_value(cdt, cdn, "custom_quantity", d.qty);
 
                 frappe.model.set_value(cdt, cdn, "rate", d.rate);
+                
+                frappe.model.set_value(cdt, cdn, "gst_hsn_code", d.hsn);
 
                 frappe.model.set_value(cdt, cdn, "warehouse", d.warehouse);
 

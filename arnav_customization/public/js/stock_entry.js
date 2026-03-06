@@ -19,7 +19,7 @@ frappe.ui.form.on("Stock Entry Detail", {
                 frappe.model.set_value(cdt, cdn, "item_code", d.item_code);
 
                 // client rule
-                frappe.model.set_value(cdt, cdn, "qty", d.qty);
+                frappe.model.set_value(cdt, cdn, "qty", d.gross_weight);
 
                 // IMPORTANT
                 frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
