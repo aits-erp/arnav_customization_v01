@@ -64,7 +64,12 @@ class SKUMaster(Document):
         # ---------------------------------------------
         # CALCULATE ACTUAL ISSUE QTY
         # ---------------------------------------------
-        actual_out_qty = total_out_weight - total_in_weight
+        # actual_out_qty = total_out_weight - total_in_weight
+        # CALCULATE ACTUAL ISSUE QTY
+        actual_out_qty = total_in_weight
+
+        if actual_out_qty == 0:
+            frappe.throw("Finished SKU weight must be greater than zero.")
 
         if actual_out_qty < 0:
             frappe.throw("Calculated Issue Quantity became negative. Check weights.")

@@ -22,7 +22,8 @@
   "status",
   "barcode",
   "valuation_rate",
-  "created_from_pi"
+  "created_from_pi",
+  "old_sku_ref"
  ],
  "fields": [
   {
@@ -124,12 +125,17 @@
    "fieldtype": "Link",
    "label": "Created From",
    "options": "Purchase Invoice"
+  },
+  {
+   "fieldname": "old_sku_ref",
+   "fieldtype": "Data",
+   "label": "Old SKU Ref"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 23:01:14.994610",
+ "modified": "2026-03-06 23:38:51.945325",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",
