@@ -7,6 +7,7 @@ app_license = "mit"
 
 doctype_js = {
     "Credit Note": "public/js/credit_note.js",
+    "Debit Note": "public/js/debit_note.js",
     "Sales Invoice": "public/js/sales_invoice.js",
     "Stock Entry": "public/js/stock_entry.js",
     "Quotation": "public/js/quotation.js"

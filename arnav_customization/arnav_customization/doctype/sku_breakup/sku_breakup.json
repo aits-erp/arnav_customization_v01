@@ -53,7 +53,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Attribute Type",
-   "options": "\nPRODUCT_TYPE\nPURITY\nSTONE\nCOLLECTION\nDESIGN\nVISUAL\nUSAGE\nTARGET"
+   "options": "PRODUCT_TYPE\nPURITY\nSTONE\nCOLLECTION\nDESIGN\nVISUAL\nUSAGE\nTARGET"
   },
   {
    "fieldname": "attribute_value",
