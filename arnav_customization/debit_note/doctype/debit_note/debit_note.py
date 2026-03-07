@@ -2224,3 +2224,51 @@ def make_purchase_receipt(source_name, target_doc=None):
 	)
 
 	return doc
+
+# =====================================================
+# BREAKUP TABLE CODE BELOW
+# =====================================================
+@frappe.whitelist()
+def get_debit_breakup_rows(debit_note, breakup_ref):
+    return frappe.get_all(
+        "Debit Breakup",
+        filters={
+            "debit_note": debit_note,
+            "breakup_ref": breakup_ref
+        },
+        fields="*",
+        order_by="creation asc"
+    )
+
+@frappe.whitelist()
+def save_debit_breakup_rows(debit_note, breakup_ref, rows):
+    import json
+
+    rows = json.loads(rows)
+
+    frappe.db.delete("Debit Breakup", {
+        "debit_note": debit_note,
+        "breakup_ref": breakup_ref
+    })
+
+    meta = frappe.get_meta("Debit Breakup")
+
+    for r in rows:
+        doc = frappe.new_doc("Debit Breakup")
+        doc.debit_note = debit_note
+        doc.breakup_ref = breakup_ref
+
+        for df in meta.fields:
+            fname = df.fieldname
+
+            if fname in ["debit_note", "breakup_ref"]:
+                continue
+
+            if fname in r:
+                doc.set(fname, r.get(fname))
+
+        doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+    return "success"

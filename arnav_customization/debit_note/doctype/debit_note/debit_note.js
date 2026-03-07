@@ -745,3 +745,137 @@ frappe.ui.form.on("Debit Note", {
 	},
 });
 
+
+// ============================================
+// CUSTOM CODE BELOW DONT CHANGE OR REMOVE
+// ============================================
+function open_dynamic_breakup_dialog(frm, row) {
+
+    let dynamic_fields = [
+        {
+            fieldname: "attribute_type",
+            label: "Attribute Type",
+            fieldtype: "Select",
+            options: `
+PRODUCT_TYPE
+PURITY
+STONE
+COLLECTION
+DESIGN
+VISUAL
+USAGE
+TARGET`,
+            in_list_view: 1
+        },
+        {
+            fieldname: "attribute_value",
+            label: "Attribute Value",
+            fieldtype: "Link",
+            options: "",
+            in_list_view: 1
+        },
+        {
+            fieldname: "weight",
+            label: "Weight",
+            fieldtype: "Float"
+        },
+        {
+            fieldname: "price",
+            label: "Price",
+            fieldtype: "Float"
+        },
+        {
+            fieldname: "unit",
+            label: "Unit",
+            fieldtype: "Select",
+            options: "\nGram\nKarat"
+        }
+    ];
+
+    frappe.call({
+        method: "arnav_customization.arnav_customization.doctype.debit_note.debit_note.get_debit_breakup_rows",
+        args: {
+            debit_note: frm.doc.name,
+            breakup_ref: row.breakup_ref
+        },
+        callback: function(r) {
+
+            let dialog = new frappe.ui.Dialog({
+                title: "Breakup",
+                size: "extra-large",
+                fields: [
+                    {
+                        fieldname: "breakup_table",
+                        fieldtype: "Table",
+                        label: "Breakup Details",
+                        in_place_edit: true,
+                        data: r.message || [],
+                        fields: dynamic_fields
+                    }
+                ],
+                primary_action_label: "Save",
+                primary_action(values) {
+
+                    frappe.call({
+                        method: "arnav_customization.arnav_customization.doctype.debit_note.debit_note.save_debit_breakup_rows",
+                        args: {
+                            debit_note: frm.doc.name,
+                            breakup_ref: row.breakup_ref,
+                            rows: JSON.stringify(values.breakup_table || [])
+                        },
+                        callback() {
+                            frappe.msgprint("Breakup saved successfully");
+                            dialog.hide();
+                        }
+                    });
+
+                }
+            });
+
+            dialog.show();
+
+            let grid = dialog.fields_dict.breakup_table.grid;
+
+            grid.wrapper.on("focus", "input[data-fieldname='attribute_value']", function () {
+
+                let grid_row = $(this).closest(".grid-row").data("grid_row");
+
+                if (!grid_row) return;
+
+                let row_doc = grid_row.doc;
+
+                if (!row_doc.attribute_type) return;
+
+                grid.update_docfield_property(
+                    "attribute_value",
+                    "options",
+                    row_doc.attribute_type
+                );
+
+            });
+
+        }
+    });
+
+}
+
+frappe.ui.form.on("Purchase Invoice Item", {
+
+    custom_breakup(frm, cdt, cdn) {
+
+        let row = locals[cdt][cdn];
+
+        if (!row.breakup_ref) {
+            row.breakup_ref = frappe.utils.get_random(12);
+            frm.refresh_field("items");
+        }
+
+        if (frm.is_new()) {
+            frappe.msgprint("Please save Debit Note before adding breakup.");
+            return;
+        }
+
+        open_dynamic_breakup_dialog(frm, row);
+    }
+
+});

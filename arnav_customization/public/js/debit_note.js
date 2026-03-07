@@ -1,3 +1,18 @@
+function calculate_debit_note_rate(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+
+    if (!row.custom_quantity || !row.qty) return;
+
+    let cost_price = flt(row.custom_quantity);   // assuming cost price stored here
+    let gross_weight = flt(row.qty);
+
+    if (gross_weight > 0) {
+        let rate = cost_price / gross_weight;
+        frappe.model.set_value(cdt, cdn, "rate", rate);
+    }
+}
+
 frappe.ui.form.on('Purchase Invoice Item', {
     custom_sku: function(frm, cdt, cdn) {
 
@@ -24,8 +39,6 @@ frappe.ui.form.on('Purchase Invoice Item', {
                 frappe.model.set_value(cdt, cdn, "custom_net_weight", d.net_weight);
 
                 frappe.model.set_value(cdt, cdn, "custom_quantity", d.qty);
-
-                frappe.model.set_value(cdt, cdn, "rate", d.rate);
                 
                 frappe.model.set_value(cdt, cdn, "gst_hsn_code", d.hsn);
 
@@ -36,9 +49,20 @@ frappe.ui.form.on('Purchase Invoice Item', {
                 // prevents batch popup
                 frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
 
+                // calculate rate
+                calculate_debit_note_rate(frm, cdt, cdn);
+
             }
         });
+    },
 
+    qty: function(frm, cdt, cdn) {
+        calculate_debit_note_rate(frm, cdt, cdn);
+    },
+
+    custom_quantity: function(frm, cdt, cdn) {
+        calculate_debit_note_rate(frm, cdt, cdn);
     }
 
 });
+
