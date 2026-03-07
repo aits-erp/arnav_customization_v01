@@ -757,6 +757,7 @@ function open_dynamic_breakup_dialog(frm, row) {
             label: "Attribute Type",
             fieldtype: "Select",
             options: `
+			
 PRODUCT_TYPE
 PURITY
 STONE
@@ -777,17 +778,21 @@ TARGET`,
         {
             fieldname: "weight",
             label: "Weight",
-            fieldtype: "Float"
+            fieldtype: "Float",
+			in_list_view: 1
+
         },
         {
             fieldname: "price",
             label: "Price",
-            fieldtype: "Float"
+            fieldtype: "Float",
+			in_list_view: 1
         },
         {
             fieldname: "unit",
             label: "Unit",
             fieldtype: "Select",
+            in_list_view: 1,
             options: "\nGram\nKarat"
         }
     ];
