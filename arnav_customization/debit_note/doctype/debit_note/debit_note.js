@@ -793,7 +793,7 @@ TARGET`,
     ];
 
     frappe.call({
-        method: "arnav_customization.arnav_customization.doctype.debit_note.debit_note.get_debit_breakup_rows",
+        method: "arnav_customization.debit_note.doctype.debit_note.debit_note.get_debit_breakup_rows",
         args: {
             debit_note: frm.doc.name,
             breakup_ref: row.breakup_ref
@@ -817,7 +817,7 @@ TARGET`,
                 primary_action(values) {
 
                     frappe.call({
-                        method: "arnav_customization.arnav_customization.doctype.debit_note.debit_note.save_debit_breakup_rows",
+                        method: "arnav_customization.debit_note.doctype.debit_note.debit_note.save_debit_breakup_rows",
                         args: {
                             debit_note: frm.doc.name,
                             breakup_ref: row.breakup_ref,
