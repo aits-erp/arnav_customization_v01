@@ -2,15 +2,24 @@ function calculate_debit_note_rate(frm, cdt, cdn) {
 
     let row = locals[cdt][cdn];
 
-    if (!row.custom_quantity || !row.qty) return;
+    if (!row.custom_sku || !row.qty) return;
 
-    let cost_price = flt(row.custom_quantity);   // assuming cost price stored here
     let gross_weight = flt(row.qty);
 
-    if (gross_weight > 0) {
-        let rate = cost_price / gross_weight;
-        frappe.model.set_value(cdt, cdn, "rate", rate);
-    }
+    if (gross_weight <= 0) return;
+
+    // Fetch cost_price from SKU
+    frappe.db.get_value("SKU", row.custom_sku, "cost_price")
+        .then(r => {
+            if (r.message && r.message.cost_price) {
+
+                let cost_price = flt(r.message.cost_price);
+
+                let rate = cost_price / gross_weight;
+
+                frappe.model.set_value(cdt, cdn, "rate", rate);
+            }
+        });
 }
 
 frappe.ui.form.on('Purchase Invoice Item', {
