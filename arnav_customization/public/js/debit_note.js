@@ -21,7 +21,7 @@ frappe.ui.form.on('Purchase Invoice Item', {
         if (!row.custom_sku) return;
 
         frappe.call({
-            method: "debit_note.sku_mapping_backend.sku_mapper.get_sku_data",
+            method: "arnav_customization.sku_mapping_backend.sku_mapper.get_sku_data",
             args: {
                 sku: row.custom_sku
             },

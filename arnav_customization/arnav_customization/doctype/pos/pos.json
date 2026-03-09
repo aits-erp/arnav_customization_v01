@@ -11,7 +11,6 @@
   "salestype",
   "billtype",
   "branch",
-  "description",
   "stock_entry_reference",
   "column_break_vyrd",
   "client_name",
@@ -178,19 +177,13 @@
    "fieldtype": "Link",
    "label": "Stock Entry Ref",
    "options": "Stock Entry"
-  },
-  {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description",
-   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-06 23:41:25.140938",
+ "modified": "2026-03-09 14:47:24.010829",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",

@@ -757,7 +757,6 @@ function open_dynamic_breakup_dialog(frm, row) {
             label: "Attribute Type",
             fieldtype: "Select",
             options: `
-			
 PRODUCT_TYPE
 PURITY
 STONE

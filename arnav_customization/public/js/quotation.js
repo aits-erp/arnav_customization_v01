@@ -26,7 +26,7 @@ frappe.ui.form.on("Quotation Item", {
 
                 frappe.model.set_value(cdt, cdn, "custom_quantity", d.qty);
 
-                frappe.model.set_value(cdt, cdn, "rate", d.selling_price);
+                frappe.model.set_value(cdt, cdn, "rate", d.rate);
 
                 frappe.model.set_value(cdt, cdn, "warehouse", d.warehouse);
 
