@@ -17,7 +17,9 @@ function calculate_debit_note_rate(frm, cdt, cdn) {
 
                 let rate = cost_price / gross_weight;
 
-                frappe.model.set_value(cdt, cdn, "rate", rate);
+                setTimeout(() => {
+                    frappe.model.set_value(cdt, cdn, "rate", d.rate);
+                }, 300);
             }
         });
 }

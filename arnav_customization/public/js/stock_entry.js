@@ -27,9 +27,10 @@ frappe.ui.form.on("Stock Entry Detail", {
                 // prevents popup
                 frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
 
-                frappe.model.set_value(cdt, cdn, "basic_rate", d.rate);
-
-                frappe.model.set_value(cdt, cdn, "valuation_rate", d.valuation_rate);
+                setTimeout(() => {
+                    frappe.model.set_value(cdt, cdn, "basic_rate", d.cost_price);
+                    frappe.model.set_value(cdt, cdn, "valuation_rate", d.valuation_rate);
+                }, 300);
 
                 if (!row.s_warehouse && !row.t_warehouse) {
                     frappe.model.set_value(cdt, cdn, "t_warehouse", d.warehouse);

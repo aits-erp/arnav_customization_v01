@@ -34,6 +34,25 @@ doc_events = {
 doc_events = {
     "Sales Order": {
         "after_insert": "arnav_customization.shopify_order_patch.smart_sku_mapper"
+    },
+        "Sales Invoice": {
+        "validate": "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process"
+    },
+
+    "Quotation": {
+        "validate": "arnav_customization.sku_mapping_backend.handlers.quotation.process"
+    },
+
+    "Debit Note": {
+        "validate": "arnav_customization.sku_mapping_backend.handlers.debit_note.process"
+    },
+
+    "Stock Entry": {
+        "validate": "arnav_customization.sku_mapping_backend.handlers.stock_entry.process"
+    },
+
+    "Credit Note": {
+        "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"
     }
 }
 
