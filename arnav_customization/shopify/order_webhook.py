@@ -7,7 +7,7 @@ from frappe.utils import today, flt
 # SHOPIFY CONFIG
 # =====================================================
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "YOUR_NEW_TOKEN"
+TOKEN = "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"
 API_VERSION = "2025-04"
 WAREHOUSE = "Arnav & Co - AAC"
 
