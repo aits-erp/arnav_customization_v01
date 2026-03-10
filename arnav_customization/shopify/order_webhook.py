@@ -218,6 +218,31 @@ def create_order():
 
     return {"status": "success", "invoice": invoice.name}
 
+# old order sysnc
+@frappe.whitelist()
+def sync_existing_orders_full():
+
+    response = requests.get(
+        f"https://{SHOP}/admin/api/{API_VERSION}/orders.json?status=any&limit=100",
+        headers=HEADERS
+    ).json()
+
+    count = 0
+
+    for order in response.get("orders", []):
+
+        invoice = build_sales_invoice(order)
+
+        if not invoice:
+            continue
+
+        create_payment(invoice)
+        count += 1
+
+    frappe.db.commit()
+
+    return f"Imported {count} orders"
+
 
 
 # import frappe
