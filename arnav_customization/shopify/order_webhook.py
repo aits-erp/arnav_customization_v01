@@ -22,13 +22,10 @@ HEADERS = {
 # =====================================================
 def get_or_create_customer(order_data):
 
-    customer_data = order_data.get("customer") or {}
-    email = order_data.get("email") or f"shopify_{order_data.get('id')}@aitsind.com"
+    email = order_data.get("email")
 
-    name = f"{customer_data.get('first_name','')} {customer_data.get('last_name','')}".strip()
-
-    if not name:
-        name = "Shopify Customer"
+    if not email:
+        email = f"shopify_{order_data.get('id')}@shopify.com"
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -36,7 +33,7 @@ def get_or_create_customer(order_data):
 
         doc = frappe.get_doc({
             "doctype": "Customer",
-            "customer_name": name,
+            "customer_name": "Shopify Customer",
             "customer_type": "Individual",
             "email_id": email
         })
@@ -48,7 +45,7 @@ def get_or_create_customer(order_data):
 
 
 # =====================================================
-# SKU → ITEM RESOLUTION
+# SKU → PRODUCT MAPPING
 # =====================================================
 def resolve_item(line_item):
 
@@ -57,20 +54,19 @@ def resolve_item(line_item):
     if not sku:
         return None, None
 
-    # ONLY use existing SKU Details mapping
+    # SKU table se product fetch
     item_code = frappe.db.get_value(
-        "SKU Details",
-        {"sku": sku},
+        "SKU",
+        {"name": sku},
         "product"
     )
 
     if item_code:
         return item_code, sku
 
-    # agar SKU mapping nahi hai
     frappe.log_error(
         f"SKU not mapped in ERP: {sku}",
-        "SHOPIFY SKU MAPPING MISSING"
+        "SHOPIFY SKU NOT FOUND"
     )
 
     return None, None
@@ -83,8 +79,8 @@ def build_sales_invoice(order_data):
 
     shopify_order_id = order_data.get("id")
 
-    # ignore cancelled or unpaid
-    if order_data.get("financial_status") not in ["paid", "partially_paid"]:
+    # only paid orders
+    if order_data.get("financial_status") != "paid":
         return None
 
     # duplicate protection
@@ -100,11 +96,12 @@ def build_sales_invoice(order_data):
         "po_no": shopify_order_id,
         "posting_date": today(),
         "set_warehouse": WAREHOUSE,
-        "update_stock": 0,
 
-        # prevent tax duplication
+        # tax duplicate prevent
         "taxes_and_charges": None,
         "apply_discount_on": "Net Total",
+
+        "update_stock": 0,
 
         "currency": "INR",
         "conversion_rate": 1,
@@ -128,7 +125,6 @@ def build_sales_invoice(order_data):
         item_code, sku = resolve_item(line)
 
         if not item_code:
-            frappe.log_error(line, "SHOPIFY ITEM NOT FOUND")
             continue
 
         batch_no = None
@@ -152,7 +148,8 @@ def build_sales_invoice(order_data):
             "qty": qty,
             "rate": flt(rate),
             "warehouse": WAREHOUSE,
-            "batch_no": batch_no
+            "batch_no": batch_no,
+            "item_tax_rate": "{}"
         })
 
     if not invoice.items:
@@ -165,7 +162,7 @@ def build_sales_invoice(order_data):
 
 
 # =====================================================
-# PAYMENT ENTRY
+# CREATE PAYMENT ENTRY
 # =====================================================
 def create_payment(invoice):
 
@@ -212,7 +209,7 @@ def create_payment(invoice):
 
 
 # =====================================================
-# WEBHOOK
+# SHOPIFY WEBHOOK
 # =====================================================
 @frappe.whitelist(allow_guest=True)
 def create_order():
@@ -248,7 +245,7 @@ def create_order():
 
 
 # =====================================================
-# OLD ORDER SYNC
+# SYNC OLD ORDERS
 # =====================================================
 @frappe.whitelist()
 def sync_existing_orders_full():
@@ -268,13 +265,11 @@ def sync_existing_orders_full():
             continue
 
         create_payment(invoice)
-
         count += 1
 
     frappe.db.commit()
 
     return f"Imported {count} orders"
-
 
 
 # import frappe
