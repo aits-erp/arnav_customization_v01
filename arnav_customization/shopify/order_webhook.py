@@ -3,9 +3,6 @@ import json
 import requests
 from frappe.utils import today, flt
 
-# =====================================================
-# SHOPIFY CONFIG
-# =====================================================
 SHOP = "jewel-box-arnav.myshopify.com"
 TOKEN = "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"
 API_VERSION = "2025-04"
@@ -18,8 +15,9 @@ HEADERS = {
 
 
 # =====================================================
-# GET OR CREATE CUSTOMER
+# CUSTOMER
 # =====================================================
+
 def get_or_create_customer(order_data):
 
     email = order_data.get("email")
@@ -27,9 +25,13 @@ def get_or_create_customer(order_data):
     if not email:
         email = f"shopify_{order_data.get('id')}@shopify.com"
 
+    frappe.log_error(f"Customer Email: {email}", "SHOPIFY DEBUG")
+
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
     if not customer:
+
+        frappe.log_error("Creating new customer", "SHOPIFY DEBUG")
 
         doc = frappe.get_doc({
             "doctype": "Customer",
@@ -45,46 +47,56 @@ def get_or_create_customer(order_data):
 
 
 # =====================================================
-# SKU → PRODUCT MAPPING
+# SKU → ITEM
 # =====================================================
+
 def resolve_item(line_item):
 
-    sku = line_item.get("sku")
+    sku = (line_item.get("sku") or "").strip()
+
+    frappe.log_error(f"Incoming SKU: {sku}", "SHOPIFY DEBUG")
 
     if not sku:
+        frappe.log_error("SKU EMPTY", "SHOPIFY ERROR")
         return None, None
 
-    # SKU table se product fetch
     item_code = frappe.db.get_value(
         "SKU",
         {"name": sku},
         "product"
     )
 
-    if item_code:
-        return item_code, sku
+    frappe.log_error(f"Mapped Product: {item_code}", "SHOPIFY DEBUG")
 
-    frappe.log_error(
-        f"SKU not mapped in ERP: {sku}",
-        "SHOPIFY SKU NOT FOUND"
-    )
+    if not item_code:
+        frappe.log_error(f"SKU NOT FOUND IN ERP: {sku}", "SHOPIFY ERROR")
+        return None, None
 
-    return None, None
+    if not frappe.db.exists("Item", item_code):
+        frappe.log_error(f"ITEM NOT FOUND: {item_code}", "SHOPIFY ERROR")
+        return None, None
+
+    return item_code, sku
 
 
 # =====================================================
-# BUILD SALES INVOICE
+# SALES INVOICE
 # =====================================================
+
 def build_sales_invoice(order_data):
+
+    frappe.log_error("START BUILD INVOICE", "SHOPIFY FLOW")
 
     shopify_order_id = order_data.get("id")
 
-    # only paid orders
+    frappe.log_error(f"ORDER ID: {shopify_order_id}", "SHOPIFY FLOW")
+
     if order_data.get("financial_status") != "paid":
+        frappe.log_error("ORDER NOT PAID", "SHOPIFY FLOW")
         return None
 
-    # duplicate protection
     if frappe.db.exists("Sales Invoice", {"po_no": shopify_order_id}):
+        frappe.log_error("INVOICE ALREADY EXISTS", "SHOPIFY FLOW")
         return None
 
     customer = get_or_create_customer(order_data)
@@ -97,9 +109,7 @@ def build_sales_invoice(order_data):
         "posting_date": today(),
         "set_warehouse": WAREHOUSE,
 
-        # tax duplicate prevent
         "taxes_and_charges": None,
-        "apply_discount_on": "Net Total",
 
         "update_stock": 0,
 
@@ -115,6 +125,8 @@ def build_sales_invoice(order_data):
 
     for line in order_data.get("line_items", []):
 
+        frappe.log_error(f"Processing Item: {line}", "SHOPIFY FLOW")
+
         qty = line.get("quantity", 1)
 
         rate = (
@@ -125,13 +137,16 @@ def build_sales_invoice(order_data):
         item_code, sku = resolve_item(line)
 
         if not item_code:
+            frappe.log_error("ITEM RESOLVE FAILED", "SHOPIFY FLOW")
             continue
 
         batch_no = None
 
         if sku:
 
-            if not frappe.db.exists("Batch", sku):
+            if not frappe.db.exists("Batch", {"batch_id": sku}):
+
+                frappe.log_error(f"Creating Batch: {sku}", "SHOPIFY FLOW")
 
                 batch = frappe.get_doc({
                     "doctype": "Batch",
@@ -153,26 +168,27 @@ def build_sales_invoice(order_data):
         })
 
     if not invoice.items:
+
+        frappe.log_error("NO ITEMS IN INVOICE", "SHOPIFY ERROR")
         return None
+
+    frappe.log_error("INSERTING INVOICE", "SHOPIFY FLOW")
 
     invoice.insert(ignore_permissions=True)
     invoice.submit()
+
+    frappe.log_error(f"INVOICE CREATED: {invoice.name}", "SHOPIFY SUCCESS")
 
     return invoice
 
 
 # =====================================================
-# CREATE PAYMENT ENTRY
+# PAYMENT
 # =====================================================
+
 def create_payment(invoice):
 
     company = frappe.defaults.get_user_default("Company")
-
-    company_currency = frappe.db.get_value(
-        "Company",
-        company,
-        "default_currency"
-    )
 
     cash_account = frappe.db.get_value(
         "Account",
@@ -185,9 +201,6 @@ def create_payment(invoice):
         "payment_type": "Receive",
         "company": company,
         "posting_date": today(),
-
-        "currency": company_currency,
-        "target_exchange_rate": 1,
 
         "party_type": "Customer",
         "party": invoice.customer,
@@ -209,8 +222,9 @@ def create_payment(invoice):
 
 
 # =====================================================
-# SHOPIFY WEBHOOK
+# WEBHOOK
 # =====================================================
+
 @frappe.whitelist(allow_guest=True)
 def create_order():
 
@@ -232,6 +246,9 @@ def create_order():
     invoice = build_sales_invoice(order_data)
 
     if not invoice:
+
+        frappe.log_error("INVOICE SKIPPED", "SHOPIFY FLOW")
+
         return {"status": "skipped"}
 
     create_payment(invoice)
@@ -242,34 +259,6 @@ def create_order():
         "status": "success",
         "invoice": invoice.name
     }
-
-
-# =====================================================
-# SYNC OLD ORDERS
-# =====================================================
-@frappe.whitelist()
-def sync_existing_orders_full():
-
-    response = requests.get(
-        f"https://{SHOP}/admin/api/{API_VERSION}/orders.json?status=any&limit=100",
-        headers=HEADERS
-    ).json()
-
-    count = 0
-
-    for order in response.get("orders", []):
-
-        invoice = build_sales_invoice(order)
-
-        if not invoice:
-            continue
-
-        create_payment(invoice)
-        count += 1
-
-    frappe.db.commit()
-
-    return f"Imported {count} orders"
 
 
 # import frappe
