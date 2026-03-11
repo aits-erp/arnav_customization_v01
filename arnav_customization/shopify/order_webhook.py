@@ -24,7 +24,11 @@ def get_or_create_customer(order_data):
 
     customer_data = order_data.get("customer") or {}
     email = order_data.get("email") or f"shopify_{order_data.get('id')}@aitsind.com"
-    customer_name = customer_data.get("first_name") or "Shopify Customer"
+
+    name = f"{customer_data.get('first_name','')} {customer_data.get('last_name','')}".strip()
+
+    if not name:
+        name = "Shopify Customer"
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -32,7 +36,7 @@ def get_or_create_customer(order_data):
 
         doc = frappe.get_doc({
             "doctype": "Customer",
-            "customer_name": customer_name,
+            "customer_name": name,
             "customer_type": "Individual",
             "email_id": email
         })
@@ -44,24 +48,29 @@ def get_or_create_customer(order_data):
 
 
 # =====================================================
-# RESOLVE ITEM FROM SKU
+# SKU → ITEM RESOLUTION
 # =====================================================
 def resolve_item(line_item):
 
     sku = line_item.get("sku")
     title = line_item.get("title")
 
-    # SKU Details mapping
     if sku:
-        item_code = frappe.db.get_value("SKU Details", {"sku": sku}, "product")
+
+        item_code = frappe.db.get_value(
+            "SKU Details",
+            {"sku": sku},
+            "product"
+        )
+
         if item_code:
             return item_code, sku
 
-    # Direct item code match
+    # fallback item code
     if sku and frappe.db.exists("Item", sku):
         return sku, sku
 
-    # Item name fallback
+    # fallback item name
     if title:
         item_code = frappe.db.get_value("Item", {"item_name": title}, "name")
         if item_code:
@@ -77,7 +86,11 @@ def build_sales_invoice(order_data):
 
     shopify_order_id = order_data.get("id")
 
-    # Prevent duplicate import
+    # ignore cancelled or unpaid
+    if order_data.get("financial_status") not in ["paid", "partially_paid"]:
+        return None
+
+    # duplicate protection
     if frappe.db.exists("Sales Invoice", {"po_no": shopify_order_id}):
         return None
 
@@ -91,11 +104,18 @@ def build_sales_invoice(order_data):
         "posting_date": today(),
         "set_warehouse": WAREHOUSE,
         "update_stock": 0,
+
+        # prevent tax duplication
+        "taxes_and_charges": None,
+        "apply_discount_on": "Net Total",
+
         "currency": "INR",
         "conversion_rate": 1,
+
         "selling_price_list": "Standard Selling",
         "price_list_currency": "INR",
         "plc_conversion_rate": 1,
+
         "items": []
     })
 
@@ -148,12 +168,17 @@ def build_sales_invoice(order_data):
 
 
 # =====================================================
-# CREATE PAYMENT ENTRY
+# PAYMENT ENTRY
 # =====================================================
 def create_payment(invoice):
 
     company = frappe.defaults.get_user_default("Company")
-    company_currency = frappe.db.get_value("Company", company, "default_currency")
+
+    company_currency = frappe.db.get_value(
+        "Company",
+        company,
+        "default_currency"
+    )
 
     cash_account = frappe.db.get_value(
         "Account",
@@ -190,12 +215,13 @@ def create_payment(invoice):
 
 
 # =====================================================
-# SHOPIFY WEBHOOK
+# WEBHOOK
 # =====================================================
 @frappe.whitelist(allow_guest=True)
 def create_order():
 
     try:
+
         order_data = frappe.request.get_json()
 
         frappe.log_error(
@@ -204,7 +230,9 @@ def create_order():
         )
 
     except Exception as e:
+
         frappe.log_error(str(e), "SHOPIFY WEBHOOK ERROR")
+
         return {"status": "invalid payload"}
 
     invoice = build_sales_invoice(order_data)
@@ -216,9 +244,15 @@ def create_order():
 
     frappe.db.commit()
 
-    return {"status": "success", "invoice": invoice.name}
+    return {
+        "status": "success",
+        "invoice": invoice.name
+    }
 
-# old order sysnc
+
+# =====================================================
+# OLD ORDER SYNC
+# =====================================================
 @frappe.whitelist()
 def sync_existing_orders_full():
 
@@ -237,6 +271,7 @@ def sync_existing_orders_full():
             continue
 
         create_payment(invoice)
+
         count += 1
 
     frappe.db.commit()
