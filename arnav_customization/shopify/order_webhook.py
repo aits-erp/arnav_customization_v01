@@ -53,28 +53,25 @@ def get_or_create_customer(order_data):
 def resolve_item(line_item):
 
     sku = line_item.get("sku")
-    title = line_item.get("title")
 
-    if sku:
+    if not sku:
+        return None, None
 
-        item_code = frappe.db.get_value(
-            "SKU Details",
-            {"sku": sku},
-            "product"
-        )
+    # ONLY use existing SKU Details mapping
+    item_code = frappe.db.get_value(
+        "SKU Details",
+        {"sku": sku},
+        "product"
+    )
 
-        if item_code:
-            return item_code, sku
+    if item_code:
+        return item_code, sku
 
-    # fallback item code
-    if sku and frappe.db.exists("Item", sku):
-        return sku, sku
-
-    # fallback item name
-    if title:
-        item_code = frappe.db.get_value("Item", {"item_name": title}, "name")
-        if item_code:
-            return item_code, sku
+    # agar SKU mapping nahi hai
+    frappe.log_error(
+        f"SKU not mapped in ERP: {sku}",
+        "SHOPIFY SKU MAPPING MISSING"
+    )
 
     return None, None
 
