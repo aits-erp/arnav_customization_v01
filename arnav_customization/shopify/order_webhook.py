@@ -3,9 +3,15 @@ import json
 import requests
 from frappe.utils import today, flt
 
+
+# =====================================================
+# SHOPIFY CONFIG
+# =====================================================
+
 SHOP = "jewel-box-arnav.myshopify.com"
 TOKEN = "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"
 API_VERSION = "2025-04"
+
 WAREHOUSE = "Arnav & Co - AAC"
 
 HEADERS = {
@@ -25,78 +31,60 @@ def get_or_create_customer(order_data):
     if not email:
         email = f"shopify_{order_data.get('id')}@shopify.com"
 
-    frappe.log_error(f"Customer Email: {email}", "SHOPIFY DEBUG")
-
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
     if not customer:
 
-        frappe.log_error("Creating new customer", "SHOPIFY DEBUG")
-
         doc = frappe.get_doc({
             "doctype": "Customer",
-            "customer_name": "Shopify Customer",
+            "customer_name": f"Shopify Customer {order_data.get('id')}",
             "customer_type": "Individual",
             "email_id": email
         })
 
         doc.insert(ignore_permissions=True)
+
         customer = doc.name
 
     return customer
 
 
 # =====================================================
-# SKU → ITEM
+# SKU → PRODUCT
 # =====================================================
 
 def resolve_item(line_item):
 
     sku = (line_item.get("sku") or "").strip()
 
-    frappe.log_error(f"Incoming SKU: {sku}", "SHOPIFY DEBUG")
-
     if not sku:
-        frappe.log_error("SKU EMPTY", "SHOPIFY ERROR")
         return None, None
 
-    item_code = frappe.db.get_value(
-        "SKU",
-        {"name": sku},
-        "product"
-    )
+    product = frappe.db.get_value("SKU", sku, "product")
 
-    frappe.log_error(f"Mapped Product: {item_code}", "SHOPIFY DEBUG")
-
-    if not item_code:
-        frappe.log_error(f"SKU NOT FOUND IN ERP: {sku}", "SHOPIFY ERROR")
+    if not product:
+        frappe.log_error(f"SKU NOT FOUND: {sku}", "SHOPIFY ERROR")
         return None, None
 
-    if not frappe.db.exists("Item", item_code):
-        frappe.log_error(f"ITEM NOT FOUND: {item_code}", "SHOPIFY ERROR")
+    if not frappe.db.exists("Item", product):
+        frappe.log_error(f"ITEM NOT FOUND: {product}", "SHOPIFY ERROR")
         return None, None
 
-    return item_code, sku
+    return product, sku
 
 
 # =====================================================
-# SALES INVOICE
+# BUILD SALES INVOICE
 # =====================================================
 
 def build_sales_invoice(order_data):
 
-    frappe.log_error("START BUILD INVOICE", "SHOPIFY FLOW")
-
-    shopify_order_id = order_data.get("id")
-
-    frappe.log_error(f"ORDER ID: {shopify_order_id}", "SHOPIFY FLOW")
+    order_id = order_data.get("id")
 
     if order_data.get("financial_status") != "paid":
-        frappe.log_error("ORDER NOT PAID", "SHOPIFY FLOW")
         return None
 
-    if frappe.db.exists("Sales Invoice", {"po_no": shopify_order_id}):
-        frappe.log_error("INVOICE ALREADY EXISTS", "SHOPIFY FLOW")
+    if frappe.db.exists("Sales Invoice", {"po_no": order_id}):
         return None
 
     customer = get_or_create_customer(order_data)
@@ -105,13 +93,13 @@ def build_sales_invoice(order_data):
         "doctype": "Sales Invoice",
         "customer": customer,
         "company": frappe.defaults.get_user_default("Company"),
-        "po_no": shopify_order_id,
+        "po_no": order_id,
         "posting_date": today(),
         "set_warehouse": WAREHOUSE,
 
-        "taxes_and_charges": None,
-
         "update_stock": 0,
+
+        "taxes_and_charges": None,
 
         "currency": "INR",
         "conversion_rate": 1,
@@ -125,19 +113,18 @@ def build_sales_invoice(order_data):
 
     for line in order_data.get("line_items", []):
 
-        frappe.log_error(f"Processing Item: {line}", "SHOPIFY FLOW")
-
         qty = line.get("quantity", 1)
 
         rate = (
             line.get("price")
-            or line.get("price_set", {}).get("shop_money", {}).get("amount", 0)
+            or line.get("price_set", {})
+                .get("shop_money", {})
+                .get("amount", 0)
         )
 
         item_code, sku = resolve_item(line)
 
         if not item_code:
-            frappe.log_error("ITEM RESOLVE FAILED", "SHOPIFY FLOW")
             continue
 
         batch_no = None
@@ -145,8 +132,6 @@ def build_sales_invoice(order_data):
         if sku:
 
             if not frappe.db.exists("Batch", {"batch_id": sku}):
-
-                frappe.log_error(f"Creating Batch: {sku}", "SHOPIFY FLOW")
 
                 batch = frappe.get_doc({
                     "doctype": "Batch",
@@ -168,22 +153,16 @@ def build_sales_invoice(order_data):
         })
 
     if not invoice.items:
-
-        frappe.log_error("NO ITEMS IN INVOICE", "SHOPIFY ERROR")
         return None
-
-    frappe.log_error("INSERTING INVOICE", "SHOPIFY FLOW")
 
     invoice.insert(ignore_permissions=True)
     invoice.submit()
-
-    frappe.log_error(f"INVOICE CREATED: {invoice.name}", "SHOPIFY SUCCESS")
 
     return invoice
 
 
 # =====================================================
-# PAYMENT
+# PAYMENT ENTRY
 # =====================================================
 
 def create_payment(invoice):
@@ -246,9 +225,6 @@ def create_order():
     invoice = build_sales_invoice(order_data)
 
     if not invoice:
-
-        frappe.log_error("INVOICE SKIPPED", "SHOPIFY FLOW")
-
         return {"status": "skipped"}
 
     create_payment(invoice)
@@ -260,6 +236,34 @@ def create_order():
         "invoice": invoice.name
     }
 
+
+# =====================================================
+# SYNC OLD ORDERS
+# =====================================================
+
+@frappe.whitelist()
+def sync_existing_orders():
+
+    url = f"https://{SHOP}/admin/api/{API_VERSION}/orders.json?status=any&limit=100"
+
+    response = requests.get(url, headers=HEADERS).json()
+
+    count = 0
+
+    for order in response.get("orders", []):
+
+        invoice = build_sales_invoice(order)
+
+        if not invoice:
+            continue
+
+        create_payment(invoice)
+
+        count += 1
+
+    frappe.db.commit()
+
+    return f"{count} orders imported"
 
 # import frappe
 # import json
