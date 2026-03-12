@@ -3,7 +3,7 @@ import json
 from frappe.utils import today, flt
 
 DEFAULT_WAREHOUSE = "Arnav & Co - AAC"
-TAX_TEMPLATE = "Output GST In-state"   # <-- अपने ERPNext के अनुसार नाम verify कर लें
+TAX_TEMPLATE = "Output GST In-state"
 
 
 # =====================================================
@@ -29,18 +29,17 @@ def get_or_create_customer(order_data):
         })
 
         doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
         customer = doc.name
 
         frappe.log_error(f"Customer Created: {customer}", "SHOPIFY DEBUG")
-
-    else:
-        frappe.log_error(f"Customer Found: {customer}", "SHOPIFY DEBUG")
 
     return customer
 
 
 # =====================================================
-# SKU → ITEM RESOLVE
+# SKU → ITEM
 # =====================================================
 
 def resolve_item(line_item):
@@ -123,7 +122,7 @@ def build_sales_order(order_data):
             or resolved["rate"]
         )
 
-        # Batch create if missing
+        # Create batch if missing
         if not frappe.db.exists("Batch", {"batch_id": resolved["batch_no"]}):
 
             batch = frappe.get_doc({
@@ -143,11 +142,6 @@ def build_sales_order(order_data):
             "custom_sku": line.get("sku")
         })
 
-        frappe.log_error(
-            f"ITEM ADDED: {resolved['item_code']} | SKU {line.get('sku')} | Rate {rate}",
-            "SHOPIFY DEBUG"
-        )
-
     if not so.items:
 
         frappe.log_error("NO ITEMS FOUND", "SHOPIFY ERROR")
@@ -155,6 +149,8 @@ def build_sales_order(order_data):
 
     so.insert(ignore_permissions=True)
     so.submit()
+
+    frappe.db.commit()
 
     frappe.log_error(f"SALES ORDER CREATED: {so.name}", "SHOPIFY SUCCESS")
 
@@ -204,11 +200,12 @@ def build_sales_invoice(order_data, sales_order):
             "so_detail": row.name
         })
 
-    # Important for GST inclusive calculation
     invoice.calculate_taxes_and_totals()
 
     invoice.insert(ignore_permissions=True)
     invoice.submit()
+
+    frappe.db.commit()
 
     frappe.log_error(f"SALES INVOICE CREATED: {invoice.name}", "SHOPIFY SUCCESS")
 
@@ -221,40 +218,48 @@ def build_sales_invoice(order_data, sales_order):
 
 def create_payment(invoice):
 
-    company = invoice.company
+    try:
 
-    account = frappe.db.get_value(
-        "Account",
-        {"account_type": ["in", ["Cash", "Bank"]], "company": company},
-        "name"
-    )
+        company = invoice.company
 
-    if not account:
+        account = frappe.db.get_value(
+            "Account",
+            {"account_type": ["in", ["Cash", "Bank"]], "company": company},
+            "name"
+        )
 
-        frappe.log_error("PAYMENT ACCOUNT NOT FOUND", "SHOPIFY ERROR")
-        return
+        if not account:
 
-    payment = frappe.get_doc({
-        "doctype": "Payment Entry",
-        "payment_type": "Receive",
-        "company": company,
-        "posting_date": today(),
-        "party_type": "Customer",
-        "party": invoice.customer,
-        "paid_to": account,
-        "paid_amount": invoice.grand_total,
-        "received_amount": invoice.grand_total,
-        "references": [{
-            "reference_doctype": "Sales Invoice",
-            "reference_name": invoice.name,
-            "allocated_amount": invoice.grand_total
-        }]
-    })
+            frappe.log_error("PAYMENT ACCOUNT NOT FOUND", "SHOPIFY ERROR")
+            return
 
-    payment.insert(ignore_permissions=True)
-    payment.submit()
+        payment = frappe.get_doc({
+            "doctype": "Payment Entry",
+            "payment_type": "Receive",
+            "company": company,
+            "posting_date": today(),
+            "party_type": "Customer",
+            "party": invoice.customer,
+            "paid_to": account,
+            "paid_amount": invoice.grand_total,
+            "received_amount": invoice.grand_total,
+            "references": [{
+                "reference_doctype": "Sales Invoice",
+                "reference_name": invoice.name,
+                "allocated_amount": invoice.grand_total
+            }]
+        })
 
-    frappe.log_error(f"PAYMENT CREATED: {payment.name}", "SHOPIFY SUCCESS")
+        payment.insert(ignore_permissions=True)
+        payment.submit()
+
+        frappe.db.commit()
+
+        frappe.log_error(f"PAYMENT CREATED: {payment.name}", "SHOPIFY SUCCESS")
+
+    except Exception:
+
+        frappe.log_error(frappe.get_traceback(), "PAYMENT ERROR")
 
 
 # =====================================================
@@ -290,14 +295,11 @@ def create_order():
     if invoice:
         create_payment(invoice)
 
-    frappe.db.commit()
-
     return {
         "status": "success",
         "sales_order": sales_order.name,
         "invoice": invoice.name if invoice else None
     }
-
 
 
 # import frappe
