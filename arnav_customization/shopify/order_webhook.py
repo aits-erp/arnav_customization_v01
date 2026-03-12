@@ -62,18 +62,19 @@ def resolve_item(line_item):
 
     product = frappe.db.get_value(
         "SKU",
-        {"sku": sku},
+        {"sku_code": sku},
         "product"
     )
 
     if not product:
-
-        frappe.log_error(
-            f"SKU NOT FOUND: {sku}",
-            "SHOPIFY SKU ERROR"
-        )
-
+        frappe.log_error(f"SKU NOT FOUND: {sku}", "SHOPIFY ERROR")
         return None, None
+
+    if not frappe.db.exists("Item", product):
+        frappe.log_error(f"ITEM NOT FOUND: {product}", "SHOPIFY ERROR")
+        return None, None
+
+    return product, sku
 
     if not frappe.db.exists("Item", product):
 
