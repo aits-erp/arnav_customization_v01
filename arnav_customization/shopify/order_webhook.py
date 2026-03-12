@@ -3,6 +3,7 @@ import json
 from frappe.utils import today, flt
 
 DEFAULT_WAREHOUSE = "Arnav & Co - AAC"
+TAX_TEMPLATE = "Output GST In-state"   # <-- अपने ERPNext के अनुसार नाम verify कर लें
 
 
 # =====================================================
@@ -32,11 +33,14 @@ def get_or_create_customer(order_data):
 
         frappe.log_error(f"Customer Created: {customer}", "SHOPIFY DEBUG")
 
+    else:
+        frappe.log_error(f"Customer Found: {customer}", "SHOPIFY DEBUG")
+
     return customer
 
 
 # =====================================================
-# SKU → ITEM
+# SKU → ITEM RESOLVE
 # =====================================================
 
 def resolve_item(line_item):
@@ -119,7 +123,7 @@ def build_sales_order(order_data):
             or resolved["rate"]
         )
 
-        # Create batch if missing
+        # Batch create if missing
         if not frappe.db.exists("Batch", {"batch_id": resolved["batch_no"]}):
 
             batch = frappe.get_doc({
@@ -138,6 +142,11 @@ def build_sales_order(order_data):
             "batch_no": resolved["batch_no"],
             "custom_sku": line.get("sku")
         })
+
+        frappe.log_error(
+            f"ITEM ADDED: {resolved['item_code']} | SKU {line.get('sku')} | Rate {rate}",
+            "SHOPIFY DEBUG"
+        )
 
     if not so.items:
 
@@ -177,7 +186,7 @@ def build_sales_invoice(order_data, sales_order):
         "update_stock": 0,
         "currency": "INR",
         "conversion_rate": 1,
-        "taxes_and_charges": "Output GST In-state",
+        "taxes_and_charges": TAX_TEMPLATE,
         "is_inclusive": 1,
         "items": []
     })
@@ -194,6 +203,9 @@ def build_sales_invoice(order_data, sales_order):
             "sales_order": sales_order.name,
             "so_detail": row.name
         })
+
+    # Important for GST inclusive calculation
+    invoice.calculate_taxes_and_totals()
 
     invoice.insert(ignore_permissions=True)
     invoice.submit()
@@ -285,8 +297,6 @@ def create_order():
         "sales_order": sales_order.name,
         "invoice": invoice.name if invoice else None
     }
-
-
 
 
 
