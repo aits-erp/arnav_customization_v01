@@ -50,7 +50,7 @@ def get_or_create_customer(order_data):
 
 
 # =====================================================
-# SKU → PRODUCT
+# SKU → ITEM
 # =====================================================
 
 def resolve_item(line_item):
@@ -60,54 +60,56 @@ def resolve_item(line_item):
     if not sku:
         return None, None
 
-    product = frappe.db.get_value("SKU", sku, "product")
+    product = frappe.db.get_value(
+        "SKU",
+        {"sku": sku},
+        "product"
+    )
 
     if not product:
-        frappe.log_error(f"SKU NOT FOUND: {sku}", "SHOPIFY ERROR")
+
+        frappe.log_error(
+            f"SKU NOT FOUND: {sku}",
+            "SHOPIFY SKU ERROR"
+        )
+
         return None, None
 
     if not frappe.db.exists("Item", product):
-        frappe.log_error(f"ITEM NOT FOUND: {product}", "SHOPIFY ERROR")
+
+        frappe.log_error(
+            f"ITEM NOT FOUND: {product}",
+            "SHOPIFY ITEM ERROR"
+        )
+
         return None, None
 
     return product, sku
 
 
 # =====================================================
-# BUILD SALES INVOICE
+# SALES ORDER
 # =====================================================
 
-def build_sales_invoice(order_data):
+def build_sales_order(order_data):
 
     order_id = order_data.get("id")
 
-    if order_data.get("financial_status") != "paid":
-        return None
-
-    if frappe.db.exists("Sales Invoice", {"po_no": order_id}):
+    if frappe.db.exists("Sales Order", {"po_no": order_id}):
         return None
 
     customer = get_or_create_customer(order_data)
 
-    invoice = frappe.get_doc({
-        "doctype": "Sales Invoice",
+    so = frappe.get_doc({
+        "doctype": "Sales Order",
         "customer": customer,
         "company": frappe.defaults.get_user_default("Company"),
         "po_no": order_id,
-        "posting_date": today(),
+        "transaction_date": today(),
+        "delivery_date": today(),
         "set_warehouse": WAREHOUSE,
-
-        "update_stock": 0,
-
-        "taxes_and_charges": None,
-
         "currency": "INR",
         "conversion_rate": 1,
-
-        "selling_price_list": "Standard Selling",
-        "price_list_currency": "INR",
-        "plc_conversion_rate": 1,
-
         "items": []
     })
 
@@ -143,17 +145,61 @@ def build_sales_invoice(order_data):
 
             batch_no = sku
 
-        invoice.append("items", {
+        so.append("items", {
             "item_code": item_code,
             "qty": qty,
             "rate": flt(rate),
             "warehouse": WAREHOUSE,
-            "batch_no": batch_no,
-            "item_tax_rate": "{}"
+            "batch_no": batch_no
         })
 
-    if not invoice.items:
+    if not so.items:
         return None
+
+    so.insert(ignore_permissions=True)
+    so.submit()
+
+    return so
+
+
+# =====================================================
+# SALES INVOICE
+# =====================================================
+
+def build_sales_invoice(order_data, sales_order):
+
+    if order_data.get("financial_status") != "paid":
+        return None
+
+    order_id = order_data.get("id")
+
+    if frappe.db.exists("Sales Invoice", {"po_no": order_id}):
+        return None
+
+    invoice = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": sales_order.customer,
+        "company": sales_order.company,
+        "po_no": order_id,
+        "posting_date": today(),
+        "set_warehouse": WAREHOUSE,
+        "update_stock": 0,
+        "currency": "INR",
+        "conversion_rate": 1,
+        "items": []
+    })
+
+    for row in sales_order.items:
+
+        invoice.append("items", {
+            "item_code": row.item_code,
+            "qty": row.qty,
+            "rate": row.rate,
+            "warehouse": row.warehouse,
+            "batch_no": row.batch_no,
+            "sales_order": sales_order.name,
+            "so_detail": row.name
+        })
 
     invoice.insert(ignore_permissions=True)
     invoice.submit()
@@ -167,7 +213,7 @@ def build_sales_invoice(order_data):
 
 def create_payment(invoice):
 
-    company = frappe.defaults.get_user_default("Company")
+    company = invoice.company
 
     cash_account = frappe.db.get_value(
         "Account",
@@ -180,15 +226,11 @@ def create_payment(invoice):
         "payment_type": "Receive",
         "company": company,
         "posting_date": today(),
-
         "party_type": "Customer",
         "party": invoice.customer,
-
         "paid_to": cash_account,
-
         "paid_amount": invoice.grand_total,
         "received_amount": invoice.grand_total,
-
         "references": [{
             "reference_doctype": "Sales Invoice",
             "reference_name": invoice.name,
@@ -222,18 +264,22 @@ def create_order():
 
         return {"status": "invalid payload"}
 
-    invoice = build_sales_invoice(order_data)
+    sales_order = build_sales_order(order_data)
 
-    if not invoice:
+    if not sales_order:
         return {"status": "skipped"}
 
-    create_payment(invoice)
+    invoice = build_sales_invoice(order_data, sales_order)
+
+    if invoice:
+        create_payment(invoice)
 
     frappe.db.commit()
 
     return {
         "status": "success",
-        "invoice": invoice.name
+        "sales_order": sales_order.name,
+        "invoice": invoice.name if invoice else None
     }
 
 
@@ -252,12 +298,15 @@ def sync_existing_orders():
 
     for order in response.get("orders", []):
 
-        invoice = build_sales_invoice(order)
+        sales_order = build_sales_order(order)
 
-        if not invoice:
+        if not sales_order:
             continue
 
-        create_payment(invoice)
+        invoice = build_sales_invoice(order, sales_order)
+
+        if invoice:
+            create_payment(invoice)
 
         count += 1
 
