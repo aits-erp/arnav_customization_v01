@@ -4,15 +4,15 @@ import requests
 from frappe.utils import today, flt
 
 
-# =====================================================
+# ==========================================
 # SHOPIFY CONFIG
-# =====================================================
+# ==========================================
 
 SHOP = "jewel-box-arnav.myshopify.com"
 TOKEN = "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"
 API_VERSION = "2025-04"
 
-WAREHOUSE = "Arnav & Co - AAC"
+DEFAULT_WAREHOUSE = "Arnav & Co - AAC"
 
 HEADERS = {
     "X-Shopify-Access-Token": TOKEN,
@@ -20,9 +20,9 @@ HEADERS = {
 }
 
 
-# =====================================================
+# ==========================================
 # CUSTOMER
-# =====================================================
+# ==========================================
 
 def get_or_create_customer(order_data):
 
@@ -49,48 +49,60 @@ def get_or_create_customer(order_data):
     return customer
 
 
-# =====================================================
-# SKU → ITEM
-# =====================================================
+# ==========================================
+# SKU → ITEM RESOLVE
+# ==========================================
 
 def resolve_item(line_item):
 
     sku = (line_item.get("sku") or "").strip()
 
     if not sku:
-        return None, None
+        frappe.log_error("SKU EMPTY", "SHOPIFY SKU ERROR")
+        return None
 
-    product = frappe.db.get_value(
+    row = frappe.db.get_value(
         "SKU",
         {"sku_code": sku},
-        "product"
+        ["product", "warehouse", "batch_no", "selling_price"],
+        as_dict=True
     )
 
-    if not product:
-        frappe.log_error(f"SKU NOT FOUND: {sku}", "SHOPIFY ERROR")
-        return None, None
-
-    if not frappe.db.exists("Item", product):
-        frappe.log_error(f"ITEM NOT FOUND: {product}", "SHOPIFY ERROR")
-        return None, None
-
-    return product, sku
-
-    if not frappe.db.exists("Item", product):
+    if not row:
 
         frappe.log_error(
-            f"ITEM NOT FOUND: {product}",
+            f"SKU NOT FOUND: {sku}",
+            "SHOPIFY SKU ERROR"
+        )
+
+        return None
+
+    item_code = row.product
+
+    if not frappe.db.exists("Item", item_code):
+
+        frappe.log_error(
+            f"ITEM NOT FOUND: {item_code}",
             "SHOPIFY ITEM ERROR"
         )
 
-        return None, None
+        return None
 
-    return product, sku
+    warehouse = row.warehouse or DEFAULT_WAREHOUSE
+    batch_no = row.batch_no or sku
+    rate = row.selling_price
+
+    return {
+        "item_code": item_code,
+        "warehouse": warehouse,
+        "batch_no": batch_no,
+        "rate": rate
+    }
 
 
-# =====================================================
+# ==========================================
 # SALES ORDER
-# =====================================================
+# ==========================================
 
 def build_sales_order(order_data):
 
@@ -108,7 +120,6 @@ def build_sales_order(order_data):
         "po_no": order_id,
         "transaction_date": today(),
         "delivery_date": today(),
-        "set_warehouse": WAREHOUSE,
         "currency": "INR",
         "conversion_rate": 1,
         "items": []
@@ -118,6 +129,11 @@ def build_sales_order(order_data):
 
         qty = line.get("quantity", 1)
 
+        resolved = resolve_item(line)
+
+        if not resolved:
+            continue
+
         rate = (
             line.get("price")
             or line.get("price_set", {})
@@ -125,36 +141,27 @@ def build_sales_order(order_data):
                 .get("amount", 0)
         )
 
-        item_code, sku = resolve_item(line)
+        # Ensure batch exists
+        if not frappe.db.exists("Batch", {"batch_id": resolved["batch_no"]}):
 
-        if not item_code:
-            continue
+            batch = frappe.get_doc({
+                "doctype": "Batch",
+                "batch_id": resolved["batch_no"],
+                "item": resolved["item_code"]
+            })
 
-        batch_no = None
-
-        if sku:
-
-            if not frappe.db.exists("Batch", {"batch_id": sku}):
-
-                batch = frappe.get_doc({
-                    "doctype": "Batch",
-                    "batch_id": sku,
-                    "item": item_code
-                })
-
-                batch.insert(ignore_permissions=True)
-
-            batch_no = sku
+            batch.insert(ignore_permissions=True)
 
         so.append("items", {
-            "item_code": item_code,
+            "item_code": resolved["item_code"],
             "qty": qty,
             "rate": flt(rate),
-            "warehouse": WAREHOUSE,
-            "batch_no": batch_no
+            "warehouse": resolved["warehouse"],
+            "batch_no": resolved["batch_no"]
         })
 
     if not so.items:
+        frappe.log_error("NO ITEMS FOUND IN ORDER", "SHOPIFY ORDER SKIPPED")
         return None
 
     so.insert(ignore_permissions=True)
@@ -163,9 +170,9 @@ def build_sales_order(order_data):
     return so
 
 
-# =====================================================
+# ==========================================
 # SALES INVOICE
-# =====================================================
+# ==========================================
 
 def build_sales_invoice(order_data, sales_order):
 
@@ -183,7 +190,6 @@ def build_sales_invoice(order_data, sales_order):
         "company": sales_order.company,
         "po_no": order_id,
         "posting_date": today(),
-        "set_warehouse": WAREHOUSE,
         "update_stock": 0,
         "currency": "INR",
         "conversion_rate": 1,
@@ -208,9 +214,9 @@ def build_sales_invoice(order_data, sales_order):
     return invoice
 
 
-# =====================================================
+# ==========================================
 # PAYMENT ENTRY
-# =====================================================
+# ==========================================
 
 def create_payment(invoice):
 
@@ -243,9 +249,9 @@ def create_payment(invoice):
     payment.submit()
 
 
-# =====================================================
+# ==========================================
 # WEBHOOK
-# =====================================================
+# ==========================================
 
 @frappe.whitelist(allow_guest=True)
 def create_order():
@@ -284,9 +290,9 @@ def create_order():
     }
 
 
-# =====================================================
+# ==========================================
 # SYNC OLD ORDERS
-# =====================================================
+# ==========================================
 
 @frappe.whitelist()
 def sync_existing_orders():
@@ -314,6 +320,7 @@ def sync_existing_orders():
     frappe.db.commit()
 
     return f"{count} orders imported"
+
 
 # import frappe
 # import json
