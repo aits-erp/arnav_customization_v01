@@ -1,6 +1,5 @@
 import frappe
 import json
-import requests
 from frappe.utils import today, flt
 
 
@@ -44,7 +43,7 @@ def get_or_create_customer(order_data):
 
 
 # =====================================================
-# SKU → ITEM RESOLVE
+# SKU → ITEM
 # =====================================================
 
 def resolve_item(line_item):
@@ -65,18 +64,10 @@ def resolve_item(line_item):
     )
 
     if not row:
-
-        frappe.log_error(
-            f"SKU NOT FOUND: {sku}",
-            "SHOPIFY ERROR"
-        )
-
+        frappe.log_error(f"SKU NOT FOUND: {sku}", "SHOPIFY ERROR")
         return None
 
-    frappe.log_error(
-        f"SKU FOUND → Product: {row.product}",
-        "SHOPIFY DEBUG"
-    )
+    frappe.log_error(f"SKU FOUND → Product: {row.product}", "SHOPIFY DEBUG")
 
     item_code = row.product
 
@@ -163,13 +154,7 @@ def build_sales_order(order_data):
             "SHOPIFY DEBUG"
         )
 
-        # create batch if missing
         if not frappe.db.exists("Batch", {"batch_id": resolved["batch_no"]}):
-
-            frappe.log_error(
-                f"CREATING BATCH {resolved['batch_no']}",
-                "SHOPIFY DEBUG"
-            )
 
             batch = frappe.get_doc({
                 "doctype": "Batch",
@@ -178,6 +163,11 @@ def build_sales_order(order_data):
             })
 
             batch.insert(ignore_permissions=True)
+
+            frappe.log_error(
+                f"BATCH CREATED: {resolved['batch_no']}",
+                "SHOPIFY DEBUG"
+            )
 
         so.append("items", {
             "item_code": resolved["item_code"],
@@ -201,15 +191,28 @@ def build_sales_order(order_data):
 
         return None
 
-    so.insert(ignore_permissions=True)
-    so.submit()
+    try:
 
-    frappe.log_error(
-        f"SALES ORDER CREATED: {so.name}",
-        "SHOPIFY SUCCESS"
-    )
+        so.insert(ignore_permissions=True)
+        so.submit()
 
-    return so
+        frappe.db.commit()
+
+        frappe.log_error(
+            f"SALES ORDER CREATED: {so.name}",
+            "SHOPIFY SUCCESS"
+        )
+
+        return so
+
+    except Exception:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            "SALES ORDER ERROR"
+        )
+
+        return None
 
 
 # =====================================================
@@ -278,6 +281,18 @@ def create_payment(invoice):
         "name"
     )
 
+    frappe.log_error(
+        f"CASH ACCOUNT: {cash_account}",
+        "SHOPIFY DEBUG"
+    )
+
+    if not cash_account:
+        frappe.log_error(
+            "CASH ACCOUNT NOT FOUND",
+            "SHOPIFY PAYMENT ERROR"
+        )
+        return
+
     payment = frappe.get_doc({
         "doctype": "Payment Entry",
         "payment_type": "Receive",
@@ -310,6 +325,8 @@ def create_payment(invoice):
 
 @frappe.whitelist(allow_guest=True)
 def create_order():
+
+    frappe.set_user("Administrator")
 
     try:
 
