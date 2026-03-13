@@ -5,96 +5,75 @@ from frappe.utils import today, flt
 DEFAULT_WAREHOUSE = "Arnav & Co - AAC"
 GST_TEMPLATE = "Output GST In-state - AAC"
 
-
 # =====================================================
-# CUSTOMER
+# CUSTOMER: Shopify customer check or create
 # =====================================================
-
 def get_or_create_customer(order_data):
-
     email = order_data.get("email")
-
     if not email:
         email = f"shopify_{order_data.get('id')}@shopify.com"
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
     if not customer:
-
         doc = frappe.get_doc({
             "doctype": "Customer",
             "customer_name": f"Shopify Customer {order_data.get('id')}",
             "customer_type": "Individual",
             "email_id": email
         })
-
         doc.insert(ignore_permissions=True)
         customer = doc.name
 
     return customer
 
-
 # =====================================================
-# SKU RESOLVE
+# SKU RESOLVE: Fetches Item, Warehouse, and GST details
 # =====================================================
-
 def resolve_item(line_item):
-
     sku = (line_item.get("sku") or "").strip()
-
-    frappe.log_error(f"SKU RECEIVED: {sku}", "SHOPIFY DEBUG")
-
+    
     if not sku:
-        frappe.log_error("SKU EMPTY", "SHOPIFY ERROR")
+        frappe.log_error(f"SKU EMPTY for item {line_item.get('name')}", "SHOPIFY ERROR")
         return None
 
+    # SKU Doctype se saara data nikalna
     row = frappe.db.get_value(
         "SKU",
         {"sku_code": sku},
-        ["product", "warehouse", "batch_no", "shopify_rate"],
+        ["product", "warehouse", "batch_no", "shopify_rate", "gst_percentage", "gst_amount"],
         as_dict=True
     )
 
     if not row:
-        frappe.log_error(f"SKU NOT FOUND: {sku}", "SHOPIFY ERROR")
+        frappe.log_error(f"SKU NOT FOUND IN MASTER: {sku}", "SHOPIFY ERROR")
         return None
 
     item_code = row.product
-
     if not frappe.db.exists("Item", item_code):
-        frappe.log_error(f"ITEM NOT FOUND: {item_code}", "SHOPIFY ERROR")
+        frappe.log_error(f"ITEM {item_code} DOES NOT EXIST", "SHOPIFY ERROR")
         return None
-
-    warehouse = row.warehouse or DEFAULT_WAREHOUSE
-    batch_no = row.batch_no or sku
-    rate = row.shopify_rate
 
     return {
         "item_code": item_code,
-        "warehouse": warehouse,
-        "batch_no": batch_no,
-        "rate": rate
+        "warehouse": row.warehouse or DEFAULT_WAREHOUSE,
+        "batch_no": row.batch_no or sku,
+        "rate": row.shopify_rate,
+        "gst_percentage": row.gst_percentage,
+        "gst_amount": row.gst_amount
     }
 
-
 # =====================================================
-# SALES ORDER
+# SALES ORDER: Creates SO with SKU GST Mapping
 # =====================================================
-
 def build_sales_order(order_data):
-
     order_id = order_data.get("id")
 
-    frappe.log_error(
-        f"BUILDING SALES ORDER FOR: {order_id}",
-        "SHOPIFY DEBUG"
-    )
-
     if frappe.db.exists("Sales Order", {"po_no": order_id}):
+        frappe.log_error(f"ORDER {order_id} ALREADY EXISTS", "SHOPIFY DEBUG")
         return None
 
     customer = get_or_create_customer(order_data)
-
     company = frappe.defaults.get_user_default("Company")
 
     so = frappe.get_doc({
@@ -112,81 +91,58 @@ def build_sales_order(order_data):
     })
 
     for line in order_data.get("line_items", []):
-
         qty = line.get("quantity", 1)
-
         resolved = resolve_item(line)
 
         if not resolved:
             continue
 
-        rate = resolved["rate"]
-
+        # Batch check/create logic
         if not frappe.db.exists("Batch", {"batch_id": resolved["batch_no"]}):
-
             batch = frappe.get_doc({
                 "doctype": "Batch",
                 "batch_id": resolved["batch_no"],
                 "item": resolved["item_code"]
             })
-
             batch.insert(ignore_permissions=True)
 
         so.append("items", {
             "item_code": resolved["item_code"],
             "qty": qty,
-            "rate": flt(rate),
+            "rate": flt(resolved["rate"]),
             "warehouse": resolved["warehouse"],
             "batch_no": resolved["batch_no"],
-            "custom_sku": line.get("sku")
+            "custom_sku": line.get("sku"),
+            "gst_percentage": resolved["gst_percentage"], # SKU se mapping
+            "gst_amount": resolved["gst_amount"]         # SKU se mapping
         })
 
     if not so.items:
         return None
 
     try:
-
         so.insert(ignore_permissions=True)
         so.submit()
-
-        frappe.log_error(
-            f"SALES ORDER CREATED: {so.name}",
-            "SHOPIFY SUCCESS"
-        )
-
         return so
-
     except Exception:
-
-        frappe.log_error(
-            frappe.get_traceback(),
-            "SALES ORDER ERROR"
-        )
-
+        frappe.log_error(frappe.get_traceback(), "SALES ORDER ERROR")
         return None
 
-
 # =====================================================
-# SALES INVOICE
+# SALES INVOICE: Creates Invoice from Sales Order
 # =====================================================
-
 def build_sales_invoice(order_data, sales_order):
-
     status = (order_data.get("financial_status") or "").lower()
-
     if status not in ["paid", "authorized"]:
-        frappe.log_error("ORDER NOT PAID → INVOICE SKIPPED", "SHOPIFY DEBUG")
         return None
-
-    order_id = order_data.get("id")
 
     invoice = frappe.get_doc({
         "doctype": "Sales Invoice",
         "customer": sales_order.customer,
         "company": sales_order.company,
-        "po_no": order_id,
+        "po_no": sales_order.po_no,
         "posting_date": today(),
-        "update_stock": 0,
+        "update_stock": 0, # Stock SO se update ho chuka hoga ya alag process hoga
         "currency": "INR",
         "conversion_rate": 1,
         "taxes_and_charges": GST_TEMPLATE,
@@ -194,7 +150,6 @@ def build_sales_invoice(order_data, sales_order):
     })
 
     for row in sales_order.items:
-
         invoice.append("items", {
             "item_code": row.item_code,
             "qty": row.qty,
@@ -202,46 +157,26 @@ def build_sales_invoice(order_data, sales_order):
             "warehouse": row.warehouse,
             "custom_sku": row.custom_sku,
             "batch_no": row.batch_no,
+            "gst_percentage": row.gst_percentage, # SO se Invoice mein mapping
+            "gst_amount": row.gst_amount,         # SO se Invoice mein mapping
             "sales_order": sales_order.name,
             "so_detail": row.name
         })
 
     try:
-
         invoice.insert(ignore_permissions=True)
         invoice.submit()
-
-        frappe.log_error(
-            f"SALES INVOICE CREATED: {invoice.name}",
-            "SHOPIFY SUCCESS"
-        )
-
         return invoice
-
     except Exception:
-
-        frappe.log_error(
-            frappe.get_traceback(),
-            "SALES INVOICE ERROR"
-        )
-
+        frappe.log_error(frappe.get_traceback(), "SALES INVOICE ERROR")
         return None
 
-
 # =====================================================
-# PAYMENT ENTRY
+# PAYMENT ENTRY: Final Payment against Invoice
 # =====================================================
-
 def create_payment(invoice):
-
-    company = invoice.company
-
-    cash_account = frappe.db.get_value(
-        "Account",
-        {"account_type": "Cash", "company": company},
-        "name"
-    )
-
+    cash_account = frappe.db.get_value("Account", {"account_type": "Cash", "company": invoice.company}, "name")
+    
     if not cash_account:
         frappe.log_error("CASH ACCOUNT NOT FOUND", "SHOPIFY ERROR")
         return
@@ -249,7 +184,7 @@ def create_payment(invoice):
     payment = frappe.get_doc({
         "doctype": "Payment Entry",
         "payment_type": "Receive",
-        "company": company,
+        "company": invoice.company,
         "posting_date": today(),
         "party_type": "Customer",
         "party": invoice.customer,
@@ -264,70 +199,32 @@ def create_payment(invoice):
     })
 
     try:
-
         payment.insert(ignore_permissions=True)
         payment.submit()
-
-        frappe.log_error(
-            f"PAYMENT CREATED: {payment.name}",
-            "SHOPIFY SUCCESS"
-        )
-
     except Exception:
-
-        frappe.log_error(
-            frappe.get_traceback(),
-            "PAYMENT ENTRY ERROR"
-        )
-
+        frappe.log_error(frappe.get_traceback(), "PAYMENT ENTRY ERROR")
 
 # =====================================================
-# WEBHOOK
+# WEBHOOK ENTRY POINT
 # =====================================================
-
 @frappe.whitelist(allow_guest=True)
 def create_order():
-
     frappe.set_user("Administrator")
-
     try:
-
         order_data = frappe.request.get_json()
-
-        frappe.log_error(
-            json.dumps(order_data, indent=2),
-            "SHOPIFY WEBHOOK RECEIVED"
-        )
-
     except Exception as e:
-
-        frappe.log_error(str(e), "SHOPIFY WEBHOOK ERROR")
-
         return {"status": "invalid payload"}
 
     sales_order = build_sales_order(order_data)
-
     if not sales_order:
-        return {"status": "sales_order_failed"}
+        return {"status": "failed or exists"}
 
     invoice = build_sales_invoice(order_data, sales_order)
-
     if invoice:
         create_payment(invoice)
 
     frappe.db.commit()
-
-    frappe.log_error(
-        f"ORDER PROCESS COMPLETE: {order_data.get('id')}",
-        "SHOPIFY SUCCESS"
-    )
-
-    return {
-        "status": "success",
-        "sales_order": sales_order.name,
-        "invoice": invoice.name if invoice else None
-    }
-
+    return {"status": "success", "order": sales_order.name}
 
 # import frappe
 # import json
