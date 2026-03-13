@@ -1,5 +1,18 @@
 frappe.ui.form.on("SKU Master", {
+    refresh(frm) {
 
+    (frm.doc.sku_details || []).forEach(row => {
+
+        if (!row.shopify_rate && row.selling_price) {
+            row.shopify_rate = row.selling_price;
+        }
+
+        calculate_shopify_fields(row);
+
+    });
+
+    frm.refresh_field("sku_details");
+},
     invoice_no: function(frm) {
 
         if (!frm.doc.invoice_no) {
@@ -222,17 +235,106 @@ frappe.ui.form.on("SKU Details", {
             });
     },
     
+    // selling_price(frm, cdt, cdn) {
+    //     let row = locals[cdt][cdn];
+    //     calculate_final_amount(row);
+    //     frm.refresh_field("sku_details");
+    // },
+
     selling_price(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+
+    calculate_final_amount(row);
+
+    // default shopify rate from selling price (only if empty)
+    if (!row.shopify_rate) {
+        row.shopify_rate = row.selling_price;
+    }
+
+    calculate_shopify_fields(row);
+
+    frm.refresh_field("sku_details");
+},
+
+shopify_rate(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+
+    calculate_shopify_fields(row);
+
+    frm.refresh_field("sku_details");
+},
+
+gst_percentage(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+
+    calculate_shopify_fields(row);
+
+    frm.refresh_field("sku_details");
+},
+
+qty(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+
+    calculate_shopify_fields(row);
+
+    frm.refresh_field("sku_details");
+},
+    roundoff(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         calculate_final_amount(row);
         frm.refresh_field("sku_details");
     },
 
-    roundoff(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        calculate_final_amount(row);
-        frm.refresh_field("sku_details");
+product(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+    if (!row.product) return;
+
+    // default shopify rate
+    if (row.selling_price && !row.shopify_rate) {
+        row.shopify_rate = row.selling_price;
     }
+
+    // Fetch complete Item document
+    frappe.db.get_doc("Item", row.product).then(item => {
+
+        let template = null;
+
+        if (item.taxes && item.taxes.length) {
+            template = item.taxes[0].item_tax_template;
+        }
+
+        if (!template) {
+            row.gst_percentage = 0;
+            calculate_shopify_fields(row);
+            frm.refresh_field("sku_details");
+            return;
+        }
+
+        // fetch gst_rate from template
+        frappe.db.get_value(
+            "Item Tax Template",
+            template,
+            "gst_rate"
+        ).then(r => {
+
+            row.gst_percentage = flt(r.message?.gst_rate || 0);
+
+            calculate_shopify_fields(row);
+
+            frm.refresh_field("sku_details");
+
+        });
+
+    });
+
+    calculate_shopify_fields(row);
+    frm.refresh_field("sku_details");
+},
     
 });
 
@@ -352,4 +454,17 @@ function calculate_final_amount(row) {
 
     // This automatically handles negative roundoff
     row.final_amount = selling + roundoff;
+}
+
+function calculate_shopify_fields(row) {
+
+    let shopify_rate = flt(row.shopify_rate);
+    let qty = flt(row.qty) || 1;
+    let gst_percent = flt(row.gst_percentage);
+
+    // GST Amount
+    row.gst_amount = shopify_rate * qty * gst_percent / 100;
+
+    // Final Shopify Selling Rate
+    row.shopify_selling_rate = shopify_rate + row.gst_amount;
 }

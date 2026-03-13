@@ -20,6 +20,7 @@
   "set_posting_time",
   "due_date",
   "inv_ref_no",
+  "valuation_rate",
   "column_break_14",
   "is_pos",
   "pos_profile",
@@ -2193,6 +2194,11 @@
    "fieldname": "inv_ref_no",
    "fieldtype": "Data",
    "label": "Inv. Ref. No."
+  },
+  {
+   "fieldname": "valuation_rate",
+   "fieldtype": "Currency",
+   "label": "Valuation Rate"
   }
  ],
  "grid_page_length": 50,
@@ -2205,7 +2211,7 @@
    "link_fieldname": "consolidated_invoice"
   }
  ],
- "modified": "2026-01-29 15:16:38.312951",
+ "modified": "2026-03-13 11:03:13.908279",
  "modified_by": "Administrator",
  "module": "credit_note",
  "name": "Credit Note",
