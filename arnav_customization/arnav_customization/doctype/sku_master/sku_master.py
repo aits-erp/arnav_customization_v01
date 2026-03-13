@@ -146,6 +146,12 @@ class SKUMaster(Document):
             sku_doc.cost_price = row.cost_price
             sku_doc.selling_price = row.selling_price
 
+            # NEW FIELDS
+            sku_doc.shopify_rate = flt(row.shopify_rate)
+            sku_doc.gst_percentage = flt(row.gst_percentage)
+            sku_doc.gst_amount = flt(row.gst_amount)
+            sku_doc.shopify_selling_rate = flt(row.shopify_selling_rate)
+
             sku_doc.image_url = row.image
 
             sku_doc.sku_master = self.name

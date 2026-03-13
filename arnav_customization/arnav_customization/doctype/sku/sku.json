@@ -23,7 +23,11 @@
   "barcode",
   "valuation_rate",
   "created_from_pi",
-  "old_sku_ref"
+  "old_sku_ref",
+  "shopify_rate",
+  "gst_percentage",
+  "gst_amount",
+  "shopify_selling_rate"
  ],
  "fields": [
   {
@@ -130,12 +134,32 @@
    "fieldname": "old_sku_ref",
    "fieldtype": "Data",
    "label": "Old SKU Ref"
+  },
+  {
+   "fieldname": "shopify_rate",
+   "fieldtype": "Float",
+   "label": "Shopify Rate"
+  },
+  {
+   "fieldname": "gst_percentage",
+   "fieldtype": "Percent",
+   "label": "GST Percentage"
+  },
+  {
+   "fieldname": "gst_amount",
+   "fieldtype": "Float",
+   "label": "GST Amount"
+  },
+  {
+   "fieldname": "shopify_selling_rate",
+   "fieldtype": "Float",
+   "label": "Shopify Selling Rate"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 23:38:51.945325",
+ "modified": "2026-03-13 12:33:43.465167",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",
