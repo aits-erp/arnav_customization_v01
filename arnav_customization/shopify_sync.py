@@ -144,7 +144,7 @@ def sync_to_shopify(doc, method=None):
             update_payload = {
                 "variant": {
                     "id": existing_variant["id"],
-                    "price": f(d.selling_price),
+                    "price": f(d.shopify_selling_rate),
                     "compare_at_price": f(d.cost_price),
                     "weight": f(d.net_weight),
                     "weight_unit": "g"
@@ -168,7 +168,7 @@ def sync_to_shopify(doc, method=None):
             variant_payload = {
                 "variant": {
                     "sku": d.sku,
-                    "price": f(d.selling_price),
+                    "price": f(d.shopify_selling_rate),
                     "compare_at_price": f(d.cost_price),
                     "weight": f(d.net_weight),
                     "weight_unit": "g",

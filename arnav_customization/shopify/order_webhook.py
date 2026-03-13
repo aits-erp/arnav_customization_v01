@@ -59,7 +59,7 @@ def resolve_item(line_item):
     row = frappe.db.get_value(
         "SKU",
         {"sku_code": sku},
-        ["product", "warehouse", "batch_no", "selling_price"],
+        ["product", "warehouse", "batch_no", "shopify_rate"],
         as_dict=True
     )
 
@@ -82,7 +82,7 @@ def resolve_item(line_item):
 
     warehouse = row.warehouse or DEFAULT_WAREHOUSE
     batch_no = row.batch_no or sku
-    rate = row.selling_price
+    rate = row.shopify_rate
 
     frappe.log_error(
         f"ITEM RESOLVED → {item_code} | WH {warehouse} | Batch {batch_no}",
@@ -129,7 +129,7 @@ def build_sales_order(order_data):
         "transaction_date": today(),
         "delivery_date": today(),
         "currency": "INR",
-        "conversion_rate": 1,
+        "conversion_rate": 0,
         "items": []
     })
 
