@@ -40,7 +40,7 @@ def get_or_create_customer(order_data):
 
 
 # =====================================================
-# SKU → ITEM RESOLUTION
+# SKU RESOLVE
 # =====================================================
 
 def resolve_item(line_item):
@@ -95,11 +95,18 @@ def build_sales_order(order_data):
 
     order_id = order_data.get("id")
 
-    frappe.log_error(f"BUILDING SALES ORDER FOR: {order_id}", "SHOPIFY DEBUG")
+    frappe.log_error(
+        f"BUILDING SALES ORDER FOR: {order_id}",
+        "SHOPIFY DEBUG"
+    )
 
     if frappe.db.exists("Sales Order", {"po_no": order_id}):
 
-        frappe.log_error("SALES ORDER ALREADY EXISTS", "SHOPIFY DEBUG")
+        frappe.log_error(
+            f"SALES ORDER ALREADY EXISTS: {order_id}",
+            "SHOPIFY DEBUG"
+        )
+
         return None
 
     customer = get_or_create_customer(order_data)
@@ -113,6 +120,7 @@ def build_sales_order(order_data):
         "delivery_date": today(),
         "currency": "INR",
         "conversion_rate": 1,
+        "selling_price_list": "Standard Selling",
         "taxes_and_charges": GST_TEMPLATE,
         "items": []
     })
@@ -149,15 +157,33 @@ def build_sales_order(order_data):
 
     if not so.items:
 
-        frappe.log_error("NO ITEMS FOUND → ORDER SKIPPED", "SHOPIFY ERROR")
+        frappe.log_error(
+            "NO ITEMS FOUND → ORDER SKIPPED",
+            "SHOPIFY ERROR"
+        )
+
         return None
 
-    so.insert(ignore_permissions=True)
-    so.submit()
+    try:
 
-    frappe.log_error(f"SALES ORDER CREATED: {so.name}", "SHOPIFY SUCCESS")
+        so.insert(ignore_permissions=True)
+        so.submit()
 
-    return so
+        frappe.log_error(
+            f"SALES ORDER CREATED: {so.name}",
+            "SHOPIFY SUCCESS"
+        )
+
+        return so
+
+    except Exception:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            "SALES ORDER ERROR"
+        )
+
+        return None
 
 
 # =====================================================
@@ -171,7 +197,10 @@ def build_sales_invoice(order_data, sales_order):
     frappe.log_error(f"FINANCIAL STATUS: {status}", "SHOPIFY DEBUG")
 
     if status not in ["paid", "authorized"]:
-        frappe.log_error("ORDER NOT PAID → INVOICE SKIPPED", "SHOPIFY DEBUG")
+        frappe.log_error(
+            "ORDER NOT PAID → INVOICE SKIPPED",
+            "SHOPIFY DEBUG"
+        )
         return None
 
     order_id = order_data.get("id")
@@ -202,12 +231,26 @@ def build_sales_invoice(order_data, sales_order):
             "so_detail": row.name
         })
 
-    invoice.insert(ignore_permissions=True)
-    invoice.submit()
+    try:
 
-    frappe.log_error(f"SALES INVOICE CREATED: {invoice.name}", "SHOPIFY SUCCESS")
+        invoice.insert(ignore_permissions=True)
+        invoice.submit()
 
-    return invoice
+        frappe.log_error(
+            f"SALES INVOICE CREATED: {invoice.name}",
+            "SHOPIFY SUCCESS"
+        )
+
+        return invoice
+
+    except Exception:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            "SALES INVOICE ERROR"
+        )
+
+        return None
 
 
 # =====================================================
@@ -226,7 +269,11 @@ def create_payment(invoice):
 
     if not cash_account:
 
-        frappe.log_error("CASH ACCOUNT NOT FOUND", "SHOPIFY ERROR")
+        frappe.log_error(
+            "CASH ACCOUNT NOT FOUND",
+            "SHOPIFY PAYMENT ERROR"
+        )
+
         return
 
     payment = frappe.get_doc({
@@ -246,14 +293,26 @@ def create_payment(invoice):
         }]
     })
 
-    payment.insert(ignore_permissions=True)
-    payment.submit()
+    try:
 
-    frappe.log_error(f"PAYMENT CREATED: {payment.name}", "SHOPIFY SUCCESS")
+        payment.insert(ignore_permissions=True)
+        payment.submit()
+
+        frappe.log_error(
+            f"PAYMENT CREATED: {payment.name}",
+            "SHOPIFY SUCCESS"
+        )
+
+    except Exception:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            "PAYMENT ENTRY ERROR"
+        )
 
 
 # =====================================================
-# WEBHOOK ENTRY POINT
+# WEBHOOK
 # =====================================================
 
 @frappe.whitelist(allow_guest=True)
@@ -273,12 +332,13 @@ def create_order():
     except Exception as e:
 
         frappe.log_error(str(e), "SHOPIFY WEBHOOK ERROR")
+
         return {"status": "invalid payload"}
 
     sales_order = build_sales_order(order_data)
 
     if not sales_order:
-        return {"status": "skipped"}
+        return {"status": "sales_order_failed"}
 
     invoice = build_sales_invoice(order_data, sales_order)
 
@@ -297,7 +357,6 @@ def create_order():
         "sales_order": sales_order.name,
         "invoice": invoice.name if invoice else None
     }
-
 
 
 
