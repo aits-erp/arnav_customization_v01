@@ -85,7 +85,7 @@ def sync_to_shopify(doc, method=None):
                 "variants": [
                     {
                         "sku": first.sku,
-                        "price": f(first.selling_price),
+                        "price": f(first.shopify_selling_rate),
                         "compare_at_price": f(first.cost_price),
                         "weight": f(first.net_weight),
                         "weight_unit": "g",
@@ -355,3 +355,4 @@ def sync_to_shopify(doc, method=None):
 #             frappe.throw(f"Inventory Error: {inv}")
 
 #     frappe.msgprint("🔥 Shopify Sync Complete (Pro Safe Mode)")
+
