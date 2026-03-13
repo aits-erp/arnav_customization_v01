@@ -3,27 +3,7 @@ import json
 from frappe.utils import today, flt
 
 DEFAULT_WAREHOUSE = "Arnav & Co - AAC"
-
-
-# =====================================================
-# GET GST TEMPLATE
-# =====================================================
-
-def get_tax_template(company):
-
-    template = frappe.db.get_value(
-        "Sales Taxes and Charges Template",
-        {"company": company},
-        "name"
-    )
-
-    if not template:
-        frappe.log_error(
-            f"No GST Template found for {company}",
-            "SHOPIFY ERROR"
-        )
-
-    return template
+GST_TEMPLATE = "Output GST In-state - AAC"
 
 
 # =====================================================
@@ -49,7 +29,6 @@ def get_or_create_customer(order_data):
         })
 
         doc.insert(ignore_permissions=True)
-
         customer = doc.name
 
     return customer
@@ -106,7 +85,10 @@ def build_sales_order(order_data):
 
     order_id = order_data.get("id")
 
-    frappe.log_error(f"BUILDING SALES ORDER FOR: {order_id}", "SHOPIFY DEBUG")
+    frappe.log_error(
+        f"BUILDING SALES ORDER FOR: {order_id}",
+        "SHOPIFY DEBUG"
+    )
 
     if frappe.db.exists("Sales Order", {"po_no": order_id}):
         return None
@@ -114,8 +96,6 @@ def build_sales_order(order_data):
     customer = get_or_create_customer(order_data)
 
     company = frappe.defaults.get_user_default("Company")
-
-    tax_template = get_tax_template(company)
 
     so = frappe.get_doc({
         "doctype": "Sales Order",
@@ -127,7 +107,7 @@ def build_sales_order(order_data):
         "currency": "INR",
         "conversion_rate": 1,
         "selling_price_list": "Standard Selling",
-        "taxes_and_charges": tax_template,
+        "taxes_and_charges": GST_TEMPLATE,
         "items": []
     })
 
@@ -200,20 +180,16 @@ def build_sales_invoice(order_data, sales_order):
 
     order_id = order_data.get("id")
 
-    company = sales_order.company
-
-    tax_template = get_tax_template(company)
-
     invoice = frappe.get_doc({
         "doctype": "Sales Invoice",
         "customer": sales_order.customer,
-        "company": company,
+        "company": sales_order.company,
         "po_no": order_id,
         "posting_date": today(),
         "update_stock": 0,
         "currency": "INR",
         "conversion_rate": 1,
-        "taxes_and_charges": tax_template,
+        "taxes_and_charges": GST_TEMPLATE,
         "items": []
     })
 
