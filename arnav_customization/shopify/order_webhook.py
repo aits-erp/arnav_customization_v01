@@ -3,7 +3,27 @@ import json
 from frappe.utils import today, flt
 
 DEFAULT_WAREHOUSE = "Arnav & Co - AAC"
-GST_TEMPLATE = "Output GST 3% - AAC"
+
+
+# =====================================================
+# GET GST TEMPLATE
+# =====================================================
+
+def get_tax_template(company):
+
+    template = frappe.db.get_value(
+        "Sales Taxes and Charges Template",
+        {"company": company},
+        "name"
+    )
+
+    if not template:
+        frappe.log_error(
+            f"No GST Template found for {company}",
+            "SHOPIFY ERROR"
+        )
+
+    return template
 
 
 # =====================================================
@@ -16,8 +36,6 @@ def get_or_create_customer(order_data):
 
     if not email:
         email = f"shopify_{order_data.get('id')}@shopify.com"
-
-    frappe.log_error(f"Customer Email: {email}", "SHOPIFY DEBUG")
 
     customer = frappe.db.get_value("Customer", {"email_id": email})
 
@@ -33,8 +51,6 @@ def get_or_create_customer(order_data):
         doc.insert(ignore_permissions=True)
 
         customer = doc.name
-
-        frappe.log_error(f"Customer Created: {customer}", "SHOPIFY DEBUG")
 
     return customer
 
@@ -74,11 +90,6 @@ def resolve_item(line_item):
     batch_no = row.batch_no or sku
     rate = row.shopify_rate
 
-    frappe.log_error(
-        f"ITEM RESOLVED → {item_code} | WH {warehouse} | Batch {batch_no} | Rate {rate}",
-        "SHOPIFY DEBUG"
-    )
-
     return {
         "item_code": item_code,
         "warehouse": warehouse,
@@ -95,33 +106,28 @@ def build_sales_order(order_data):
 
     order_id = order_data.get("id")
 
-    frappe.log_error(
-        f"BUILDING SALES ORDER FOR: {order_id}",
-        "SHOPIFY DEBUG"
-    )
+    frappe.log_error(f"BUILDING SALES ORDER FOR: {order_id}", "SHOPIFY DEBUG")
 
     if frappe.db.exists("Sales Order", {"po_no": order_id}):
-
-        frappe.log_error(
-            f"SALES ORDER ALREADY EXISTS: {order_id}",
-            "SHOPIFY DEBUG"
-        )
-
         return None
 
     customer = get_or_create_customer(order_data)
 
+    company = frappe.defaults.get_user_default("Company")
+
+    tax_template = get_tax_template(company)
+
     so = frappe.get_doc({
         "doctype": "Sales Order",
         "customer": customer,
-        "company": frappe.defaults.get_user_default("Company"),
+        "company": company,
         "po_no": order_id,
         "transaction_date": today(),
         "delivery_date": today(),
         "currency": "INR",
         "conversion_rate": 1,
         "selling_price_list": "Standard Selling",
-        "taxes_and_charges": GST_TEMPLATE,
+        "taxes_and_charges": tax_template,
         "items": []
     })
 
@@ -156,12 +162,6 @@ def build_sales_order(order_data):
         })
 
     if not so.items:
-
-        frappe.log_error(
-            "NO ITEMS FOUND → ORDER SKIPPED",
-            "SHOPIFY ERROR"
-        )
-
         return None
 
     try:
@@ -194,27 +194,26 @@ def build_sales_invoice(order_data, sales_order):
 
     status = (order_data.get("financial_status") or "").lower()
 
-    frappe.log_error(f"FINANCIAL STATUS: {status}", "SHOPIFY DEBUG")
-
     if status not in ["paid", "authorized"]:
-        frappe.log_error(
-            "ORDER NOT PAID → INVOICE SKIPPED",
-            "SHOPIFY DEBUG"
-        )
+        frappe.log_error("ORDER NOT PAID → INVOICE SKIPPED", "SHOPIFY DEBUG")
         return None
 
     order_id = order_data.get("id")
 
+    company = sales_order.company
+
+    tax_template = get_tax_template(company)
+
     invoice = frappe.get_doc({
         "doctype": "Sales Invoice",
         "customer": sales_order.customer,
-        "company": sales_order.company,
+        "company": company,
         "po_no": order_id,
         "posting_date": today(),
         "update_stock": 0,
         "currency": "INR",
         "conversion_rate": 1,
-        "taxes_and_charges": GST_TEMPLATE,
+        "taxes_and_charges": tax_template,
         "items": []
     })
 
@@ -268,12 +267,7 @@ def create_payment(invoice):
     )
 
     if not cash_account:
-
-        frappe.log_error(
-            "CASH ACCOUNT NOT FOUND",
-            "SHOPIFY PAYMENT ERROR"
-        )
-
+        frappe.log_error("CASH ACCOUNT NOT FOUND", "SHOPIFY ERROR")
         return
 
     payment = frappe.get_doc({
@@ -357,7 +351,6 @@ def create_order():
         "sales_order": sales_order.name,
         "invoice": invoice.name if invoice else None
     }
-
 
 
 # import frappe
