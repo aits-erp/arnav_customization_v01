@@ -8,7 +8,8 @@
  "field_order": [
   "add_orders_section",
   "date",
-  "group",
+  "lead_owner_1",
+  "lead_owner_2",
   "salestype",
   "billtype",
   "branch",
@@ -39,12 +40,6 @@
    "label": "Add Orders"
   },
   {
-   "fieldname": "group",
-   "fieldtype": "Link",
-   "label": "Group",
-   "options": "Sales Person"
-  },
-  {
    "fieldname": "billtype",
    "fieldtype": "Link",
    "label": "BillType",
@@ -56,9 +51,8 @@
   },
   {
    "fieldname": "salestype",
-   "fieldtype": "Select",
-   "label": "SalesType",
-   "options": "\nStore\nOnline\nWhatsapp\nExibition\nStore & Online"
+   "fieldtype": "Data",
+   "label": "SalesType"
   },
   {
    "fieldname": "client_name",
@@ -135,7 +129,6 @@
    "options": "Warehouse"
   },
   {
-   "fetch_from": "client_name.mobile_no",
    "fieldname": "mobile_number",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -183,13 +176,25 @@
    "fieldname": "date",
    "fieldtype": "Datetime",
    "label": "Date"
+  },
+  {
+   "fieldname": "lead_owner_1",
+   "fieldtype": "Link",
+   "label": "Lead Owner_1",
+   "options": "Sales Person"
+  },
+  {
+   "fieldname": "lead_owner_2",
+   "fieldtype": "Link",
+   "label": "Lead Owner_2",
+   "options": "Sales Person"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-13 11:32:18.888771",
+ "modified": "2026-03-13 13:16:24.973441",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
