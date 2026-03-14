@@ -10,7 +10,8 @@ doctype_js = {
     "Debit Note": "public/js/debit_note.js",
     "Sales Invoice": "public/js/sales_invoice.js",
     "Stock Entry": "public/js/stock_entry.js",
-    "Quotation": "public/js/quotation.js"
+    "Quotation": "public/js/quotation.js",
+	"Opportunity": "public/js/opportunity.js"
 }
 
 fixtures = [
@@ -52,7 +53,8 @@ doc_events = {
 
     "Credit Note": {
         "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"
-    }
+    },
+	
 }
 
 # doc_events = {
