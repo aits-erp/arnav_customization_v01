@@ -4,7 +4,9 @@ from frappe.model.mapper import get_mapped_doc
 
 @frappe.whitelist()
 def make_opportunity(source_name, target_doc=None):
-	frappe.msgprint("CUSTOM METHOD RUNNING")
+
+    frappe.msgprint("CUSTOM METHOD RUNNING")
+
     doc = get_mapped_doc(
         "Lead",
         source_name,
@@ -37,7 +39,6 @@ def make_opportunity(source_name, target_doc=None):
 
 
 def set_missing_values(source, target):
-
     target.opportunity_from = "Lead"
     target.party_name = source.name
     target.customer_name = source.lead_name
