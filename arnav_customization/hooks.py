@@ -52,7 +52,7 @@ doc_events = {
     },
 
     "Credit Note": {
-        "validate": "arnav_customization.utils.sku_mapping_backend.handlers.credit_note.process"
+        "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"
     },
 	
 }
@@ -60,6 +60,6 @@ doc_events = {
 # 🔥 ADD THIS
 override_whitelisted_methods = {
     "erpnext.crm.doctype.lead.lead.make_opportunity":
-    "arnav_customization.lead_to_opportunity.make_opportunity"
+    "arnav_customization.utils.lead_to_opportunity.make_opportunity"
 }
 
