@@ -25,7 +25,7 @@ frappe.ui.form.on("Stock Entry Detail", {
                 frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
 
                 // prevents popup
-                frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
+                // frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
 
                 setTimeout(() => {
                     frappe.model.set_value(cdt, cdn, "basic_rate", d.cost_price);

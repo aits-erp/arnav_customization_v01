@@ -44,7 +44,7 @@ from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 
 form_grid_templates = {"items": "templates/form_grid/item_grid.html"}
 
-class CreditNote(SellingController):
+class CreditNote(SellingController):\
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -65,6 +65,10 @@ class CreditNote(SellingController):
 			}
 		]
 
+	@property
+	def voucher_type(self):
+		return "Sales Invoice"
+		
 	def set_indicator(self):
 		"""Set indicator for portal"""
 		if self.outstanding_amount < 0:

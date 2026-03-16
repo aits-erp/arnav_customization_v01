@@ -2,6 +2,39 @@ frappe.ui.form.on('POS', {
 
     refresh: function(frm) {
         calculate_all(frm);
+
+        // ============================================
+        // FILTER SKU ITEMS BASED ON METAL SELECTION
+        // ============================================
+
+        frm.set_query("product", "sku_details", function(doc, cdt, cdn) {
+
+            if (!doc.billtype) {
+                frappe.msgprint("Please select Metal (BillType) first.");
+                return;
+            }
+
+            return {
+                filters: {
+                    custom_metal: doc.billtype
+                }
+            };
+        });
+
+
+        // ============================================
+        // FILTER PACKING MATERIAL ITEMS
+        // ============================================
+
+        frm.set_query("packing_material", "packing_materials", function() {
+
+            return {
+                filters: {
+                    item_group: "Packing"
+                }
+            };
+        });
+
     },
 
     before_submit: function(frm) {

@@ -1,18 +1,33 @@
 frappe.ui.form.on("SKU Master", {
     refresh(frm) {
 
-    (frm.doc.sku_details || []).forEach(row => {
+        // Filter Product items in SKU Details based on selected Metal
+        frm.set_query("product", "sku_details", function(doc, cdt, cdn) {
 
-        if (!row.shopify_rate && row.selling_price) {
-            row.shopify_rate = row.selling_price;
-        }
+            if (!doc.metal) {
+                frappe.msgprint("Please select Metal first.");
+                return;
+            }
 
-        calculate_shopify_fields(row);
+            return {
+                filters: {
+                    custom_metal: doc.metal
+                }
+            };
+        });
 
-    });
+        (frm.doc.sku_details || []).forEach(row => {
 
-    frm.refresh_field("sku_details");
-},
+            if (!row.shopify_rate && row.selling_price) {
+                row.shopify_rate = row.selling_price;
+            }
+
+            calculate_shopify_fields(row);
+
+        });
+
+        frm.refresh_field("sku_details");
+    },
     invoice_no: function(frm) {
 
         if (!frm.doc.invoice_no) {

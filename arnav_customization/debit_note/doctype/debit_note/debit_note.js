@@ -792,7 +792,7 @@ TARGET`,
             label: "Unit",
             fieldtype: "Select",
             in_list_view: 1,
-            options: "\nGram\nKarat"
+            options: "\nGram\nCarat"
         }
     ];
 

@@ -55,10 +55,7 @@ frappe.ui.form.on('Purchase Invoice Item', {
 
                 frappe.model.set_value(cdt, cdn, "warehouse", d.warehouse);
 
-                frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
-
-                // prevents batch popup
-                frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
+                // frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
 
                 // calculate rate
                 calculate_debit_note_rate(frm, cdt, cdn);

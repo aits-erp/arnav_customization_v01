@@ -41,7 +41,7 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 	get_item_account_wise_additional_cost,
 	update_billed_amount_based_on_po,
 )
-
+from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
 
 class WarehouseMissingError(frappe.ValidationError):
 	pass
@@ -49,9 +49,25 @@ class WarehouseMissingError(frappe.ValidationError):
 
 form_grid_templates = {"items": "templates/form_grid/item_grid.html"}
 
+import erpnext.controllers.sales_and_purchase_return as spr
 
-class DebitNote(BuyingController):
-	
+_original_func = spr.get_return_against_item_fields
+
+def patched_get_return_against_item_fields(voucher_type):
+    if voucher_type == "Debit Note":
+        return "purchase_invoice_item"
+    return _original_func(voucher_type)
+
+spr.get_return_against_item_fields = patched_get_return_against_item_fields
+
+class DebitNote(PurchaseInvoice):
+
+	def get_voucher_type(self):
+		return "Purchase Invoice"
+
+	def get_return_against_doctype(self):
+		return "Purchase Invoice"
+
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.status_updater = [
@@ -109,7 +125,7 @@ class DebitNote(BuyingController):
 		self.validate_credit_to_acc()
 		self.clear_unallocated_advances("Purchase Invoice Advance", "advances")
 		self.check_on_hold_or_closed_status()
-		self.validate_with_previous_doc()
+		# self.validate_with_previous_doc()
 		self.validate_uom_is_integer("uom", "qty")
 		self.validate_uom_is_integer("stock_uom", "stock_qty")
 		self.set_expense_account(for_validate=True)
@@ -216,42 +232,42 @@ class DebitNote(BuyingController):
 				check_list.append(d.purchase_order)
 				check_on_hold_or_closed_status("Purchase Order", d.purchase_order)
 
-	def validate_with_previous_doc(self):
-		super().validate_with_previous_doc(
-			{
-				"Purchase Order": {
-					"ref_dn_field": "purchase_order",
-					"compare_fields": [["supplier", "="], ["company", "="], ["currency", "="]],
-				},
-				"Purchase Order Item": {
-					"ref_dn_field": "po_detail",
-					"compare_fields": [["project", "="], ["item_code", "="], ["uom", "="]],
-					"is_child_table": True,
-					"allow_duplicate_prev_row_id": True,
-				},
-				"Purchase Receipt": {
-					"ref_dn_field": "purchase_receipt",
-					"compare_fields": [["supplier", "="], ["company", "="], ["currency", "="]],
-				},
-				"Purchase Receipt Item": {
-					"ref_dn_field": "pr_detail",
-					"compare_fields": [["project", "="], ["item_code", "="], ["uom", "="]],
-					"is_child_table": True,
-				},
-			}
-		)
+	# def validate_with_previous_doc(self):
+	# 	super().validate_with_previous_doc(
+	# 		{
+	# 			"Purchase Order": {
+	# 				"ref_dn_field": "purchase_order",
+	# 				"compare_fields": [["supplier", "="], ["company", "="], ["currency", "="]],
+	# 			},
+	# 			"Purchase Order Item": {
+	# 				"ref_dn_field": "po_detail",
+	# 				"compare_fields": [["project", "="], ["item_code", "="], ["uom", "="]],
+	# 				"is_child_table": True,
+	# 				"allow_duplicate_prev_row_id": True,
+	# 			},
+	# 			"Purchase Receipt": {
+	# 				"ref_dn_field": "purchase_receipt",
+	# 				"compare_fields": [["supplier", "="], ["company", "="], ["currency", "="]],
+	# 			},
+	# 			"Purchase Receipt Item": {
+	# 				"ref_dn_field": "pr_detail",
+	# 				"compare_fields": [["project", "="], ["item_code", "="], ["uom", "="]],
+	# 				"is_child_table": True,
+	# 			},
+	# 		}
+	# 	)
 
-		if (
-			cint(frappe.db.get_single_value("Buying Settings", "maintain_same_rate"))
-			and not self.is_return
-			and not self.is_internal_supplier
-		):
-			self.validate_rate_with_reference_doc(
-				[
-					["Purchase Order", "purchase_order", "po_detail"],
-					["Purchase Receipt", "purchase_receipt", "pr_detail"],
-				]
-			)
+	# 	if (
+	# 		cint(frappe.db.get_single_value("Buying Settings", "maintain_same_rate"))
+	# 		and not self.is_return
+	# 		and not self.is_internal_supplier
+	# 	):
+	# 		self.validate_rate_with_reference_doc(
+	# 			[
+	# 				["Purchase Order", "purchase_order", "po_detail"],
+	# 				["Purchase Receipt", "purchase_receipt", "pr_detail"],
+	# 			]
+	# 		)
 
 	def validate_warehouse(self, for_validate=True):
 		if self.update_stock and for_validate:

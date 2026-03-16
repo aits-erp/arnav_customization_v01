@@ -61,7 +61,7 @@ frappe.ui.form.on("Sales Invoice Item", {
                 frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
 
                 // prevents batch popup
-                frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
+                // frappe.model.set_value(cdt, cdn, "use_serial_batch_fields", 1);
 
             }
         });
