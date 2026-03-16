@@ -4,7 +4,7 @@ from frappe.model.mapper import get_mapped_doc
 
 @frappe.whitelist()
 def make_opportunity(source_name, target_doc=None):
-
+frappe.msgprint("CUSTOM METHOD RUNNING")
     doc = get_mapped_doc(
         "Lead",
         source_name,
