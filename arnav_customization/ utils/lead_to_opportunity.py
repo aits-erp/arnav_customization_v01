@@ -5,18 +5,6 @@ from frappe.model.mapper import get_mapped_doc
 @frappe.whitelist()
 def make_opportunity(source_name, target_doc=None):
 
-    def set_missing_values(source, target):
-
-        target.opportunity_from = "Lead"
-        target.party_name = source.name
-        target.customer_name = source.lead_name
-
-        # AUTO COPY CUSTOM FIELDS
-        for field in source.meta.fields:
-            if field.fieldname.startswith("custom_"):
-                if target.meta.has_field(field.fieldname):
-                    target.set(field.fieldname, source.get(field.fieldname))
-
     doc = get_mapped_doc(
         "Lead",
         source_name,
@@ -24,9 +12,20 @@ def make_opportunity(source_name, target_doc=None):
             "Lead": {
                 "doctype": "Opportunity",
                 "field_map": {
+
+                    # STANDARD FIELDS
                     "lead_name": "customer_name",
                     "email_id": "contact_email",
-                    "mobile_no": "contact_mobile"
+                    "mobile_no": "contact_mobile",
+
+                    # CUSTOM FIELDS
+                    "custom_source_type": "custom_source_type",
+                    "custom_lead_source": "custom_lead_source",
+                    "custom_category_interest": "custom_category_interest",
+                    "custom_metal_interest": "custom_metal_interest",
+                    "custom_lead_owner_1": "custom_lead_owner_1",
+                    "custom_lead_owner_2": "custom_lead_owner_2",
+                    "custom_budget_range": "custom_budget_range"
                 }
             }
         },
@@ -35,3 +34,10 @@ def make_opportunity(source_name, target_doc=None):
     )
 
     return doc
+
+
+def set_missing_values(source, target):
+
+    target.opportunity_from = "Lead"
+    target.party_name = source.name
+    target.customer_name = source.lead_name
