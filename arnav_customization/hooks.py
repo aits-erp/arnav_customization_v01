@@ -52,7 +52,7 @@ doc_events = {
     },
 
     "Credit Note": {
-        "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"
+        "validate": "arnav_customization.utils.sku_mapping_backend.handlers.credit_note.process"
     },
 	
 }
