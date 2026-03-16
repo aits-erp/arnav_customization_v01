@@ -57,9 +57,9 @@ doc_events = {
 	
 }
 
-# 🔥 ADD THIS
-override_whitelisted_methods = {
-    "erpnext.crm.doctype.lead.lead.make_opportunity":
-    "arnav_customization.utils.lead_to_opportunity.make_opportunity"
-}
+# # 🔥 ADD THIS
+# override_whitelisted_methods = {
+#     "erpnext.crm.doctype.lead.lead.make_opportunity":
+#     "arnav_customization.utils.lead_to_opportunity.make_opportunity"
+# }
 
