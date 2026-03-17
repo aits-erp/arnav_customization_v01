@@ -44,7 +44,7 @@ from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 
 form_grid_templates = {"items": "templates/form_grid/item_grid.html"}
 
-class CreditNote(SellingController):\
+class CreditNote(SellingController):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -94,12 +94,9 @@ class CreditNote(SellingController):\
 		super().validate()
 
 		# FIX: ensure negative qty for returns
-		if self.is_return and cint(self.update_stock):
-			for d in self.items:
-				if d.qty and d.qty > 0:
-					d.qty = -1 * abs(d.qty)
-				if d.stock_qty and d.stock_qty > 0:
-					d.stock_qty = -1 * abs(d.stock_qty)
+		for item in self.items:
+			if self.is_return and item.qty > 0:
+				item.qty = -1 * item.qty
 
 		if not self.is_pos:
 			self.so_dn_required()

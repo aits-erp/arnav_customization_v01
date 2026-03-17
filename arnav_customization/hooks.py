@@ -56,7 +56,4 @@ doc_events = {
     }
 }
 
-after_migrate = [
-    "arnav_customization.patches.register_debit_note_return.execute"
-]
 

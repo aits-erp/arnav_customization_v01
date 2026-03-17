@@ -157,62 +157,46 @@ class POS(Document):
 			row.gst_amount = (row.final_amount * gst_rate) / 100
 
 	def create_stock_out_entry(self):
+
 		if not self.branch:
-			frappe.throw("Warehouse (Branch) is mandatory to create Stock Out Entry.")
+			frappe.throw("No Branch")
 
 		if not self.sku_details:
-			return
+			frappe.throw("No SKU details")
 
 		stock_entry = frappe.new_doc("Stock Entry")
+
+		# ✅ FIX ADDED HERE
 		stock_entry.stock_entry_type = "Material Issue"
+
 		stock_entry.company = frappe.defaults.get_user_default("Company")
-		stock_entry.posting_date = self.posting_date if hasattr(self, "posting_date") else frappe.utils.nowdate()
-		stock_entry.posting_time = frappe.utils.nowtime()
-		stock_entry.set_posting_time = 1
+		stock_entry.date = frappe.utils.nowdate()
 
 		for row in self.sku_details:
 
 			if not row.sku or not row.gross_weight:
 				continue
 
-			# Get item from SKU
 			item_code = frappe.db.get_value("SKU", row.sku, "product")
 
 			if not item_code:
 				continue
 
-			qty = row.gross_weight  # 🔥 MAIN LOGIC: use gross weight
-
-			batch_no = None
-			has_batch = frappe.db.get_value("Item", item_code, "has_batch_no")
-
-			if has_batch:
-				batch = frappe.db.sql("""
-					SELECT name
-					FROM `tabBatch`
-					WHERE item = %s
-					LIMIT 1
-				""", (item_code), as_dict=True)
-
-				if not batch:
-					frappe.throw(f"No batch found for Item {item_code}")
-
-				batch_no = batch[0].name
-
 			stock_entry.append("items", {
 				"item_code": item_code,
-				"qty": qty,
-				"s_warehouse": self.branch,
-				"batch_no": batch_no
+				"qty": row.gross_weight,
+				"s_warehouse": self.branch
 			})
 
 		if not stock_entry.items:
-			return
+			frappe.throw("No items added → Stock Entry not created")
 
 		stock_entry.insert(ignore_permissions=True)
 		stock_entry.submit()
 
 		self.stock_out_ref = stock_entry.name
+
+		frappe.msgprint(f"Stock Entry Created: {stock_entry.name}")
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
