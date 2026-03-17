@@ -46,7 +46,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "UNIT",
-   "options": "\nGram\nKarat"
+   "options": "\nGram\nCarat"
   },
   {
    "fieldname": "attribute_type",

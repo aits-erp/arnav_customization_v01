@@ -14,6 +14,7 @@
   "billtype",
   "branch",
   "stock_entry_reference",
+  "stock_out_ref",
   "column_break_vyrd",
   "client_name",
   "mobile_number",
@@ -170,7 +171,8 @@
    "fieldname": "stock_entry_reference",
    "fieldtype": "Link",
    "label": "Stock Entry Ref",
-   "options": "Stock Entry"
+   "options": "Stock Entry",
+   "read_only": 1
   },
   {
    "fieldname": "date",
@@ -188,13 +190,19 @@
    "fieldtype": "Link",
    "label": "Lead Owner_2",
    "options": "Sales Person"
+  },
+  {
+   "fieldname": "stock_out_ref",
+   "fieldtype": "Link",
+   "label": "Stock Out Ref",
+   "options": "Stock Entry"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-13 13:16:24.973441",
+ "modified": "2026-03-17 12:39:25.868629",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",

@@ -451,7 +451,7 @@ TARGET`,
             fieldname: "unit",
             label: "Unit",
             fieldtype: "Select",
-            options: "\nGram\nKarat",
+            options: "\nGram\nCarat",
             in_list_view: 1
         }
     ];

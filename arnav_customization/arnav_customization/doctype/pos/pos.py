@@ -35,6 +35,9 @@ class POS(Document):
 		
 		# 3️⃣ Create Stock Entry for Packing Materials
 		self.create_packing_material_issue()
+		
+		# 4️⃣ Create Stock Entry for SKUs
+		self.create_stock_out_entry()
 
 	def on_cancel(self):
 		if self.stock_entry_reference:
@@ -153,6 +156,64 @@ class POS(Document):
 
 			row.gst_amount = (row.final_amount * gst_rate) / 100
 
+	def create_stock_out_entry(self):
+		if not self.branch:
+			frappe.throw("Warehouse (Branch) is mandatory to create Stock Out Entry.")
+
+		if not self.sku_details:
+			return
+
+		stock_entry = frappe.new_doc("Stock Entry")
+		stock_entry.stock_entry_type = "Material Issue"
+		stock_entry.company = frappe.defaults.get_user_default("Company")
+		stock_entry.posting_date = self.posting_date if hasattr(self, "posting_date") else frappe.utils.nowdate()
+		stock_entry.posting_time = frappe.utils.nowtime()
+		stock_entry.set_posting_time = 1
+
+		for row in self.sku_details:
+
+			if not row.sku or not row.gross_weight:
+				continue
+
+			# Get item from SKU
+			item_code = frappe.db.get_value("SKU", row.sku, "product")
+
+			if not item_code:
+				continue
+
+			qty = row.gross_weight  # 🔥 MAIN LOGIC: use gross weight
+
+			batch_no = None
+			has_batch = frappe.db.get_value("Item", item_code, "has_batch_no")
+
+			if has_batch:
+				batch = frappe.db.sql("""
+					SELECT name
+					FROM `tabBatch`
+					WHERE item = %s
+					LIMIT 1
+				""", (item_code), as_dict=True)
+
+				if not batch:
+					frappe.throw(f"No batch found for Item {item_code}")
+
+				batch_no = batch[0].name
+
+			stock_entry.append("items", {
+				"item_code": item_code,
+				"qty": qty,
+				"s_warehouse": self.branch,
+				"batch_no": batch_no
+			})
+
+		if not stock_entry.items:
+			return
+
+		stock_entry.insert(ignore_permissions=True)
+		stock_entry.submit()
+
+		self.stock_out_ref = stock_entry.name
+
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def customer_search_by_mobile(doctype, txt, searchfield, start, page_len, filters):
@@ -222,13 +283,3 @@ def get_sku_details(sku):
         "net_weight": sku_doc.net_weight,
         "gst_rate": gst_rate
     }
-
-# import frappe
-# from frappe.model.document import Document
-
-
-# class POS(Document):
-# 	def before_submit(self):
-# 		if abs(self.balance_amount) > 0.01:
-# 			frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
-
