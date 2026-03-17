@@ -41,38 +41,55 @@ class SKUMaster(Document):
         # ---------------------------------------------
         # CALCULATE TOTAL IN WEIGHT (FROM SKU DETAILS)
         # ---------------------------------------------
-        total_in_weight = 0
+        # total_in_weight = 0
 
-        for row in self.sku_details:
-            if flt(row.gross_weight) <= 0:
-                frappe.throw(f"Gross Weight must be greater than zero in row {row.idx}")
-            total_in_weight += flt(row.gross_weight)
+        # for row in self.sku_details:
+        #     if flt(row.gross_weight) <= 0:
+        #         frappe.throw(f"Gross Weight must be greater than zero in row {row.idx}")
+        #     total_in_weight += flt(row.gross_weight)
+
+        # total_in_qty = 0
+
+        # for row in self.sku_details:
+        #     if flt(row.qty) <= 0:
+        #         frappe.throw(f"Qty must be greater than zero in row {row.idx}")
+
+        #     total_in_qty += flt(row.qty)
 
         # ---------------------------------------------
         # VALIDATION
         # ---------------------------------------------
-        if total_in_weight > total_out_weight:
-            frappe.throw(
-                f"""
-                Total Finished Gross Weight ({total_in_weight})
-                cannot exceed Available Gross Weight ({total_out_weight}).
+        # if total_in_weight > total_out_weight:
+        #     frappe.throw(
+        #         f"""
+        #         Total Finished Gross Weight ({total_in_weight})
+        #         cannot exceed Available Gross Weight ({total_out_weight}).
 
-                Please adjust SKU Gross Weight values.
-                """
-            )
+        #         Please adjust SKU Gross Weight values.
+        #         """
+        #     )
+
+        if not self.net_quantiity:
+            frappe.throw("Gross weight must be entered.")
+
+        for row in self.sku_details:
+            if flt(row.qty) <= 0:
+                frappe.throw(f"Qty must be greater than zero in row {row.idx}")
+
+            if flt(row.gross_weight) <= 0:
+                frappe.throw(f"Gross weight must be entered in row {row.idx}")
         
         # ---------------------------------------------
         # CALCULATE ACTUAL ISSUE QTY
         # ---------------------------------------------
         # actual_out_qty = total_out_weight - total_in_weight
         # CALCULATE ACTUAL ISSUE QTY
-        actual_out_qty = total_in_weight
+        # actual_out_qty = total_in_weight
+        
+        actual_out_qty = total_out_weight
 
-        if actual_out_qty == 0:
-            frappe.throw("Finished SKU weight must be greater than zero.")
-
-        if actual_out_qty < 0:
-            frappe.throw("Calculated Issue Quantity became negative. Check weights.")
+        if actual_out_qty <= 0:
+            frappe.throw("Available gross weight must be greater than zero.")
 
         # ---------------------------------------------
         # CREATE STOCK ENTRY
@@ -172,7 +189,8 @@ class SKUMaster(Document):
             #5️⃣ Add to Stock Entry
             se.append("items", {
                 "item_code": row.product,
-                "qty": flt(row.gross_weight),
+                # "qty": flt(row.gross_weight),
+                "qty": flt(row.qty),
                 "t_warehouse": self.warehouse,
                 "batch_no": batch_name,
                 "is_finished_item": 1,

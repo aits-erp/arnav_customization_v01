@@ -1,12 +1,16 @@
 frappe.ui.form.on("SKU Master", {
-    refresh(frm) {
+
+    setup(frm) {
 
         // Filter Product items in SKU Details based on selected Metal
-        frm.set_query("product", "sku_details", function(doc, cdt, cdn) {
+        frm.set_query("product", "sku_details", function(doc) {
 
             if (!doc.metal) {
-                frappe.msgprint("Please select Metal first.");
-                return;
+                return {
+                    filters: {
+                        name: ""
+                    }
+                };
             }
 
             return {
@@ -15,6 +19,10 @@ frappe.ui.form.on("SKU Master", {
                 }
             };
         });
+
+    },
+
+    refresh(frm) {
 
         (frm.doc.sku_details || []).forEach(row => {
 
@@ -28,8 +36,8 @@ frappe.ui.form.on("SKU Master", {
 
         frm.refresh_field("sku_details");
     },
-    invoice_no: function(frm) {
 
+    invoice_no(frm) {
         if (!frm.doc.invoice_no) {
 
             frm.set_value("supplier_name", "");
@@ -46,6 +54,55 @@ frappe.ui.form.on("SKU Master", {
     }
 
 });
+
+// frappe.ui.form.on("SKU Master", {
+//     refresh(frm) {
+
+//         // Filter Product items in SKU Details based on selected Metal
+//         frm.set_query("product", "sku_details", function(doc, cdt, cdn) {
+
+//             if (!doc.metal) {
+//                 frappe.msgprint("Please select Metal first.");
+//                 return;
+//             }
+
+//             return {
+//                 filters: {
+//                     custom_metal: doc.metal
+//                 }
+//             };
+//         });
+
+//         (frm.doc.sku_details || []).forEach(row => {
+
+//             if (!row.shopify_rate && row.selling_price) {
+//                 row.shopify_rate = row.selling_price;
+//             }
+
+//             calculate_shopify_fields(row);
+
+//         });
+
+//         frm.refresh_field("sku_details");
+//     },
+//     invoice_no: function(frm) {
+
+//         if (!frm.doc.invoice_no) {
+
+//             frm.set_value("supplier_name", "");
+//             frm.set_value("metal", "");
+//             frm.set_value("hsn", "");
+//             frm.set_value("date_of_invoice", "");
+//             frm.set_value("warehouse", "");
+//             frm.set_value("net_quantiity", "");
+
+//             return;
+//         }
+
+//         load_invoices(frm, [frm.doc.invoice_no], true);
+//     }
+
+// });
 
 function calculate_weight_totals(frm) {
 

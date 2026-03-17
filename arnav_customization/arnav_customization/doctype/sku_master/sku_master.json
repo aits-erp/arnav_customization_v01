@@ -41,11 +41,13 @@
    "label": "Date of Invoice"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "net_quantiity",
    "fieldtype": "Float",
    "label": "Gross weight"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "label": "Warehouse",
@@ -56,6 +58,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "invoice_no",
    "fieldtype": "Link",
    "label": "Invoice No.",
@@ -67,6 +70,7 @@
    "label": "Date of Received"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "metal",
    "fieldtype": "Link",
    "label": "Metal",
@@ -88,6 +92,7 @@
    "label": "Note"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "sku_details",
    "fieldtype": "Table",
    "label": "SKU details",
@@ -151,7 +156,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-25 11:47:47.074615",
+ "modified": "2026-03-16 22:43:44.184056",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",

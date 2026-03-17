@@ -60,7 +60,3 @@ after_migrate = [
     "arnav_customization.patches.register_debit_note_return.execute"
 ]
 
-override_whitelisted_methods = {
-    "erpnext.controllers.queries.item_query":
-        "arnav_customization.queries.purchase_item_query.purchase_item_query"
-}

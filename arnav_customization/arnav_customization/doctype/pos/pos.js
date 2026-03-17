@@ -1,17 +1,15 @@
 frappe.ui.form.on('POS', {
 
-    refresh: function(frm) {
-        calculate_all(frm);
+    setup: function(frm) {
 
         // ============================================
-        // FILTER SKU ITEMS BASED ON METAL SELECTION
+        // FILTER SKU ITEMS BASED ON METAL
         // ============================================
 
-        frm.set_query("product", "sku_details", function(doc, cdt, cdn) {
+        frm.set_query("product", "sku_details", function(doc) {
 
             if (!doc.billtype) {
-                frappe.msgprint("Please select Metal (BillType) first.");
-                return;
+                return { filters: { name: "" } };
             }
 
             return {
@@ -35,7 +33,21 @@ frappe.ui.form.on('POS', {
             };
         });
 
+
+        // Existing customer query
+        frm.set_query("client_name", function() {
+            return {
+                query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
+            };
+        });
+
     },
+
+
+    refresh: function(frm) {
+        calculate_all(frm);
+    },
+
 
     before_submit: function(frm) {
 
@@ -76,19 +88,9 @@ frappe.ui.form.on('POS', {
                         __(". Total Cash Entered: ₹") + total_cash
             });
         }
-    },
-
-    setup: function(frm) {
-        frm.set_query("client_name", function() {
-            return {
-                query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
-            };
-        });
     }
 
 });
-
-
 
 /* =====================================================
 SKU TABLE LOGIC
