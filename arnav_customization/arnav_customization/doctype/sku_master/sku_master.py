@@ -193,7 +193,7 @@ class SKUMaster(Document):
                 "qty": flt(row.qty),
                 "t_warehouse": self.warehouse,
                 "batch_no": batch_name,
-                "is_finished_item": 1,
+                # "is_finished_item": 1,
                 "set_basic_rate_manually": 1,
                 "basic_rate": flt(row.cost_price)
             })
