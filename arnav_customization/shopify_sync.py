@@ -5,7 +5,7 @@ import requests
 # CONFIG
 # ===============================
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "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"   # ⚠️ replace
+TOKEN = "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"   # ⚠️ Replace
 API_VERSION = "2024-01"
 LOCATION_ID = 52386005145
 
@@ -25,7 +25,23 @@ def f(val):
 
 
 # ===============================
-# CREATE PRODUCT (ALWAYS DRAFT)
+# 🔒 SKU CHANGE VALIDATION
+# ===============================
+def validate_sku_change(doc):
+
+    for d in doc.sku_details:
+
+        # only check existing rows
+        if d.name and frappe.db.exists("SKUDetails", d.name):
+
+            old_sku = frappe.db.get_value("SKUDetails", d.name, "sku")
+
+            if old_sku and old_sku != d.sku:
+                frappe.throw(f"❌ SKU change allowed nahi hai: {old_sku} → {d.sku}")
+
+
+# ===============================
+# CREATE PRODUCT (DRAFT)
 # ===============================
 def create_product(d):
 
@@ -43,7 +59,7 @@ def create_product(d):
         "product": {
             "title": title,
             "body_html": description,
-            "status": "draft",   # ✅ ALWAYS DRAFT
+            "status": "draft",
             "variants": [
                 {
                     "sku": d.sku,
@@ -73,7 +89,7 @@ def create_product(d):
 
 
 # ===============================
-# UPDATE PRODUCT (FORCE DRAFT)
+# UPDATE PRODUCT (SKU LOCKED)
 # ===============================
 def update_product(d):
 
@@ -87,7 +103,7 @@ def update_product(d):
     <b>Cost:</b> ₹{d.cost_price}<br>
     """
 
-    # ✅ UPDATE PRODUCT + FORCE DRAFT
+    # ✅ UPDATE PRODUCT (FORCE DRAFT)
     requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}.json",
         json={
@@ -95,19 +111,19 @@ def update_product(d):
                 "id": d.shopify_product_id,
                 "title": title,
                 "body_html": description,
-                "status": "draft"   # 🔥 IMPORTANT FIX
+                "status": "draft"
             }
         },
         headers=HEADERS
     )
 
-    # ✅ UPDATE VARIANT (SKU + PRICE ETC)
+    # ✅ UPDATE VARIANT (NO SKU CHANGE)
     res = requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/variants/{d.shopify_variant_id}.json",
         json={
             "variant": {
                 "id": d.shopify_variant_id,
-                "sku": d.sku,
+                # ❌ SKU NOT INCLUDED (LOCKED)
                 "price": f(d.shopify_selling_rate),
                 "compare_at_price": f(d.cost_price),
                 "weight": f(d.net_weight),
@@ -127,23 +143,6 @@ def update_product(d):
     ).json()
 
     return v["variant"]["inventory_item_id"]
-
-
-# ===============================
-# ARCHIVE OLD PRODUCT (SKU CHANGE)
-# ===============================
-def archive_product(product_id):
-
-    requests.put(
-        f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}.json",
-        json={
-            "product": {
-                "id": product_id,
-                "status": "archived"
-            }
-        },
-        headers=HEADERS
-    )
 
 
 # ===============================
@@ -172,21 +171,13 @@ def update_inventory(inventory_item_id, qty):
 # ===============================
 def sync_each_sku_as_product(doc, method=None):
 
+    # 🔒 SKU CHANGE BLOCK
+    validate_sku_change(doc)
+
     if not doc.sku_details:
         frappe.throw("No SKU Details found")
 
     for d in doc.sku_details:
-
-        # ===============================
-        # SKU CHANGE DETECT
-        # ===============================
-        if d.last_synced_sku and d.last_synced_sku != d.sku:
-
-            if d.shopify_product_id:
-                archive_product(d.shopify_product_id)
-
-            d.shopify_product_id = None
-            d.shopify_variant_id = None
 
         # ===============================
         # CREATE OR UPDATE
@@ -203,16 +194,11 @@ def sync_each_sku_as_product(doc, method=None):
             inventory_item_id = update_product(d)
 
         # ===============================
-        # INVENTORY
+        # INVENTORY SYNC
         # ===============================
         update_inventory(inventory_item_id, d.qty)
 
-        # ===============================
-        # SAVE LAST SKU
-        # ===============================
-        d.last_synced_sku = d.sku
-
-    frappe.msgprint("🔥 Shopify Sync Complete (Draft Safe Mode)")
+    frappe.msgprint("🔥 Shopify Sync Complete (SKU Locked Mode)")
 
 
 # ===============================
@@ -220,7 +206,6 @@ def sync_each_sku_as_product(doc, method=None):
 # ===============================
 def sync_to_shopify(doc, method=None):
     return sync_each_sku_as_product(doc, method)
-
 
 
 # import frappe
