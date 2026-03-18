@@ -5,7 +5,7 @@ import requests
 # CONFIG
 # ===============================
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "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"   # ⚠️ Replace
+TOKEN = "NEW_TOKEN_HERE"   # ⚠️ Replace
 API_VERSION = "2024-01"
 LOCATION_ID = 52386005145
 
@@ -31,10 +31,8 @@ def validate_sku_change(doc):
 
     for d in doc.sku_details:
 
-        # only check existing rows
-        if d.name and frappe.db.exists("SKUDetails", d.name):
-
-            old_sku = frappe.db.get_value("SKUDetails", d.name, "sku")
+        if d.name and frappe.db.exists("SKU Details", d.name):
+            old_sku = frappe.db.get_value("SKU Details", d.name, "sku")
 
             if old_sku and old_sku != d.sku:
                 frappe.throw(f"❌ SKU change allowed nahi hai: {old_sku} → {d.sku}")
@@ -59,7 +57,7 @@ def create_product(d):
         "product": {
             "title": title,
             "body_html": description,
-            "status": "draft",
+            "status": "draft",   # ✅ CREATE = DRAFT
             "variants": [
                 {
                     "sku": d.sku,
@@ -89,7 +87,7 @@ def create_product(d):
 
 
 # ===============================
-# UPDATE PRODUCT (SKU LOCKED)
+# UPDATE PRODUCT (ACTIVE)
 # ===============================
 def update_product(d):
 
@@ -103,7 +101,7 @@ def update_product(d):
     <b>Cost:</b> ₹{d.cost_price}<br>
     """
 
-    # ✅ UPDATE PRODUCT (FORCE DRAFT)
+    # ✅ UPDATE PRODUCT → ACTIVE (PUBLISH)
     requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}.json",
         json={
@@ -111,19 +109,18 @@ def update_product(d):
                 "id": d.shopify_product_id,
                 "title": title,
                 "body_html": description,
-                "status": "draft"
+                "status": "active"   # 🔥 UPDATE = ACTIVE
             }
         },
         headers=HEADERS
     )
 
-    # ✅ UPDATE VARIANT (NO SKU CHANGE)
+    # ✅ UPDATE VARIANT (SKU LOCKED)
     res = requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/variants/{d.shopify_variant_id}.json",
         json={
             "variant": {
                 "id": d.shopify_variant_id,
-                # ❌ SKU NOT INCLUDED (LOCKED)
                 "price": f(d.shopify_selling_rate),
                 "compare_at_price": f(d.cost_price),
                 "weight": f(d.net_weight),
@@ -136,7 +133,37 @@ def update_product(d):
     if "errors" in res:
         frappe.throw(f"Variant Update Error: {res}")
 
+    # ===============================
+    # 🧹 DELETE OLD IMAGES
+    # ===============================
+    images = requests.get(
+        f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}/images.json",
+        headers=HEADERS
+    ).json()
+
+    for img in images.get("images", []):
+        requests.delete(
+            f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}/images/{img['id']}.json",
+            headers=HEADERS
+        )
+
+    # ===============================
+    # 🖼️ ADD NEW IMAGE
+    # ===============================
+    if getattr(d, "image_url", None):
+        requests.post(
+            f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}/images.json",
+            json={
+                "image": {
+                    "src": d.image_url
+                }
+            },
+            headers=HEADERS
+        )
+
+    # ===============================
     # GET INVENTORY ITEM ID
+    # ===============================
     v = requests.get(
         f"https://{SHOP}/admin/api/{API_VERSION}/variants/{d.shopify_variant_id}.json",
         headers=HEADERS
@@ -167,11 +194,10 @@ def update_inventory(inventory_item_id, qty):
 
 
 # ===============================
-# MAIN SYNC FUNCTION
+# MAIN FUNCTION
 # ===============================
 def sync_each_sku_as_product(doc, method=None):
 
-    # 🔒 SKU CHANGE BLOCK
     validate_sku_change(doc)
 
     if not doc.sku_details:
@@ -179,26 +205,17 @@ def sync_each_sku_as_product(doc, method=None):
 
     for d in doc.sku_details:
 
-        # ===============================
-        # CREATE OR UPDATE
-        # ===============================
         if not d.shopify_product_id:
-
             product_id, variant_id, inventory_item_id = create_product(d)
 
             d.shopify_product_id = product_id
             d.shopify_variant_id = variant_id
-
         else:
-
             inventory_item_id = update_product(d)
 
-        # ===============================
-        # INVENTORY SYNC
-        # ===============================
         update_inventory(inventory_item_id, d.qty)
 
-    frappe.msgprint("🔥 Shopify Sync Complete (SKU Locked Mode)")
+    frappe.msgprint("🔥 Shopify Sync Complete (Draft → Active Flow)")
 
 
 # ===============================
