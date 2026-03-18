@@ -8,7 +8,8 @@
  "field_order": [
   "payment_type",
   "amount",
-  "description"
+  "description",
+  "credit_note"
  ],
  "fields": [
   {
@@ -28,13 +29,20 @@
    "in_list_view": 1,
    "label": "Description",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.payment_type=='Old Gold'",
+   "fieldname": "credit_note",
+   "fieldtype": "Link",
+   "label": "Credit Note",
+   "options": "Credit Note"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-09 14:47:36.101088",
+ "modified": "2026-03-18 12:58:59.118727",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS Payment Details",

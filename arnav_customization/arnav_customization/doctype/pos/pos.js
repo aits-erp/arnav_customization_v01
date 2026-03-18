@@ -19,6 +19,16 @@ frappe.ui.form.on('POS', {
             };
         });
 
+        // ============================================
+        // CREDIT NOTE FILTER BASED ON CUSTOMER ON POS
+        // ============================================
+        frm.set_query("credit_note", "payment_details", function(doc, cdt, cdn) {
+            return {
+                filters: {
+                    customer: doc.client_name
+                }
+            };
+        });
 
         // ============================================
         // FILTER PACKING MATERIAL ITEMS
@@ -98,6 +108,11 @@ frappe.ui.form.on('POS', {
                         __(". Total Cash Entered: ₹") + total_cash
             });
         }
+    },
+
+    client_name: function(frm) {
+        // refresh child table filter when customer changes
+        frm.refresh_field("payment_details");
     }
 
 });
@@ -194,6 +209,26 @@ frappe.ui.form.on('POS SKU Details', {
             calculate_row(frm, cdt, cdn);
 
         });
+    },
+
+    payment_type: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (row.payment_type !== "Old Gold") {
+            frappe.model.set_value(cdt, cdn, "credit_note", null);
+            frappe.model.set_value(cdt, cdn, "amount", null);
+        }
+    },
+
+    credit_note: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (row.credit_note) {
+            frappe.db.get_doc('Credit Note', row.credit_note)
+                .then(doc => {
+                    frappe.model.set_value(cdt, cdn, "amount", doc.grand_total || doc.total || 0);
+                });
+        }
     }
 
 });
