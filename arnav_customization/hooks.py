@@ -11,16 +11,14 @@ doctype_js = {
     "Sales Invoice": "public/js/sales_invoice.js",
     "Stock Entry": "public/js/stock_entry.js",
     "Quotation": "public/js/quotation.js",
-	"Opportunity": "public/js/opportunity.js"
+	"Opportunity": "public/js/opportunity.js",
+    "Payment Entry": "public/js/payment_entry.js"
 }
 
 fixtures = [
     {
         "dt": "Custom Field",
         "filters": [
-            # ["dt", "in", [
-            #     "Sales Invoice Item"
-            # ]],
             ["module", "=", "arnav_customization"]
         ]
     }
@@ -50,10 +48,13 @@ doc_events = {
     "Stock Entry": {
         "validate": "arnav_customization.sku_mapping_backend.handlers.stock_entry.process"
     },
-
     "Credit Note": {
         "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"
+    },
+    "Payment Entry": {
+        "validate": "arnav_customization.sku_mapping_backend.handlers.payment_entry.calculate_custom_paid_amount"
     }
+
 }
 
 
