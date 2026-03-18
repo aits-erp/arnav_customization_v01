@@ -30,7 +30,7 @@ fixtures = [
 
 doc_events = {
 	  "SKU Master": {
-        "on_submit": "arnav_customization.shopify_sync.sync_to_shopify"
+        "on_submit": "arnav_customization.shopify_sync.sync_each_sku_as_product"
     },
     "Sales Order": {
         "after_insert": "arnav_customization.shopify_order_patch.smart_sku_mapper"
