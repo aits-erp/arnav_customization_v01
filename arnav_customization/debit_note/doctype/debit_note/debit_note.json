@@ -68,6 +68,7 @@
   "tax_withholding_net_total",
   "base_tax_withholding_net_total",
   "taxes_section",
+  "column_break_xlim",
   "tax_category",
   "taxes_and_charges",
   "column_break_58",
@@ -78,6 +79,7 @@
   "section_break_51",
   "taxes",
   "totals",
+  "column_break_yuiz",
   "base_taxes_and_charges_added",
   "base_taxes_and_charges_deducted",
   "base_total_taxes_and_charges",
@@ -680,6 +682,7 @@
   {
    "fieldname": "taxes_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "hide_border": 1,
    "label": "Taxes and Charges",
    "oldfieldtype": "Section Break",
@@ -703,7 +706,8 @@
   },
   {
    "fieldname": "column_break_58",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "hidden": 1
   },
   {
    "fieldname": "shipping_rule",
@@ -714,7 +718,8 @@
   },
   {
    "fieldname": "column_break_49",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "hidden": 1
   },
   {
    "fieldname": "incoterm",
@@ -731,11 +736,13 @@
   {
    "fieldname": "section_break_51",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "hide_border": 1
   },
   {
    "fieldname": "taxes",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Purchase Taxes and Charges",
    "oldfieldname": "purchase_tax_details",
    "oldfieldtype": "Table",
@@ -744,6 +751,7 @@
   {
    "fieldname": "totals",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "oldfieldtype": "Section Break",
    "options": "fa fa-money"
   },
@@ -779,7 +787,8 @@
   },
   {
    "fieldname": "column_break_40",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "hidden": 1
   },
   {
    "fieldname": "taxes_and_charges_added",
@@ -1643,13 +1652,23 @@
    "fieldtype": "Tab Break",
    "label": "Connections",
    "show_dashboard": 1
+  },
+  {
+   "fieldname": "column_break_xlim",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "column_break_yuiz",
+   "fieldtype": "Column Break",
+   "hidden": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-file-text",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-13 10:53:14.458904",
+ "modified": "2026-03-18 10:17:26.689206",
  "modified_by": "Administrator",
  "module": "debit_note",
  "name": "Debit Note",

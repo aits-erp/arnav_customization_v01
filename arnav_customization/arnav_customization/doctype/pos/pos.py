@@ -1,6 +1,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint
+from frappe.model.mapper import get_mapped_doc
 
 class POS(Document):
 	def validate(self):
@@ -174,7 +175,7 @@ class POS(Document):
 
 		for row in self.sku_details:
 
-			if not row.sku or not row.gross_weight:
+			if not row.sku or not row.qty:
 				continue
 
 			item_code = frappe.db.get_value("SKU", row.sku, "product")
@@ -184,7 +185,7 @@ class POS(Document):
 
 			stock_entry.append("items", {
 				"item_code": item_code,
-				"qty": row.gross_weight,
+				"qty": row.qty,
 				"s_warehouse": self.branch
 			})
 
@@ -267,3 +268,105 @@ def get_sku_details(sku):
         "net_weight": sku_doc.net_weight,
         "gst_rate": gst_rate
     }
+
+@frappe.whitelist()
+def make_credit_note(source_name, target_doc=None):
+
+    # ===============================
+    # HEADER POST PROCESS
+    # ===============================
+    def set_missing_values(source, target):
+        target.is_return = 1
+        target.update_stock = 1
+
+        # Optional linkage
+        # target.return_against = source.sales_invoice_ref
+
+    # ===============================
+    # SKU → SALES INVOICE ITEM
+    # ===============================
+    def map_items(source, target, source_parent):
+
+        # 🔁 CORE FIELD MAPPING
+        target.item_code = source.product
+
+        # ⚠️ CRITICAL REVERSAL LOGIC
+        # POS.qty → Sales Invoice custom_gross_weight
+        # POS.gross_weight → Sales Invoice qty
+
+        target.qty = -1 * (source.gross_weight or 0)   # Qty = Gross Weight
+        target.custom_gross_weight = source.qty        # Custom Qty field
+
+        # Additional fields
+        target.rate = source.price
+        target.amount = source.final_amount
+        target.discount_amount = source.discount
+
+        # Custom fields
+        target.custom_sku = source.sku
+        target.custom_net_weight = source.net_weight
+
+        # Batch & HSN
+        target.batch_no = source.batch_no
+        target.gst_hsn_code = source.hsn
+
+    # ===============================
+    # PACKING MATERIALS MAPPING
+    # ===============================
+    def map_packing_materials(source, target, source_parent):
+
+        target.packing_material = source.packing_material
+        target.qty = source.qty
+        target.rate_optional = source.rate_optional
+
+    doc = get_mapped_doc(
+        "POS",
+        source_name,
+        {
+            # ===============================
+            # HEADER
+            # ===============================
+            "POS": {
+                "doctype": "Sales Invoice",
+                "field_map": {
+                    "client_name": "customer",
+                    "mobile_number": "contact_mobile",
+                    "email": "contact_email",
+                    "address": "address_display",
+                    "branch": "set_warehouse",
+
+                    # Totals
+                    "total_amount_with_gst": "grand_total",
+                    "total_amount_wo_tax": "total"
+                }
+            },
+
+            # ===============================
+            # ITEMS TABLE
+            # ===============================
+            "POS SKU Details": {
+                "doctype": "Sales Invoice Item",
+                "postprocess": map_items
+            },
+
+            # ===============================
+            # PACKING MATERIAL TABLE
+            # POS: packing_materials
+            # SI: custom_packing_materials
+            # ===============================
+            "Packing Materials": {
+                "doctype": "Packing Materials",
+                "field_map": {
+                    # direct mapping (same fieldnames)
+                    "packing_material": "packing_material",
+                    "qty": "qty",
+                    "rate_optional": "rate_optional"
+                }
+            }
+
+        },
+        target_doc,
+        set_missing_values
+    )
+
+    return doc

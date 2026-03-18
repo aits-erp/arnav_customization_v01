@@ -43,11 +43,21 @@ frappe.ui.form.on('POS', {
 
     },
 
-
     refresh: function(frm) {
         calculate_all(frm);
-    },
 
+        if (!frm.is_new() && frm.doc.docstatus === 1) {
+
+            frm.add_custom_button(__('Create Credit Note'), function () {
+
+                frappe.model.open_mapped_doc({
+                    method: "arnav_customization.arnav_customization.doctype.pos.pos.make_credit_note",
+                    frm: frm
+                });
+
+            }, __("Create"));
+        }
+    },
 
     before_submit: function(frm) {
 
