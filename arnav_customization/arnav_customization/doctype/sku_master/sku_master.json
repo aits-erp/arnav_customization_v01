@@ -11,6 +11,7 @@
   "date_of_invoice",
   "date_of_received",
   "warehouse",
+  "supplier_invoice_no",
   "column_break_fkoy",
   "purchase_invoices",
   "metal",
@@ -150,13 +151,19 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fetch_from": "invoice_no.bill_no",
+   "fieldname": "supplier_invoice_no",
+   "fieldtype": "Data",
+   "label": "Supplier Invoice No."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-16 22:43:44.184056",
+ "modified": "2026-03-18 22:55:12.171759",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",
