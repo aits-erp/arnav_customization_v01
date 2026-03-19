@@ -2288,3 +2288,38 @@ def save_debit_breakup_rows(debit_note, breakup_ref, rows):
     frappe.db.commit()
 
     return "success"
+
+# =====================================================
+# MAKE DEBIT NOTE FROM PURCHASE INVOICE
+# =====================================================
+@frappe.whitelist()
+def make_debit_note_from_pi(source_name, target_doc=None):
+
+    def postprocess(source, target):
+        target.supplier = source.supplier
+        target.supplier_invoice_no = source.bill_no
+
+    doc = get_mapped_doc(
+        "Purchase Invoice",
+        source_name,
+        {
+            "Purchase Invoice": {
+                "doctype": "Debit Note",
+                "validation": {
+                    "docstatus": ["=", 1]
+                }
+            },
+            "Purchase Invoice Item": {
+                "doctype": "Purchase Invoice Item",  # ✅ SAME CHILD TABLE
+                "target_parentfield": "items",       # 🔥 CRITICAL FIX
+                "field_map": {
+                    "parent": "purchase_invoice",
+                    "name": "pi_detail"
+                }
+            }
+        },
+        target_doc,
+        postprocess
+    )
+
+    return doc

@@ -626,6 +626,33 @@ frappe.ui.form.on("Debit Note", {
 
 	refresh: function (frm) {
 		frm.events.add_custom_buttons(frm);
+
+		// ==========================================================
+		// Map from Purchase Invoice only if it is a new Debit Note
+		// ==========================================================
+		if (frm.doc.docstatus === 0) {
+
+            frm.add_custom_button(
+                __("Purchase Invoice"),
+                function () {
+                    erpnext.utils.map_current_doc({
+                        method: "arnav_customization.debit_note.doctype.debit_note.debit_note.make_debit_note_from_pi",
+                        source_doctype: "Purchase Invoice",
+                        target: frm,
+                        setters: {
+                            supplier: frm.doc.supplier || undefined,
+                        },
+                        get_query_filters: {
+                            docstatus: 1,
+                            status: ["!=", "Cancelled"]
+                        }
+                    });
+                },
+                __("Get Items From")
+            );
+
+        }
+
 	},
 
 	mode_of_payment: function (frm) {
