@@ -52,7 +52,7 @@ doc_events = {
         "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"
     },
     "Payment Entry": {
-        "validate": "arnav_customization.sku_mapping_backend.handlers.payment_entry.calculate_custom_paid_amount"
+        "validate": "arnav_customization.sku_mapping_backend.payment_entry.calculate_custom_paid_amount"
     }
 
 }
