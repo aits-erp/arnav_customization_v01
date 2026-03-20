@@ -48,9 +48,9 @@ def create_product(d):
     description = f"""
     <b>Product:</b> {d.product}<br>
     <b>SKU:</b> {d.sku}<br>
-    <b>Weight:</b> {d.net_weight} g<br>
+    <b>Weight:</b> {d.gross_weight} g<br>
     <b>Price:</b> ₹{d.shopify_selling_rate}<br>
-    <b>Cost:</b> ₹{d.cost_price}<br>
+
     """
 
     payload = {
@@ -62,8 +62,7 @@ def create_product(d):
                 {
                     "sku": d.sku,
                     "price": f(d.shopify_selling_rate),
-                    "compare_at_price": f(d.cost_price),
-                    "weight": f(d.net_weight),
+                    "weight": f(d.gross_weight),
                     "weight_unit": "g",
                     "inventory_management": "shopify"
                 }
@@ -122,8 +121,7 @@ def update_product(d):
             "variant": {
                 "id": d.shopify_variant_id,
                 "price": f(d.shopify_selling_rate),
-                "compare_at_price": f(d.cost_price),
-                "weight": f(d.net_weight),
+                "weight": f(d.gross_weight),
                 "weight_unit": "g"
             }
         },
