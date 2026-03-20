@@ -274,16 +274,19 @@ PAYMENT TABLE
 
 frappe.ui.form.on('POS Payment Details', {
 
-    amount: function(frm) {
+    amount: function(frm, cdt, cdn) {
+        if (frm.doc.doctype !== "POS") return;
         calculate_payments(frm);
     },
 
     payment_details_remove: function(frm) {
+        if (frm.doc.doctype !== "POS") return;
         calculate_payments(frm);
     },
 
-    
     payment_type: function(frm, cdt, cdn) {
+        if (frm.doc.doctype !== "POS") return;
+
         let row = locals[cdt][cdn];
 
         if (row.payment_type !== "Old Gold") {
@@ -293,6 +296,8 @@ frappe.ui.form.on('POS Payment Details', {
     },
 
     credit_note: function(frm, cdt, cdn) {
+        if (frm.doc.doctype !== "POS") return;
+
         let row = locals[cdt][cdn];
 
         if (row.credit_note) {
@@ -302,7 +307,6 @@ frappe.ui.form.on('POS Payment Details', {
                 });
         }
     }
-
 });
 
 
