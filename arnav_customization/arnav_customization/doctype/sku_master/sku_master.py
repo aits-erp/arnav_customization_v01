@@ -180,6 +180,7 @@ class SKUMaster(Document):
             sku_doc.valuation_rate = row.cost_price
             sku_doc.created_from_pi = self.invoice_no
             sku_doc.old_sku_ref = row.old_sku_ref
+            sku_doc.supplier_invoice_no = self.supplier_invoice_no
 
             sku_doc.insert(ignore_permissions=True)
 

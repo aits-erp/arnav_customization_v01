@@ -27,7 +27,8 @@
   "shopify_rate",
   "gst_percentage",
   "gst_amount",
-  "shopify_selling_rate"
+  "shopify_selling_rate",
+  "supplier_invoice_no"
  ],
  "fields": [
   {
@@ -88,6 +89,8 @@
   {
    "fieldname": "metal",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Metal",
    "options": "Metal Master"
   },
@@ -154,12 +157,19 @@
    "fieldname": "shopify_selling_rate",
    "fieldtype": "Float",
    "label": "Shopify Selling Rate"
+  },
+  {
+   "fieldname": "supplier_invoice_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Supplier Invoice No."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-13 12:33:43.465167",
+ "modified": "2026-03-20 11:27:27.323210",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",
