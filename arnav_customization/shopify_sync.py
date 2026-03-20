@@ -5,7 +5,7 @@ import requests
 # CONFIG
 # ===============================
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "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"   # ⚠️ Replace
+TOKEN = "YOUR_TOKEN_HERE"   # ⚠️ Replace
 API_VERSION = "2024-01"
 LOCATION_ID = 52386005145
 
@@ -25,34 +25,38 @@ def f(val):
 
 
 # ===============================
-# BREAKUP HTML
+# ✅ BREAKUP SAFE HTML
 # ===============================
 def get_breakup_html(breakup_ref):
 
     if not breakup_ref:
         return ""
 
+    if not frappe.db.exists("SKU Breakup", breakup_ref):
+        frappe.log_error(f"Invalid Breakup Ref: {breakup_ref}", "SHOPIFY SYNC")
+        return ""
+
     breakup = frappe.get_doc("SKU Breakup", breakup_ref)
 
     html = "<br><b>Breakup Details:</b><br>"
 
-    if hasattr(breakup, "metal"):
+    if getattr(breakup, "metal", None):
         html += f"Metal: {breakup.metal}<br>"
 
-    if hasattr(breakup, "purity"):
+    if getattr(breakup, "purity", None):
         html += f"Purity: {breakup.purity}<br>"
 
-    if hasattr(breakup, "diamond_weight"):
+    if getattr(breakup, "diamond_weight", None):
         html += f"Diamond Weight: {breakup.diamond_weight}<br>"
 
-    if hasattr(breakup, "making_charges"):
+    if getattr(breakup, "making_charges", None):
         html += f"Making Charges: ₹{breakup.making_charges}<br>"
 
     return html
 
 
 # ===============================
-# SKU VALIDATION
+# 🔒 SKU CHANGE VALIDATION
 # ===============================
 def validate_sku_change(doc):
 
@@ -66,7 +70,7 @@ def validate_sku_change(doc):
 
 
 # ===============================
-# CREATE PRODUCT (DRAFT)
+# 🆕 CREATE PRODUCT (DRAFT)
 # ===============================
 def create_product(d):
 
@@ -74,12 +78,12 @@ def create_product(d):
     breakup_html = get_breakup_html(d.breakup_ref)
 
     description = f"""
-<b>Product:</b> {d.product}<br>
-<b>SKU:</b> {d.sku}<br>
-<b>Weight:</b> {d.gross_weight} g<br>
-<b>Price:</b> ₹{d.shopify_selling_rate}<br>
-{breakup_html}
-"""
+    <b>Product:</b> {d.product}<br>
+    <b>SKU:</b> {d.sku}<br>
+    <b>Weight:</b> {d.gross_weight} g<br>
+    <b>Price:</b> ₹{d.shopify_selling_rate}<br>
+    {breakup_html}
+    """
 
     payload = {
         "product": {
@@ -114,7 +118,7 @@ def create_product(d):
 
 
 # ===============================
-# UPDATE PRODUCT (ACTIVE)
+# 🔄 UPDATE PRODUCT (ACTIVE)
 # ===============================
 def update_product(d):
 
@@ -122,15 +126,14 @@ def update_product(d):
     breakup_html = get_breakup_html(d.breakup_ref)
 
     description = f"""
-<b>Product:</b> {d.product}<br>
-<b>SKU:</b> {d.sku}<br>
-<b>Weight:</b> {d.net_weight} g<br>
-<b>Price:</b> ₹{d.shopify_selling_rate}<br>
-<b>Cost:</b> ₹{d.cost_price}<br>
-{breakup_html}
-"""
+    <b>Product:</b> {d.product}<br>
+    <b>SKU:</b> {d.sku}<br>
+    <b>Weight:</b> {d.gross_weight} g<br>
+    <b>Price:</b> ₹{d.shopify_selling_rate}<br>
+    {breakup_html}
+    """
 
-    # UPDATE PRODUCT → ACTIVE
+    # ✅ PRODUCT UPDATE → ACTIVE
     requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}.json",
         json={
@@ -144,7 +147,7 @@ def update_product(d):
         headers=HEADERS
     )
 
-    # UPDATE VARIANT
+    # ✅ VARIANT UPDATE (SKU LOCKED)
     res = requests.put(
         f"https://{SHOP}/admin/api/{API_VERSION}/variants/{d.shopify_variant_id}.json",
         json={
@@ -161,7 +164,9 @@ def update_product(d):
     if "errors" in res:
         frappe.throw(f"Variant Update Error: {res}")
 
-    # DELETE OLD IMAGES
+    # ===============================
+    # 🧹 DELETE OLD IMAGES
+    # ===============================
     images = requests.get(
         f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}/images.json",
         headers=HEADERS
@@ -173,15 +178,23 @@ def update_product(d):
             headers=HEADERS
         )
 
-    # ADD NEW IMAGE
+    # ===============================
+    # 🖼️ ADD NEW IMAGE
+    # ===============================
     if getattr(d, "image_url", None):
         requests.post(
             f"https://{SHOP}/admin/api/{API_VERSION}/products/{d.shopify_product_id}/images.json",
-            json={"image": {"src": d.image_url}},
+            json={
+                "image": {
+                    "src": d.image_url
+                }
+            },
             headers=HEADERS
         )
 
-    # GET INVENTORY ID
+    # ===============================
+    # GET INVENTORY ITEM ID
+    # ===============================
     v = requests.get(
         f"https://{SHOP}/admin/api/{API_VERSION}/variants/{d.shopify_variant_id}.json",
         headers=HEADERS
@@ -191,7 +204,7 @@ def update_product(d):
 
 
 # ===============================
-# INVENTORY UPDATE
+# 📦 INVENTORY UPDATE
 # ===============================
 def update_inventory(inventory_item_id, qty):
 
@@ -212,7 +225,7 @@ def update_inventory(inventory_item_id, qty):
 
 
 # ===============================
-# MAIN FUNCTION
+# 🚀 MAIN SYNC FUNCTION
 # ===============================
 def sync_each_sku_as_product(doc, method=None):
 
@@ -233,14 +246,15 @@ def sync_each_sku_as_product(doc, method=None):
 
         update_inventory(inventory_item_id, d.qty)
 
-    frappe.msgprint("🔥 Shopify Sync Complete")
+    frappe.msgprint("🔥 Shopify Sync Complete (Draft → Active)")
 
 
 # ===============================
-# BACKWARD COMPATIBILITY
+# 🔁 BACKWARD COMPATIBILITY
 # ===============================
 def sync_to_shopify(doc, method=None):
     return sync_each_sku_as_product(doc, method)
+
 
 # import frappe
 # import requests
