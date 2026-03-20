@@ -5,7 +5,7 @@ import requests
 # CONFIG
 # ===============================
 SHOP = "jewel-box-arnav.myshopify.com"
-TOKEN = "YOUR_TOKEN_HERE"   # ⚠️ Replace
+TOKEN = "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"   # ⚠️ Replace
 API_VERSION = "2024-01"
 LOCATION_ID = 52386005145
 
