@@ -1,3 +1,7 @@
+function is_pos(frm) {
+    return frm.doc.doctype === "POS";
+}
+
 frappe.ui.form.on('POS', {
 
     setup: function(frm) {
@@ -246,6 +250,7 @@ PARENT TOTALS
 ===================================================== */
 
 function calculate_parent_totals(frm) {
+    if (!is_pos(frm)) return;
 
     let total_discount = 0;
     let total_amount = 0;
@@ -275,12 +280,10 @@ PAYMENT TABLE
 frappe.ui.form.on('POS Payment Details', {
 
     amount: function(frm, cdt, cdn) {
-        if (frm.doc.doctype !== "POS") return;
         calculate_payments(frm);
     },
 
     payment_details_remove: function(frm) {
-        if (frm.doc.doctype !== "POS") return;
         calculate_payments(frm);
     },
 
@@ -318,12 +321,14 @@ function calculate_payments(frm) {
         paid += flt(row.amount);
     });
 
-    frm.set_value("paid_amount", paid);
+    // 🚨 ONLY FOR POS
+    if (is_pos(frm)) {
+        frm.set_value("paid_amount", paid);
+        calculate_balance(frm);
+    }
 
-    calculate_balance(frm);
+    // ✅ For other doctypes → do nothing (prevents exchange rate crash)
 }
-
-
 
 /* =====================================================
 BALANCE
@@ -331,13 +336,14 @@ BALANCE
 
 function calculate_balance(frm) {
 
+    // 🚨 ADD THIS
+    if (!is_pos(frm)) return;
+
     let total = flt(frm.doc.total_amount_with_gst);
     let paid = flt(frm.doc.paid_amount);
 
     frm.set_value("balance_amount", total - paid);
 }
-
-
 
 /* =====================================================
 FLOAT SAFE
@@ -347,8 +353,11 @@ function flt(val) {
     return parseFloat(val) || 0;
 }
 
-
 function calculate_all(frm) {
-    calculate_parent_totals(frm);
-    calculate_payments(frm);
+
+    if (is_pos(frm)) {
+        calculate_parent_totals(frm);
+    }
+
+    calculate_payments(frm); // safe now
 }
