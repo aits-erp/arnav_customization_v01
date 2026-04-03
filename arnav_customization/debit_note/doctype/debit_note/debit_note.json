@@ -320,7 +320,7 @@
    "print_hide": 1
   },
   {
-   "default": "1",
+   "default": "0",
    "fieldname": "is_return",
    "fieldtype": "Check",
    "label": "Is Return (Debit Note)",
@@ -1668,7 +1668,7 @@
  "icon": "fa fa-file-text",
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-19 12:56:07.126367",
+ "modified": "2026-04-02 17:49:10.590552",
  "modified_by": "Administrator",
  "module": "debit_note",
  "name": "Debit Note",
