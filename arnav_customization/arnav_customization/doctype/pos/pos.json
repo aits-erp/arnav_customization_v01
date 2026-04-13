@@ -25,6 +25,7 @@
   "sku_details",
   "packing_materials",
   "total_discount_in_rs",
+  "discount_percentage",
   "handling_and_packaging_charges",
   "total_amount_wo_tax",
   "total_amount_with_gst",
@@ -198,17 +199,22 @@
    "label": "Stock Out Ref",
    "options": "Stock Entry",
    "read_only": 1
+  },
+  {
+   "fieldname": "discount_percentage",
+   "fieldtype": "Data",
+   "label": "Discount Percentage"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-17 23:51:00.636442",
+ "modified": "2026-04-13 12:48:33.411445",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
