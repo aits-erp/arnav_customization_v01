@@ -59,7 +59,6 @@
   {
    "fieldname": "discount",
    "fieldtype": "Float",
-   "hidden": 1,
    "label": "Discount",
    "placeholder": "Discount amount"
   },
@@ -101,7 +100,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-13 12:47:13.254401",
+ "modified": "2026-04-15 10:15:59.032674",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS SKU Details",

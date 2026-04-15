@@ -367,12 +367,15 @@ function is_pos(frm) {
     return frm.doc.doctype === "POS";
 }
 
+/* =====================================================
+POS MAIN FORM
+===================================================== */
+
 frappe.ui.form.on('POS', {
 
     setup: function(frm) {
 
         frm.set_query("product", "sku_details", function(doc) {
-
             if (!doc.billtype) {
                 return { filters: { name: "" } };
             }
@@ -384,7 +387,7 @@ frappe.ui.form.on('POS', {
             };
         });
 
-        frm.set_query("credit_note", "payment_details", function(doc, cdt, cdn) {
+        frm.set_query("credit_note", "payment_details", function(doc) {
             return {
                 filters: {
                     customer: doc.client_name
@@ -405,21 +408,17 @@ frappe.ui.form.on('POS', {
                 query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
             };
         });
-
     },
 
     refresh: function(frm) {
         calculate_all(frm);
 
         if (!frm.is_new() && frm.doc.docstatus === 1) {
-
             frm.add_custom_button(__('Sales Return'), function () {
-
                 frappe.model.open_mapped_doc({
                     method: "arnav_customization.arnav_customization.doctype.pos.pos.make_credit_note",
                     frm: frm
                 });
-
             }, __("Create"));
         }
     },
@@ -434,48 +433,9 @@ frappe.ui.form.on('POS', {
                 message: __("Cannot submit POS because Balance Amount must be 0.00. Current Balance: ") + balance
             });
         }
-
-        const CASH_LIMIT = 195000;
-        let total_cash = 0;
-
-        (frm.doc.payment_details || []).forEach(row => {
-
-            if (row.payment_type === "Cash") {
-
-                let row_amount = flt(row.amount);
-
-                if (row_amount > CASH_LIMIT) {
-                    frappe.throw({
-                        title: __("Cash Limit Exceeded"),
-                        message: __("Single Cash entry cannot exceed ₹") + CASH_LIMIT +
-                                __(". Current Row Amount: ₹") + row_amount
-                    });
-                }
-
-                total_cash += row_amount;
-            }
-        });
-
-        if (total_cash > CASH_LIMIT) {
-            frappe.throw({
-                title: __("Cash Limit Exceeded"),
-                message: __("Total Cash payment cannot exceed ₹") + CASH_LIMIT +
-                        __(". Total Cash Entered: ₹") + total_cash
-            });
-        }
     },
 
-    client_name: function(frm) {
-        frm.refresh_field("payment_details");
-    },
-
-    // ✅ NEW: LIVE DISCOUNT %
-    discount_percentage: function(frm) {
-
-        (frm.doc.sku_details || []).forEach(row => {
-            calculate_row(frm, row.doctype, row.name);
-        });
-
+    handling_and_packaging_charges: function(frm) {
         calculate_parent_totals(frm);
     }
 
@@ -483,29 +443,66 @@ frappe.ui.form.on('POS', {
 
 
 /* =====================================================
-SKU TABLE LOGIC
+SKU TABLE
 ===================================================== */
 
 frappe.ui.form.on('POS SKU Details', {
 
-    price: function(frm, cdt, cdn) {
-        calculate_row(frm, cdt, cdn);
+    price: function(frm) {
+        apply_global_discount(frm);
     },
 
-    qty: function(frm, cdt, cdn) {
-        calculate_row(frm, cdt, cdn);
+    qty: function(frm) {
+        apply_global_discount(frm);
     },
 
-    discount: function(frm, cdt, cdn) {
-        calculate_row(frm, cdt, cdn);
+    gst_percentage: function(frm) {
+        apply_global_discount(frm);
     },
 
-    gst_percentage: function(frm, cdt, cdn) {
-        calculate_row(frm, cdt, cdn);
+    sku_details_add: function(frm) {
+        setTimeout(() => {
+            apply_global_discount(frm);
+        }, 200);
     },
 
     sku_details_remove: function(frm) {
         calculate_parent_totals(frm);
+    },
+
+    /* =================================================
+    ONLY FIRST ROW DISCOUNT ENTRY
+    converts to %
+    then applies same % to all rows
+    ================================================= */
+    discount: function(frm, cdt, cdn) {
+
+        let row = locals[cdt][cdn];
+        let rows = frm.doc.sku_details || [];
+
+        if (!rows.length) return;
+
+        let first_row = rows[0];
+
+        if (row.name === first_row.name) {
+
+            let amount = flt(first_row.price) * flt(first_row.qty);
+            let disc = flt(first_row.discount);
+
+            let perc = 0;
+
+            if (amount > 0) {
+                perc = (disc / amount) * 100;
+            }
+
+            frm.set_value("discount_percentage", perc);
+
+            apply_global_discount(frm);
+
+        } else {
+
+            apply_global_discount(frm);
+        }
     },
 
     sku: function(frm, cdt, cdn) {
@@ -558,8 +555,7 @@ frappe.ui.form.on('POS SKU Details', {
                 frappe.model.set_value(cdt, cdn, "gst_percentage", 0);
             }
 
-            calculate_row(frm, cdt, cdn);
-
+            apply_global_discount(frm);
         });
     }
 
@@ -567,42 +563,42 @@ frappe.ui.form.on('POS SKU Details', {
 
 
 /* =====================================================
-ROW CALCULATION
+APPLY SAME % TO ALL ROWS
 ===================================================== */
 
-function calculate_row(frm, cdt, cdn) {
+function apply_global_discount(frm) {
 
-    let row = locals[cdt][cdn];
+    let rows = frm.doc.sku_details || [];
+    let perc = flt(frm.doc.discount_percentage);
 
-    let price = flt(row.price);
-    let qty = flt(row.qty);
-    let discount = flt(row.discount);
-    let gst = flt(row.gst_percentage);
+    rows.forEach(r => {
 
-    let final_amount = (price * qty) - discount;
+        let amount = flt(r.price) * flt(r.qty);
 
-    // ✅ GLOBAL DISCOUNT %
-    let bill_discount_perc = flt(frm.doc.discount_percentage || 0);
-    let bill_discount_value = (final_amount * bill_discount_perc) / 100;
+        let disc = (amount * perc) / 100;
 
-    final_amount = final_amount - bill_discount_value;
+        r.discount = disc;
 
-    frappe.model.set_value(cdt, cdn, "final_amount", final_amount);
+        let final_amount = amount - disc;
 
-    let gst_amount = (final_amount * gst) / 100;
+        if (final_amount < 0) final_amount = 0;
 
-    frappe.model.set_value(cdt, cdn, "gst_amount", gst_amount);
+        r.final_amount = final_amount;
+
+        r.gst_amount = (final_amount * flt(r.gst_percentage)) / 100;
+    });
+
+    frm.refresh_field("sku_details");
 
     calculate_parent_totals(frm);
 }
 
 
 /* =====================================================
-PARENT TOTALS
+TOTALS
 ===================================================== */
 
 function calculate_parent_totals(frm) {
-    if (!is_pos(frm)) return;
 
     let total_discount = 0;
     let total_amount = 0;
@@ -616,21 +612,23 @@ function calculate_parent_totals(frm) {
 
     });
 
+    let packing = flt(frm.doc.handling_and_packaging_charges);
+
     frm.set_value("total_discount_in_rs", total_discount);
-    frm.set_value("total_amount_wo_tax", total_amount);
-    frm.set_value("total_amount_with_gst", total_amount + total_gst);
+    frm.set_value("total_amount_wo_tax", total_amount + packing);
+    frm.set_value("total_amount_with_gst", total_amount + total_gst + packing);
 
     calculate_balance(frm);
 }
 
 
 /* =====================================================
-PAYMENT TABLE
+PAYMENT
 ===================================================== */
 
 frappe.ui.form.on('POS Payment Details', {
 
-    amount: function(frm, cdt, cdn) {
+    amount: function(frm) {
         calculate_payments(frm);
     },
 
@@ -640,7 +638,6 @@ frappe.ui.form.on('POS Payment Details', {
 
 });
 
-
 function calculate_payments(frm) {
 
     let paid = 0;
@@ -649,10 +646,9 @@ function calculate_payments(frm) {
         paid += flt(row.amount);
     });
 
-    if (is_pos(frm)) {
-        frm.set_value("paid_amount", paid);
-        calculate_balance(frm);
-    }
+    frm.set_value("paid_amount", paid);
+
+    calculate_balance(frm);
 }
 
 
@@ -662,8 +658,6 @@ BALANCE
 
 function calculate_balance(frm) {
 
-    if (!is_pos(frm)) return;
-
     let total = flt(frm.doc.total_amount_with_gst);
     let paid = flt(frm.doc.paid_amount);
 
@@ -672,19 +666,20 @@ function calculate_balance(frm) {
 
 
 /* =====================================================
-FLOAT SAFE
+LOAD
+===================================================== */
+
+function calculate_all(frm) {
+
+    apply_global_discount(frm);
+    calculate_payments(frm);
+}
+
+
+/* =====================================================
+SAFE FLOAT
 ===================================================== */
 
 function flt(val) {
     return parseFloat(val) || 0;
-}
-
-
-function calculate_all(frm) {
-
-    if (is_pos(frm)) {
-        calculate_parent_totals(frm);
-    }
-
-    calculate_payments(frm);
 }
