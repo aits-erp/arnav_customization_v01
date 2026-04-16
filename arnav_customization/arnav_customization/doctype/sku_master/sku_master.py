@@ -26,6 +26,11 @@ class SKUMaster(Document):
         if not self.sku_details:
             frappe.throw("SKU Details are mandatory for Stock In process.")
 
+        is_stock_item = frappe.db.get_value("Item", row.product, "is_stock_item")
+
+        if not is_stock_item:
+            frappe.throw(f"Item {row.product} is not marked as Stock Item (row {row.idx})")
+
         company = frappe.get_cached_value("Global Defaults", None, "default_company")
         if not company:
             frappe.throw("Default Company is not set in Global Defaults.")
@@ -109,6 +114,8 @@ class SKUMaster(Document):
         pi = frappe.get_doc("Purchase Invoice", self.invoice_no)
 
         for item in pi.items:
+            if not item.item_code:
+                continue
 
             if remaining_issue_qty <= 0:
                 break
@@ -135,6 +142,14 @@ class SKUMaster(Document):
         # STOCK IN (RECEIPT)
         # -----------------------------
         for row in self.sku_details:
+            if not row.product:
+                frappe.throw(f"Product is missing in row {row.idx}")
+
+            if flt(row.qty) <= 0:
+                frappe.throw(f"Qty must be greater than zero in row {row.idx}")
+
+            if flt(row.gross_weight) <= 0:
+                frappe.throw(f"Gross weight must be entered in row {row.idx}")
 
             # 1️⃣ Generate Batch Name
             batch_name = self.generate_custom_batch_name(self.date_of_invoice)
@@ -202,6 +217,10 @@ class SKUMaster(Document):
         
         if not se.items:
             frappe.throw("No valid items found for Stock Entry.")
+
+        for d in se.items:
+            if not d.item_code:
+                frappe.throw("Stock Entry has item with empty item_code")
 
         se.insert()
         se.submit()
