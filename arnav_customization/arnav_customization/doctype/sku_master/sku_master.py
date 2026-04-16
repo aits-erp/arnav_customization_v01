@@ -26,10 +26,6 @@ class SKUMaster(Document):
         if not self.sku_details:
             frappe.throw("SKU Details are mandatory for Stock In process.")
 
-        is_stock_item = frappe.db.get_value("Item", row.product, "is_stock_item")
-
-        if not is_stock_item:
-            frappe.throw(f"Item {row.product} is not marked as Stock Item (row {row.idx})")
 
         company = frappe.get_cached_value("Global Defaults", None, "default_company")
         if not company:
@@ -78,11 +74,22 @@ class SKUMaster(Document):
             frappe.throw("Gross weight must be entered.")
 
         for row in self.sku_details:
+            if not row.product:
+                frappe.throw(f"Product is missing in row {row.idx}")
+
+            is_stock_item = frappe.db.get_value("Item", row.product, "is_stock_item")
+
+            if not is_stock_item:
+                frappe.throw(f"Item {row.product} is not marked as Stock Item (row {row.idx})")
+
             if flt(row.qty) <= 0:
                 frappe.throw(f"Qty must be greater than zero in row {row.idx}")
 
             if flt(row.gross_weight) <= 0:
                 frappe.throw(f"Gross weight must be entered in row {row.idx}")
+
+            if not row.cost_price:
+                frappe.throw(f"Cost Price is required for row {row.idx}")
         
         # ---------------------------------------------
         # CALCULATE ACTUAL ISSUE QTY
