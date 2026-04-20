@@ -14,6 +14,7 @@
   "supplier_invoice_no",
   "column_break_fkoy",
   "purchase_invoices",
+  "posting_date",
   "metal",
   "hsn",
   "stock_entry",
@@ -157,13 +158,18 @@
    "fieldname": "supplier_invoice_no",
    "fieldtype": "Data",
    "label": "Supplier Invoice No."
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Datetime",
+   "label": "Posting Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-18 22:55:12.171759",
+ "modified": "2026-04-20 16:46:54.720869",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU Master",

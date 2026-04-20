@@ -1,4 +1,2 @@
 arnav_customization
-credit_note
-debit_note
 Breakup doctypes

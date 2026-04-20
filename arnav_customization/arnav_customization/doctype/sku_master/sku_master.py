@@ -112,19 +112,16 @@ class SKUMaster(Document):
         # se.posting_date = frappe.utils.nowdate()
         # se.posting_time = frappe.utils.nowtime()
         
-        # fetch date and time from SKU Master fields or fallback to current date/time
-        from frappe.utils import getdate, get_time
+        from frappe.utils import get_datetime
 
-        # Use SKU Master backdated field
-        posting_date = self.date_of_invoice or self.get("posting_date")
+        # Single source of truth: SKU Master posting_date (Datetime)
+        if not self.posting_date:
+            frappe.throw("Posting Date is mandatory for Stock Entry")
 
-        if not posting_date:
-            frappe.throw("Posting Date / Invoice Date is required for Stock Entry")
+        dt = get_datetime(self.posting_date)
 
-        se.posting_date = getdate(posting_date)
-
-        # Optional: set time (important for ordering within same day)
-        se.posting_time = self.get("posting_time") or "00:00:00"
+        se.posting_date = dt.date()
+        se.posting_time = dt.time()
 
         # -----------------------------
         # STOCK OUT (ISSUE)
