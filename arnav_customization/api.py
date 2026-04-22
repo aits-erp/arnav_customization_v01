@@ -28,6 +28,8 @@ def get_sku_details(warehouse=None):
             sd.selling_price,
             sd.gross_weight,
             sd.net_weight,
+			sd.huid,
+			sd.d_no,
             sd.image
         FROM `tabSKU Details` sd
         LEFT JOIN `tabItem` i
