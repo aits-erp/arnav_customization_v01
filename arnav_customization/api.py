@@ -1,14 +1,7 @@
 import frappe
-
-@frappe.whitelist(allow_guest=True)
-def get_location_master_list():
-
-    locations = frappe.get_all(
-        "Warehouse",
-        fields=["name"]
-    )
-
-    return [loc["name"] for loc in locations]
+import qrcode
+import base64
+from io import BytesIO
 
 
 @frappe.whitelist(allow_guest=True)
@@ -17,10 +10,11 @@ def get_sku_details(warehouse=None):
     if not warehouse:
         frappe.throw("Warehouse is required")
 
-    site_url = frappe.utils.get_url()  # ✅ gets base URL dynamically
+    site_url = frappe.utils.get_url()
 
     sku_details = frappe.db.sql("""
         SELECT
+            sd.name as sku_name,
             sd.sku,
             sd.product,
             i.item_name,
@@ -39,15 +33,33 @@ def get_sku_details(warehouse=None):
         WHERE b.warehouse = %s
     """, (warehouse,), as_dict=True)
 
-    # ✅ Convert image path to full URL
     for item in sku_details:
+
+        # ✅ Full Image URL + Image Name
         if item.get("image"):
-            item["image"] = site_url + item["image"]
+            image_path = item["image"]
+            item["image_url"] = site_url + image_path
+            item["image_name"] = image_path.split("/")[-1]  # 🔥 extract file name
+        else:
+            item["image_url"] = None
+            item["image_name"] = None
+
+        # ✅ QR Code
+        qr_data = item.get("sku") or item.get("sku_name")
+
+        if qr_data:
+            qr = qrcode.make(qr_data)
+            buffer = BytesIO()
+            qr.save(buffer, format="PNG")
+
+            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+            item["qr_code"] = f"data:image/png;base64,{qr_base64}"
+        else:
+            item["qr_code"] = None
 
     return {
         "sku_details": sku_details
     }
-
 
 
 
