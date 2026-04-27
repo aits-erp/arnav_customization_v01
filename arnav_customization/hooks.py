@@ -31,8 +31,8 @@ doc_events = {
         "on_submit": "arnav_customization.shopify_sync.sync_each_sku_as_product"
     },
 	  "SKU Details": {
-        "on_update": "arnav_customization.api.rename_sku_image"
-    },
+        "on_submit": "arnav_customization.api.rename_and_update_image"
+    }
     "Sales Order": {
         "after_insert": "arnav_customization.shopify_order_patch.smart_sku_mapper"
     },
