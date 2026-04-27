@@ -8,9 +8,7 @@ def get_location_master_list():
         fields=["name"]
     )
 
-    # Return only list of names
     return [loc["name"] for loc in locations]
-
 
 
 @frappe.whitelist(allow_guest=True)
@@ -18,6 +16,8 @@ def get_sku_details(warehouse=None):
 
     if not warehouse:
         frappe.throw("Warehouse is required")
+
+    site_url = frappe.utils.get_url()  # ✅ gets base URL dynamically
 
     sku_details = frappe.db.sql("""
         SELECT
@@ -28,8 +28,8 @@ def get_sku_details(warehouse=None):
             sd.selling_price,
             sd.gross_weight,
             sd.net_weight,
-			sd.huid,
-			sd.d_no,
+            sd.huid,
+            sd.d_no,
             sd.image
         FROM `tabSKU Details` sd
         LEFT JOIN `tabItem` i
@@ -39,9 +39,63 @@ def get_sku_details(warehouse=None):
         WHERE b.warehouse = %s
     """, (warehouse,), as_dict=True)
 
+    # ✅ Convert image path to full URL
+    for item in sku_details:
+        if item.get("image"):
+            item["image"] = site_url + item["image"]
+
     return {
         "sku_details": sku_details
     }
+
+
+
+
+
+# import frappe
+
+# @frappe.whitelist(allow_guest=True)
+# def get_location_master_list():
+
+#     locations = frappe.get_all(
+#         "Warehouse",
+#         fields=["name"]
+#     )
+
+#     # Return only list of names
+#     return [loc["name"] for loc in locations]
+
+
+
+# @frappe.whitelist(allow_guest=True)
+# def get_sku_details(warehouse=None):
+
+#     if not warehouse:
+#         frappe.throw("Warehouse is required")
+
+#     sku_details = frappe.db.sql("""
+#         SELECT
+#             sd.sku,
+#             sd.product,
+#             i.item_name,
+#             IFNULL(b.actual_qty,0) as qty,
+#             sd.selling_price,
+#             sd.gross_weight,
+#             sd.net_weight,
+# 			sd.huid,
+# 			sd.d_no,
+#             sd.image
+#         FROM `tabSKU Details` sd
+#         LEFT JOIN `tabItem` i
+#             ON i.name = sd.product
+#         LEFT JOIN `tabBin` b
+#             ON b.item_code = sd.product
+#         WHERE b.warehouse = %s
+#     """, (warehouse,), as_dict=True)
+
+#     return {
+#         "sku_details": sku_details
+#     }
 
 # @frappe.whitelist(allow_guest=True)
 # def get_sku_details():
