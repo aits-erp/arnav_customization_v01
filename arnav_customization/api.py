@@ -12,13 +12,14 @@ def get_sku_details(warehouse=None):
 
     site_url = frappe.utils.get_url()
 
+    # ✅ FIXED QUERY (important change here)
     sku_details = frappe.db.sql("""
         SELECT
             sd.name as sku_name,
             sd.sku,
             sd.product,
             i.item_name,
-            IFNULL(b.actual_qty,0) as qty,
+            IFNULL(b.actual_qty, 0) as qty,
             sd.selling_price,
             sd.gross_weight,
             sd.net_weight,
@@ -30,21 +31,21 @@ def get_sku_details(warehouse=None):
             ON i.name = sd.product
         LEFT JOIN `tabBin` b
             ON b.item_code = sd.product
-        WHERE b.warehouse = %s
+            AND b.warehouse = %s
     """, (warehouse,), as_dict=True)
 
     for item in sku_details:
 
-        # ✅ Full Image URL + Image Name
-        if item.get("image"):
-            image_path = item["image"]
+        # ✅ Image URL + Image Name
+        image_path = item.get("image")
+        if image_path:
             item["image_url"] = site_url + image_path
-            item["image_name"] = image_path.split("/")[-1]  # 🔥 extract file name
+            item["image_name"] = image_path.split("/")[-1]
         else:
             item["image_url"] = None
             item["image_name"] = None
 
-        # ✅ QR Code
+        # ✅ QR Code (based on SKU)
         qr_data = item.get("sku") or item.get("sku_name")
 
         if qr_data:
@@ -60,7 +61,6 @@ def get_sku_details(warehouse=None):
     return {
         "sku_details": sku_details
     }
-
 
 
 
