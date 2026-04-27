@@ -8,64 +8,6 @@ try:
     QR_AVAILABLE = True
 except ImportError:
     QR_AVAILABLE = False
-def rename_and_update_image(doc, method):
-
-    # ✅ Image field
-    image_path = doc.image
-    if not image_path:
-        return
-
-    # ✅ Get file document
-    file_doc = frappe.db.get_value(
-        "File",
-        {"file_url": image_path},
-        ["name", "file_name", "file_url", "is_private"],
-        as_dict=True
-    )
-
-    if not file_doc:
-        return
-
-    # ✅ SKU code
-    sku_code = doc.sku or doc.name
-    if not sku_code:
-        return
-
-    # ✅ Extension
-    ext = os.path.splitext(file_doc.file_name)[1]
-
-    # ✅ New file name
-    new_file_name = f"{sku_code}{ext}"
-
-    # Avoid duplicate conflict
-    if frappe.db.exists("File", {"file_name": new_file_name}):
-        new_file_name = f"{sku_code}_{frappe.generate_hash(length=4)}{ext}"
-
-    # ✅ Get full file path
-    old_file = frappe.get_doc("File", file_doc.name)
-    file_content = old_file.get_content()
-
-    # ✅ Save new file
-    new_file = frappe.get_doc({
-        "doctype": "File",
-        "file_name": new_file_name,
-        "attached_to_doctype": "SKU Details",
-        "attached_to_name": doc.name,
-        "is_private": file_doc.is_private,
-        "content": file_content
-    })
-    new_file.insert(ignore_permissions=True)
-
-    # ✅ Update SKU image field with new URL
-    doc.db_set("image", new_file.file_url)
-
-    # ✅ Delete old file (optional but recommended)
-    try:
-        frappe.delete_doc("File", file_doc.name)
-    except Exception:
-        pass
-
-    frappe.db.commit()
 
 @frappe.whitelist(allow_guest=True)
 def get_sku_details(warehouse=None):
