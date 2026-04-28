@@ -184,6 +184,7 @@ class SKUMaster(Document):
             # 4️⃣ Create SKU Record
             sku_doc = frappe.new_doc("SKU")
 
+            sku_doc.breakup_ref = row.breakup_ref
             sku_doc.sku_code = batch_name
             sku_doc.product = row.product
             sku_doc.batch_no = batch_name
