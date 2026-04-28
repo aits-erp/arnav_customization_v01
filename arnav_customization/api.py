@@ -73,16 +73,16 @@ def get_sku_details(warehouse=None):
 
 # import frappe
 
-# @frappe.whitelist(allow_guest=True)
-# def get_location_master_list():
+@frappe.whitelist(allow_guest=True)
+def get_location_master_list():
 
-#     locations = frappe.get_all(
-#         "Warehouse",
-#         fields=["name"]
-#     )
+    locations = frappe.get_all(
+        "Warehouse",
+        fields=["name"]
+    )
 
-#     # Return only list of names
-#     return [loc["name"] for loc in locations]
+    # Return only list of names
+    return [loc["name"] for loc in locations]
 
 
 
