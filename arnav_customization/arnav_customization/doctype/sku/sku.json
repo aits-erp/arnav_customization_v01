@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "autoname": "field:sku_code",
  "creation": "2026-02-16 13:23:10.468742",
  "doctype": "DocType",
@@ -169,7 +170,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 11:27:27.323210",
+ "modified": "2026-04-22 12:21:39.736224",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",
