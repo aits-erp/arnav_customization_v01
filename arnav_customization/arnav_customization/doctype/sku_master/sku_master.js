@@ -541,51 +541,6 @@ function calculate_shopify_fields(row) {
     row.shopify_selling_rate = shopify_rate + row.gst_amount;
 }
 
-frappe.ui.form.on("SKU", {
-
-    breakup_info(frm) {
-
-        if (!frm.doc.breakup_ref) {
-            frappe.msgprint("No breakup data found for this SKU.");
-            return;
-        }
-
-        frappe.call({
-            method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_breakup_rows",
-            args: {
-                sku_master: frm.doc.sku_master,
-                breakup_ref: frm.doc.breakup_ref
-            },
-            callback: function (r) {
-
-                let dialog = new frappe.ui.Dialog({
-                    title: "Breakup Details",
-                    size: "extra-large",
-                    fields: [
-                        {
-                            fieldname: "breakup_table",
-                            fieldtype: "Table",
-                            label: "Breakup",
-                            read_only: 1,
-                            cannot_add_rows: true,
-                            data: r.message || [],
-                            fields: [
-                                { fieldname: "attribute_type", label: "Attribute Type", fieldtype: "Data", in_list_view: 1 },
-                                { fieldname: "attribute_value", label: "Attribute Value", fieldtype: "Data", in_list_view: 1 },
-                                { fieldname: "weight", label: "Weight", fieldtype: "Float", in_list_view: 1 },
-                                { fieldname: "price", label: "Price", fieldtype: "Float", in_list_view: 1 },
-                                { fieldname: "unit", label: "Unit", fieldtype: "Data", in_list_view: 1 }
-                            ]
-                        }
-                    ]
-                });
-
-                dialog.show();
-            }
-        });
-    }
-});
-
 frappe.ui.form.on("SKU Master", {
 
     refresh(frm) {
@@ -631,3 +586,48 @@ frappe.ui.form.on("SKU Master", {
         });
     }
 });
+
+// frappe.ui.form.on("SKU", {
+
+//     breakup_info(frm) {
+
+//         if (!frm.doc.breakup_ref) {
+//             frappe.msgprint("No breakup data found for this SKU.");
+//             return;
+//         }
+
+//         frappe.call({
+//             method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_breakup_rows",
+//             args: {
+//                 sku_master: frm.doc.sku_master,
+//                 breakup_ref: frm.doc.breakup_ref
+//             },
+//             callback: function (r) {
+
+//                 let dialog = new frappe.ui.Dialog({
+//                     title: "Breakup Details",
+//                     size: "extra-large",
+//                     fields: [
+//                         {
+//                             fieldname: "breakup_table",
+//                             fieldtype: "Table",
+//                             label: "Breakup",
+//                             read_only: 1,
+//                             cannot_add_rows: true,
+//                             data: r.message || [],
+//                             fields: [
+//                                 { fieldname: "attribute_type", label: "Attribute Type", fieldtype: "Data", in_list_view: 1 },
+//                                 { fieldname: "attribute_value", label: "Attribute Value", fieldtype: "Data", in_list_view: 1 },
+//                                 { fieldname: "weight", label: "Weight", fieldtype: "Float", in_list_view: 1 },
+//                                 { fieldname: "price", label: "Price", fieldtype: "Float", in_list_view: 1 },
+//                                 { fieldname: "unit", label: "Unit", fieldtype: "Data", in_list_view: 1 }
+//                             ]
+//                         }
+//                     ]
+//                 });
+
+//                 dialog.show();
+//             }
+//         });
+//     }
+// });
