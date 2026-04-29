@@ -18,25 +18,49 @@ def get_sku_details(warehouse=None):
     site_url = frappe.utils.get_url()
 
     # ✅ FIXED QUERY (important)
+    # sku_details = frappe.db.sql("""
+    #     SELECT
+    #         sd.name as sku_name,
+    #         sd.sku,
+    #         sd.product,
+    #         i.item_name,
+    #         IFNULL(b.actual_qty, 0) as qty,
+    #         sd.selling_price,
+    #         sd.gross_weight,
+    #         sd.net_weight,
+    #         sd.huid,
+    #         sd.d_no,
+    #         sd.image
+    #     FROM `tabSKU Details` sd
+    #     LEFT JOIN `tabItem` i
+    #         ON i.name = sd.product
+    #     LEFT JOIN `tabBin` b
+    #         ON b.item_code = sd.product
+    #         AND b.warehouse = %s
+    # """, (warehouse,), as_dict=True)
+    
     sku_details = frappe.db.sql("""
         SELECT
-            sd.name as sku_name,
             sd.sku,
-            sd.product,
-            i.item_name,
-            IFNULL(b.actual_qty, 0) as qty,
-            sd.selling_price,
-            sd.gross_weight,
-            sd.net_weight,
-            sd.huid,
-            sd.d_no,
-            sd.image
+            MIN(sd.name) as sku_name,
+            MIN(sd.product) as product,
+            MIN(i.item_name) as item_name,
+            SUM(IFNULL(b.actual_qty, 0)) as qty,
+            MIN(sd.selling_price) as selling_price,
+            MIN(sd.gross_weight) as gross_weight,
+            MIN(sd.net_weight) as net_weight,
+            MIN(sd.huid) as huid,
+            MIN(sd.d_no) as d_no,
+            MIN(sd.image) as image
         FROM `tabSKU Details` sd
         LEFT JOIN `tabItem` i
             ON i.name = sd.product
         LEFT JOIN `tabBin` b
             ON b.item_code = sd.product
             AND b.warehouse = %s
+        WHERE sd.sku IS NOT NULL
+        AND sd.sku != ''
+        GROUP BY sd.sku
     """, (warehouse,), as_dict=True)
 
     for item in sku_details:
