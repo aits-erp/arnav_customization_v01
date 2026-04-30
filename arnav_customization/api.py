@@ -45,7 +45,7 @@ def get_sku_details(warehouse=None):
             MIN(sd.name) as sku_name,
             MIN(sd.product) as product,
             MIN(i.item_name) as item_name,
-            SUM(IFNULL(b.actual_qty, 0)) as qty,
+            b.actual_qty as qty,
             MIN(sd.selling_price) as selling_price,
             MIN(sd.gross_weight) as gross_weight,
             MIN(sd.net_weight) as net_weight,
@@ -53,11 +53,11 @@ def get_sku_details(warehouse=None):
             MIN(sd.d_no) as d_no,
             MIN(sd.image) as image
         FROM `tabSKU Details` sd
-        LEFT JOIN `tabItem` i
-            ON i.name = sd.product
-        LEFT JOIN `tabBin` b
+        JOIN `tabBin` b
             ON b.item_code = sd.product
             AND b.warehouse = %s
+        LEFT JOIN `tabItem` i
+            ON i.name = sd.product
         WHERE sd.sku IS NOT NULL
         AND sd.sku != ''
         GROUP BY sd.sku
@@ -93,9 +93,6 @@ def get_sku_details(warehouse=None):
     return {
         "sku_details": sku_details
     }
-
-
-# import frappe
 
 @frappe.whitelist(allow_guest=True)
 def get_location_master_list():
