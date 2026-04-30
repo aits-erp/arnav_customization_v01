@@ -16,6 +16,7 @@
   "breakup_info",
   "status",
   "old_sku_ref",
+  "d_no",
   "shopify_rate",
   "gst_percentage",
   "valuation_rate",
@@ -176,18 +177,24 @@
   {
    "fieldname": "breakup_info",
    "fieldtype": "Button",
+   "in_preview": 1,
    "label": "Breakup Info"
   },
   {
    "fieldname": "breakup_ref",
    "fieldtype": "Data",
    "label": "Breakup Ref"
+  },
+  {
+   "fieldname": "d_no",
+   "fieldtype": "Data",
+   "label": "D. No."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-28 12:38:20.089752",
+ "modified": "2026-04-30 14:54:42.003243",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",

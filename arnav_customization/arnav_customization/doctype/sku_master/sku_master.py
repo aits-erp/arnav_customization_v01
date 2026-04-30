@@ -185,6 +185,7 @@ class SKUMaster(Document):
             sku_doc = frappe.new_doc("SKU")
 
             sku_doc.breakup_ref = row.breakup_ref
+        
             sku_doc.sku_code = batch_name
             sku_doc.product = row.product
             sku_doc.batch_no = batch_name
@@ -194,10 +195,12 @@ class SKUMaster(Document):
             sku_doc.net_weight = row.net_weight
             sku_doc.qty = row.qty
 
+            #d no mapping from sku master to sku
+            sku_doc.d_no = row.d_no
+
             sku_doc.cost_price = row.cost_price
             sku_doc.selling_price = row.selling_price
 
-            # NEW FIELDS
             sku_doc.shopify_rate = flt(row.shopify_rate)
             sku_doc.gst_percentage = flt(row.gst_percentage)
             sku_doc.gst_amount = flt(row.gst_amount)
