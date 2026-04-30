@@ -141,23 +141,29 @@ def get_sku_details(warehouse=None):
     
     sku_details = frappe.db.sql("""
         SELECT
-            sd.name AS sku_name,
-            sd.sku,
-            sd.product,
+            MIN(sd.name) AS sku_name,
+            MIN(sd.sku) AS sku,
+            b.item_code AS product,
             i.item_name,
             b.actual_qty AS qty,
-            sd.selling_price,
-            sd.gross_weight,
-            sd.net_weight,
-            sd.huid,
-            sd.d_no,
-            sd.image
+            MIN(sd.selling_price) AS selling_price,
+            MIN(sd.gross_weight) AS gross_weight,
+            MIN(sd.net_weight) AS net_weight,
+            MIN(sd.huid) AS huid,
+            MIN(sd.d_no) AS d_no,
+            MIN(sd.image) AS image
+
         FROM tabBin b
+
         JOIN `tabItem` i
             ON i.name = b.item_code
+
         LEFT JOIN `tabSKU Details` sd
             ON sd.product = b.item_code
+
         WHERE b.warehouse = %(warehouse)s
+
+        GROUP BY b.item_code
     """, {"warehouse": warehouse}, as_dict=True)
 
     for item in sku_details:
