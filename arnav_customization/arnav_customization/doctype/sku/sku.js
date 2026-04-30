@@ -1,11 +1,9 @@
 frappe.ui.form.on("SKU", {
-
     refresh(frm) {
-        // Optional: show button only if breakup exists
-        if (!frm.doc.breakup_ref) {
-            frm.toggle_display("breakup_info", false);
+        if (frm.doc.breakup_ref) {
+            frm.set_df_property("breakup_info", "label", "Edit Breakup");
         } else {
-            frm.toggle_display("breakup_info", true);
+            frm.set_df_property("breakup_info", "label", "Add Breakup");
         }
     },
 
