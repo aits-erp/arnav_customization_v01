@@ -33,7 +33,8 @@
   "supplier_invoice_no",
   "shopify_selling_rate",
   "created_from_pi",
-  "barcode"
+  "barcode",
+  "huid"
  ],
  "fields": [
   {
@@ -190,12 +191,17 @@
    "fieldname": "d_no",
    "fieldtype": "Data",
    "label": "D. No."
+  },
+  {
+   "fieldname": "huid",
+   "fieldtype": "Data",
+   "label": "HUID"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-01 11:45:33.175311",
+ "modified": "2026-05-01 19:27:00.730200",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",
