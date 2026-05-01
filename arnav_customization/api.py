@@ -196,7 +196,7 @@ def get_sku_details(warehouse=None):
     sku_details = frappe.db.sql("""
         SELECT
             s.name AS sku_name,
-            s.sku,
+            s.sku_code AS sku,
             s.product,
             1 AS qty,
             s.selling_price,
