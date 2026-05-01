@@ -139,32 +139,59 @@ def get_sku_details(warehouse=None):
     #         AND b.warehouse = %s
     # """, (warehouse,), as_dict=True)
     
-    sku_details = frappe.db.sql("""
-        SELECT
-            MIN(sd.name) AS sku_name,
-            MIN(sd.sku) AS sku,
-            b.item_code AS product,
-            i.item_name,
-            b.actual_qty AS qty,
-            MIN(sd.selling_price) AS selling_price,
-            MIN(sd.gross_weight) AS gross_weight,
-            MIN(sd.net_weight) AS net_weight,
-            MIN(sd.huid) AS huid,
-            MIN(sd.d_no) AS d_no,
-            MIN(sd.image) AS image
+    # sku_details = frappe.db.sql("""
+    #     SELECT
+    #         MIN(sd.name) AS sku_name,
+    #         MIN(sd.sku) AS sku,
+    #         b.item_code AS product,
+    #         i.item_name,
+    #         b.actual_qty AS qty,
+    #         MIN(sd.selling_price) AS selling_price,
+    #         MIN(sd.gross_weight) AS gross_weight,
+    #         MIN(sd.net_weight) AS net_weight,
+    #         MIN(sd.huid) AS huid,
+    #         MIN(sd.d_no) AS d_no,
+    #         MIN(sd.image) AS image
 
-        FROM tabBin b
+    #     FROM tabBin b
 
-        JOIN `tabItem` i
-            ON i.name = b.item_code
+    #     JOIN `tabItem` i
+    #         ON i.name = b.item_code
 
-        LEFT JOIN `tabSKU Details` sd
-            ON sd.product = b.item_code
+    #     LEFT JOIN `tabSKU Details` sd
+    #         ON sd.product = b.item_code
 
-        WHERE b.warehouse = %(warehouse)s
+    #     WHERE b.warehouse = %(warehouse)s
 
-        GROUP BY b.item_code
-    """, {"warehouse": warehouse}, as_dict=True)
+    #     GROUP BY b.item_code
+    # """, {"warehouse": warehouse}, as_dict=True)
+
+	sku_details = frappe.db.sql("""
+	    SELECT
+	        sd.name AS sku_name,
+	        sd.sku,
+	        sd.product,
+	        i.item_name,
+	        IFNULL(b.actual_qty, 0) AS qty,
+	        sd.selling_price,
+	        sd.gross_weight,
+	        sd.net_weight,
+	        sd.huid,
+	        sd.d_no,
+	        sd.image
+	
+	    FROM `tabSKU Details` sd
+	
+	    INNER JOIN `tabItem` i
+	        ON i.name = sd.product
+	
+	    LEFT JOIN `tabBin` b
+	        ON b.item_code = sd.product
+	        AND b.warehouse = %(warehouse)s
+	
+	    WHERE IFNULL(b.actual_qty, 0) > 0
+	
+	""", {"warehouse": warehouse}, as_dict=True)
 
 
 
