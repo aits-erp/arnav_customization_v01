@@ -195,8 +195,8 @@ class SKUMaster(Document):
             sku_doc.net_weight = row.net_weight
             sku_doc.qty = row.qty
 
-            #d no mapping from sku master to sku
             sku_doc.d_no = row.d_no
+            sku_doc.huid = row.huid
 
             sku_doc.cost_price = row.cost_price
             sku_doc.selling_price = row.selling_price

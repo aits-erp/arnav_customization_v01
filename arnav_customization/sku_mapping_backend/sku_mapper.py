@@ -19,5 +19,7 @@ def get_sku_data(sku):
         "hsn": sku_doc.hsn,
         "metal": sku_doc.metal,
         "warehouse": sku_doc.warehouse,
-        "qty": sku_doc.qty
+        "qty": sku_doc.qty,
+        "d_no": sku_doc.d_no,
+        "huid": sku_doc.huid
     }
