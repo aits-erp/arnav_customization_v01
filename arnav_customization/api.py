@@ -166,7 +166,7 @@ def get_sku_details(warehouse=None):
     #     GROUP BY b.item_code
     # """, {"warehouse": warehouse}, as_dict=True)
 
-	sku_details = frappe.db.sql("""
+    sku_details = frappe.db.sql("""
 	    SELECT
 	        sd.name AS sku_name,
 	        sd.sku,
@@ -192,8 +192,6 @@ def get_sku_details(warehouse=None):
 	    WHERE IFNULL(b.actual_qty, 0) > 0
 	
 	""", {"warehouse": warehouse}, as_dict=True)
-
-
 
     for item in sku_details:
 
