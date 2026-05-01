@@ -180,16 +180,16 @@ def get_sku_details(warehouse=None):
 	        sd.d_no,
 	        sd.image
 	
-	    FROM `tabSKU Details` sd
-	
-	    LEFT JOIN `tabItem` i
-	        ON i.name = sd.product
-	
-	    LEFT JOIN `tabBin` b
-	        ON b.item_code = sd.product
-	        AND b.warehouse = %(warehouse)s
-	
-	    WHERE IFNULL(b.actual_qty, 0) > 0
+		FROM tabBin b
+		
+		INNER JOIN `tabSKU Details` sd
+		    ON sd.product = b.item_code
+		
+		LEFT JOIN `tabItem` i
+		    ON i.name = b.item_code
+		
+		WHERE b.warehouse = %(warehouse)s
+		AND b.actual_qty > 0
 	
 	""", {"warehouse": warehouse}, as_dict=True)
 
