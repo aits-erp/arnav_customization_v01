@@ -39,9 +39,8 @@
  "fields": [
   {
    "fieldname": "sku_code",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "SKU Code",
-   "options": "SKU",
    "unique": 1
   },
   {
@@ -201,7 +200,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-01 19:27:00.730200",
+ "modified": "2026-05-05 15:02:20.659562",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "SKU",
