@@ -7,6 +7,21 @@ def get_sku_data(sku):
         return {}
 
     sku_doc = frappe.get_doc("SKU", sku)
+    breakup = frappe.get_all(
+        "SKU Breakup",
+        filters={
+            "sku_master": sku_doc.sku_master,
+            "breakup_ref": sku_doc.breakup_ref
+        },
+        fields=[
+            "attribute_type",
+            "attribute_value",
+            "weight",
+            "price",
+            "unit"
+        ],
+        order_by="creation asc"
+    )
 
     return {
         "item_code": sku_doc.product,
@@ -21,5 +36,6 @@ def get_sku_data(sku):
         "warehouse": sku_doc.warehouse,
         "qty": sku_doc.qty,
         "d_no": sku_doc.d_no,
-        "huid": sku_doc.huid
+        "huid": sku_doc.huid,
+        "breakup": breakup
     }

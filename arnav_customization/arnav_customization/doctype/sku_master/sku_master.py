@@ -169,6 +169,9 @@ class SKUMaster(Document):
             if flt(row.gross_weight) <= 0:
                 frappe.throw(f"Gross weight must be entered in row {row.idx}")
 
+            if not row.breakup_ref:
+                row.breakup_ref = frappe.generate_hash(length=12)
+
             # 1️⃣ Generate Batch Name
             batch_name = self.generate_custom_batch_name(self.date_of_invoice)
 
@@ -186,7 +189,7 @@ class SKUMaster(Document):
 
             sku_doc.breakup_ref = row.breakup_ref
         
-            sku_doc.sku_code = batch_name
+            sku_doc.name = batch_name
             sku_doc.product = row.product
             sku_doc.batch_no = batch_name
             sku_doc.warehouse = self.warehouse
