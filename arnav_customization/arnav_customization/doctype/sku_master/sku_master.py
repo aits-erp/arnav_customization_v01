@@ -189,7 +189,7 @@ class SKUMaster(Document):
 
             sku_doc.breakup_ref = row.breakup_ref
         
-            sku_doc.name = batch_name
+            # sku_doc.sku_code = batch_name
             sku_doc.product = row.product
             sku_doc.batch_no = batch_name
             sku_doc.warehouse = self.warehouse
