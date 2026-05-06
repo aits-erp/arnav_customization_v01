@@ -24,8 +24,11 @@
   "section_break_ymor",
   "sku_details",
   "packing_materials",
+  "section_break_uvak",
+  "total_price",
   "total_discount_in_rs",
   "discount_percentage",
+  "column_break_lhie",
   "handling_and_packaging_charges",
   "total_amount_wo_tax",
   "total_amount_with_gst",
@@ -77,8 +80,7 @@
   {
    "fieldname": "total_discount_in_rs",
    "fieldtype": "Float",
-   "label": "Total Discount( in Rs.)",
-   "read_only": 1
+   "label": "Total Discount( in Rs.)"
   },
   {
    "fieldname": "handling_and_packaging_charges",
@@ -202,15 +204,29 @@
   },
   {
    "fieldname": "discount_percentage",
-   "fieldtype": "Data",
-   "label": "Discount Percentage"
+   "fieldtype": "Float",
+   "label": "Discount Percentage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_price",
+   "fieldtype": "Float",
+   "label": "Total Price"
+  },
+  {
+   "fieldname": "section_break_uvak",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_lhie",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-13 12:48:33.411445",
+ "modified": "2026-05-06 15:37:51.014854",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",

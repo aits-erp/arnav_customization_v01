@@ -27,14 +27,15 @@ frappe.ui.form.on("SKU", {
                     fieldname: "attribute_type",
                     label: "Attribute Type",
                     fieldtype: "Select",
-                    options: `PRODUCT_TYPE
-                        PURITY
-                        STONE
-                        COLLECTION
-                        DESIGN
-                        VISUAL
-                        USAGE
-                        TARGET`,
+                    options: `
+PRODUCT_TYPE
+PURITY
+STONE
+COLLECTION
+DESIGN
+VISUAL
+USAGE
+TARGET`,
                     in_list_view: 1
                 },
                 {

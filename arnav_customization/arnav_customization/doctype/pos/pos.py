@@ -5,7 +5,8 @@ from frappe.model.mapper import get_mapped_doc
 
 class POS(Document):
 	def validate(self):
-	    self.calculate_gst_for_items()
+	    # self.calculate_gst_for_items()
+		self.apply_discount_and_calculate_totals()
 
 	def before_submit(self):
 		# 1️⃣ Balance validation
@@ -198,6 +199,107 @@ class POS(Document):
 		self.stock_out_ref = stock_entry.name
 
 		frappe.msgprint(f"Stock Entry Created: {stock_entry.name}")
+
+	def apply_discount_and_calculate_totals(self):
+
+		total_price = 0
+
+		# ================================
+		# TOTAL PRICE
+		# ================================
+
+		for row in self.sku_details:
+
+			amount = (row.price or 0) * (row.qty or 0)
+
+			total_price += amount
+
+		self.total_price = total_price
+
+		# ================================
+		# DISCOUNT %
+		# ================================
+
+		discount_percentage = 0
+
+		if total_price > 0:
+
+			discount_percentage = (
+				(self.total_discount_in_rs or 0)
+				/ total_price
+			) * 100
+
+		self.discount_percentage = discount_percentage
+
+		# ================================
+		# APPLY ROW CALCULATIONS
+		# ================================
+
+		total_amount = 0
+		total_gst = 0
+
+		for row in self.sku_details:
+
+			amount = (row.price or 0) * (row.qty or 0)
+
+			row.discount = (
+				amount * discount_percentage
+			) / 100
+
+			row.final_amount = amount - row.discount
+
+			if row.final_amount < 0:
+				row.final_amount = 0
+
+			# GST LOGIC
+			item_code = frappe.db.get_value(
+				"SKU",
+				row.sku,
+				"product"
+			)
+
+			gst_rate = 0
+
+			if item_code:
+
+				item_doc = frappe.get_doc(
+					"Item",
+					item_code
+				)
+
+				if item_doc.taxes:
+
+					template = item_doc.taxes[0].item_tax_template
+
+					if template:
+
+						gst_rate = frappe.db.get_value(
+							"Item Tax Template",
+							template,
+							"gst_rate"
+						) or 0
+
+			row.gst_percentage = gst_rate
+
+			row.gst_amount = (
+				row.final_amount * gst_rate
+			) / 100
+
+			total_amount += row.final_amount
+			total_gst += row.gst_amount
+
+		packing = self.handling_and_packaging_charges or 0
+
+		self.total_amount_wo_tax = total_amount + packing
+
+		self.total_amount_with_gst = (
+			total_amount + total_gst + packing
+		)
+
+		self.balance_amount = (
+			self.total_amount_with_gst
+			- (self.paid_amount or 0)
+		)
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs

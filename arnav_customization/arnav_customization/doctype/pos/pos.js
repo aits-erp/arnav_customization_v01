@@ -412,6 +412,7 @@ frappe.ui.form.on('POS', {
         });
     },
 
+
     refresh: function(frm) {
         calculate_all(frm);
 
@@ -439,7 +440,11 @@ frappe.ui.form.on('POS', {
 
     handling_and_packaging_charges: function(frm) {
         calculate_parent_totals(frm);
-    }
+    },
+
+    total_discount_in_rs: function(frm) {
+        apply_global_discount(frm);
+    },
 
 });
 
@@ -471,6 +476,41 @@ frappe.ui.form.on('POS SKU Details', {
     sku_details_remove: function(frm) {
         calculate_parent_totals(frm);
     },
+
+    // /* =================================================
+    // ONLY FIRST ROW DISCOUNT ENTRY
+    // converts to %
+    // then applies same % to all rows
+    // ================================================= */
+    // discount: function(frm, cdt, cdn) {
+
+    //     let row = locals[cdt][cdn];
+    //     let rows = frm.doc.sku_details || [];
+
+    //     if (!rows.length) return;
+
+    //     let first_row = rows[0];
+
+    //     if (row.name === first_row.name) {
+
+    //         let amount = flt(first_row.price) * flt(first_row.qty);
+    //         let disc = flt(first_row.discount);
+
+    //         let perc = 0;
+
+    //         if (amount > 0) {
+    //             perc = (disc / amount) * 100;
+    //         }
+
+    //         frm.set_value("discount_percentage", perc);
+
+    //         apply_global_discount(frm);
+
+    //     } else {
+
+    //         apply_global_discount(frm);
+    //     }
+    // },
 
     /* =================================================
     ONLY FIRST ROW DISCOUNT ENTRY
@@ -568,10 +608,82 @@ frappe.ui.form.on('POS SKU Details', {
 APPLY SAME % TO ALL ROWS
 ===================================================== */
 
+// function apply_global_discount(frm) {
+
+//     let rows = frm.doc.sku_details || [];
+//     let perc = flt(frm.doc.discount_percentage);
+
+//     rows.forEach(r => {
+
+//         let amount = flt(r.price) * flt(r.qty);
+
+//         let disc = (amount * perc) / 100;
+
+//         // r.discount = disc;
+
+//         // let final_amount = amount - disc;
+
+//         // if (final_amount < 0) final_amount = 0;
+
+//         // r.final_amount = final_amount;
+
+//         // r.gst_amount = (final_amount * flt(r.gst_percentage)) / 100;
+
+//         let final_amount = amount - disc;
+
+//         if (final_amount < 0) {
+//             final_amount = 0;
+//         }
+
+//         let gst_amount = (final_amount * flt(r.gst_percentage)) / 100;
+
+//         frappe.model.set_value(r.doctype, r.name, "discount", disc);
+//         frappe.model.set_value(r.doctype, r.name, "final_amount", final_amount);
+//         frappe.model.set_value(r.doctype, r.name, "gst_amount", gst_amount);
+//     });
+
+//     frm.refresh_field("sku_details");
+
+//     calculate_parent_totals(frm);
+// }
+
 function apply_global_discount(frm) {
 
     let rows = frm.doc.sku_details || [];
-    let perc = flt(frm.doc.discount_percentage);
+
+    let total_price = 0;
+
+    // =========================================
+    // CALCULATE TOTAL PRICE
+    // =========================================
+
+    rows.forEach(r => {
+
+        let row_total = flt(r.price) * flt(r.qty);
+
+        total_price += row_total;
+    });
+
+    // store parent total price
+    frm.set_value("total_price", total_price);
+
+    // =========================================
+    // CALCULATE DISCOUNT %
+    // =========================================
+
+    let total_discount = flt(frm.doc.total_discount_in_rs);
+
+    let perc = 0;
+
+    if (total_price > 0) {
+        perc = (total_discount / total_price) * 100;
+    }
+
+    frm.set_value("discount_percentage", perc);
+
+    // =========================================
+    // APPLY DISCOUNT TO ALL ROWS
+    // =========================================
 
     rows.forEach(r => {
 
@@ -579,15 +691,35 @@ function apply_global_discount(frm) {
 
         let disc = (amount * perc) / 100;
 
-        r.discount = disc;
-
         let final_amount = amount - disc;
 
-        if (final_amount < 0) final_amount = 0;
+        if (final_amount < 0) {
+            final_amount = 0;
+        }
 
-        r.final_amount = final_amount;
+        let gst_amount =
+            (final_amount * flt(r.gst_percentage)) / 100;
 
-        r.gst_amount = (final_amount * flt(r.gst_percentage)) / 100;
+        frappe.model.set_value(
+            r.doctype,
+            r.name,
+            "discount",
+            disc
+        );
+
+        frappe.model.set_value(
+            r.doctype,
+            r.name,
+            "final_amount",
+            final_amount
+        );
+
+        frappe.model.set_value(
+            r.doctype,
+            r.name,
+            "gst_amount",
+            gst_amount
+        );
     });
 
     frm.refresh_field("sku_details");
@@ -600,15 +732,36 @@ function apply_global_discount(frm) {
 TOTALS
 ===================================================== */
 
+// function calculate_parent_totals(frm) {
+
+//     // let total_discount = 0;
+//     let total_amount = 0;
+//     let total_gst = 0;
+
+//     (frm.doc.sku_details || []).forEach(row => {
+
+//         // total_discount += flt(row.discount);
+//         total_amount += flt(row.final_amount);
+//         total_gst += flt(row.gst_amount);
+
+//     });
+
+//     let packing = flt(frm.doc.handling_and_packaging_charges);
+
+//     // frm.set_value("total_discount_in_rs", total_discount);
+//     frm.set_value("total_amount_wo_tax", total_amount + packing);
+//     frm.set_value("total_amount_with_gst", total_amount + total_gst + packing);
+
+//     calculate_balance(frm);
+// }
+
 function calculate_parent_totals(frm) {
 
-    let total_discount = 0;
     let total_amount = 0;
     let total_gst = 0;
 
     (frm.doc.sku_details || []).forEach(row => {
 
-        total_discount += flt(row.discount);
         total_amount += flt(row.final_amount);
         total_gst += flt(row.gst_amount);
 
@@ -616,13 +769,18 @@ function calculate_parent_totals(frm) {
 
     let packing = flt(frm.doc.handling_and_packaging_charges);
 
-    frm.set_value("total_discount_in_rs", total_discount);
-    frm.set_value("total_amount_wo_tax", total_amount + packing);
-    frm.set_value("total_amount_with_gst", total_amount + total_gst + packing);
+    frm.set_value(
+        "total_amount_wo_tax",
+        total_amount + packing
+    );
+
+    frm.set_value(
+        "total_amount_with_gst",
+        total_amount + total_gst + packing
+    );
 
     calculate_balance(frm);
 }
-
 
 /* =====================================================
 PAYMENT
