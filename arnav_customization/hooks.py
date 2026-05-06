@@ -47,7 +47,11 @@ doc_events = {
     },
 
     "Stock Entry": {
-        "validate": "arnav_customization.sku_mapping_backend.handlers.stock_entry.process"
+        "validate": "arnav_customization.sku_mapping_backend.handlers.stock_entry.process",
+        "before_validate": [
+            "arnav_customization.sku_mapping_backend.handlers.stock_entry.process",
+            "arnav_customization.sku_mapping_backend.handlers.stock_entry.material_transfer_qty_handler"
+        ]
     },
     "Credit Note": {
         "validate": "arnav_customization.sku_mapping_backend.handlers.credit_note.process"

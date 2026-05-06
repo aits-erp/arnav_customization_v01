@@ -42,3 +42,19 @@ frappe.ui.form.on("Stock Entry Detail", {
     }
 
 });
+
+frappe.ui.form.on("Stock Entry", {
+
+    refresh(frm) {
+
+        // auto enable only for Material Transfer
+        if (frm.doc.purpose === "Material Transfer") {
+
+            frm.set_value("custom_use_qty_mode", 1);
+
+        } else {
+
+            frm.set_value("custom_use_qty_mode", 0);
+        }
+    }
+});
