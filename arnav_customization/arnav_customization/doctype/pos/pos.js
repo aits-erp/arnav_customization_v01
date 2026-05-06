@@ -398,7 +398,9 @@ frappe.ui.form.on('POS', {
         frm.set_query("packing_material", "packing_materials", function() {
             return {
                 filters: {
-                    item_group: "Packing"
+                    // item_group: "Packing"
+                    item_group: "PACKING METERIALS"
+                    
                 }
             };
         });
