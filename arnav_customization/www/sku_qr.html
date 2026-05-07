@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>
+        {% if item %}
+            {{ item.sku }}
+        {% else %}
+            SKU Details
+        {% endif %}
+    </title>
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+            margin:0;
+            padding:20px;
+            background:#f5f5f5;
+            font-family:Arial, sans-serif;
+            color:#222;
+        }
+
+        .container{
+            max-width:500px;
+            margin:auto;
+        }
+
+        .card{
+            background:#fff;
+            border-radius:16px;
+            overflow:hidden;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .image-section{
+            background:#fff;
+            text-align:center;
+            padding:20px;
+            border-bottom:1px solid #eee;
+        }
+
+        .image-section img{
+            max-width:100%;
+            max-height:320px;
+            object-fit:contain;
+        }
+
+        .details{
+            padding:20px;
+        }
+
+        .title{
+            font-size:24px;
+            font-weight:600;
+            margin-bottom:5px;
+        }
+
+        .sku{
+            color:#777;
+            margin-bottom:20px;
+            font-size:14px;
+        }
+
+        .price{
+            font-size:28px;
+            font-weight:bold;
+            margin-bottom:20px;
+        }
+
+        .section-title{
+            font-size:16px;
+            font-weight:600;
+            margin-top:25px;
+            margin-bottom:12px;
+        }
+
+        .info-row{
+            display:flex;
+            justify-content:space-between;
+            padding:10px 0;
+            border-bottom:1px solid #f0f0f0;
+        }
+
+        .info-label{
+            color:#666;
+        }
+
+        .info-value{
+            font-weight:500;
+            text-align:right;
+        }
+
+        .breakup-table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:10px;
+        }
+
+        .breakup-table th{
+            background:#fafafa;
+            text-align:left;
+            padding:10px;
+            border:1px solid #eee;
+            font-size:13px;
+        }
+
+        .breakup-table td{
+            padding:10px;
+            border:1px solid #eee;
+            font-size:13px;
+        }
+
+        .empty-state{
+            text-align:center;
+            background:#fff;
+            padding:40px 20px;
+            border-radius:16px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .empty-state h2{
+            margin-top:0;
+        }
+
+        @media(max-width:480px){
+
+            body{
+                padding:10px;
+            }
+
+            .details{
+                padding:15px;
+            }
+
+            .title{
+                font-size:20px;
+            }
+
+            .price{
+                font-size:24px;
+            }
+
+            .breakup-table th,
+            .breakup-table td{
+                padding:8px;
+                font-size:12px;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    {% if item %}
+
+        <div class="card">
+
+            <!-- ========================================= -->
+            <!-- Product Image -->
+            <!-- ========================================= -->
+            <div class="image-section">
+
+                {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.sku }}">
+                {% endif %}
+
+            </div>
+
+            <!-- ========================================= -->
+            <!-- Product Details -->
+            <!-- ========================================= -->
+            <div class="details">
+
+                <div class="title">
+                    {{ item.product or "Jewellery Item" }}
+                </div>
+
+                <div class="sku">
+                    SKU : {{ item.sku }}
+                </div>
+
+                <div class="price">
+                    ₹ {{ item.selling_price or 0 }}
+                </div>
+
+                <!-- ===================================== -->
+                <!-- Basic Information -->
+                <!-- ===================================== -->
+                <div class="section-title">
+                    Product Details
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Gross Weight</div>
+                    <div class="info-value">
+                        {{ item.gross_weight or 0 }}
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Net Weight</div>
+                    <div class="info-value">
+                        {{ item.net_weight or 0 }}
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">HUID</div>
+                    <div class="info-value">
+                        {{ item.huid or "-" }}
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">D No</div>
+                    <div class="info-value">
+                        {{ item.d_no or "-" }}
+                    </div>
+                </div>
+
+                <!-- ===================================== -->
+                <!-- Breakup -->
+                <!-- ===================================== -->
+                {% if item.breakup %}
+
+                    <div class="section-title">
+                        Breakup Details
+                    </div>
+
+                    <table class="breakup-table">
+
+                        <thead>
+                            <tr>
+                                <th>Attribute</th>
+                                <th>Value</th>
+                                <th>Weight</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for row in item.breakup %}
+
+                                <tr>
+                                    <td>
+                                        {{ row.attribute_type }}
+                                    </td>
+
+                                    <td>
+                                        {{ row.attribute_value }}
+                                    </td>
+
+                                    <td>
+                                        {{ row.weight }}
+                                    </td>
+
+                                    <td>
+                                        ₹ {{ row.price }}
+                                    </td>
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <h2>
+                SKU Details
+            </h2>
+
+            <p>
+                {{ message or "No data found" }}
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>
