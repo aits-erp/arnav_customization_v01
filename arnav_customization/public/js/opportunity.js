@@ -42,11 +42,12 @@ frappe.ui.form.on("Opportunity", {
         // =========================
         frm.add_custom_button(__("POS"), function () {
 
+            console.log("loaded 1st");
             frappe.new_doc("POS", {
 
                 client_name:
-                    frm.doc.customer_name ||
                     frm.doc.title ||
+                    frm.doc.customer_name ||
                     frm.doc.name ||
                     "",
 
