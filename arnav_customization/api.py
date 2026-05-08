@@ -535,3 +535,54 @@ def get_location_master_list():
     )
 
     return [loc["name"] for loc in locations]
+
+# =========================================================
+# Debug QR Library Check
+# =========================================================
+@frappe.whitelist(allow_guest=True)
+def debug_qr_install():
+
+    result = {}
+
+    # =====================================================
+    # Check qrcode
+    # =====================================================
+    try:
+        import qrcode
+
+        result["qrcode_import"] = "SUCCESS"
+        result["qrcode_version"] = getattr(qrcode, "__version__", "UNKNOWN")
+
+    except Exception as e:
+        result["qrcode_import"] = str(e)
+
+    # =====================================================
+    # Check PIL
+    # =====================================================
+    try:
+        from PIL import Image
+
+        result["pillow_import"] = "SUCCESS"
+
+    except Exception as e:
+        result["pillow_import"] = str(e)
+
+    # =====================================================
+    # Try QR Generation
+    # =====================================================
+    try:
+        import qrcode
+        from io import BytesIO
+
+        qr = qrcode.make("TEST QR")
+
+        buffer = BytesIO()
+
+        qr.save(buffer, format="PNG")
+
+        result["qr_generation"] = "SUCCESS"
+
+    except Exception as e:
+        result["qr_generation"] = str(e)
+
+    return result
