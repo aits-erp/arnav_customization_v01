@@ -169,13 +169,15 @@
             <!-- ========================================= -->
             <!-- Product Image -->
             <!-- ========================================= -->
-            <div class="image-section">
+            {% if item.image_url %}
 
-                {% if item.image_url %}
+                <div class="image-section">
+
                     <img src="{{ item.image_url }}" alt="{{ item.sku }}">
-                {% endif %}
 
-            </div>
+                </div>
+
+            {% endif %}
 
             <!-- ========================================= -->
             <!-- Product Details -->
@@ -228,6 +230,34 @@
                         {{ item.d_no or "-" }}
                     </div>
                 </div>
+
+                <!-- ===================================== -->
+                <!-- QR Code -->
+                <!-- ===================================== -->
+                {% if item.qr_code %}
+
+                    <div class="section-title">
+                        QR Code
+                    </div>
+
+                    <div style="text-align:center; margin-top:15px;">
+
+                        <img
+                            src="{{ item.qr_code }}"
+                            alt="QR Code"
+                            style="
+                                width:180px;
+                                height:180px;
+                                border:1px solid #eee;
+                                padding:10px;
+                                border-radius:12px;
+                                background:#fff;
+                            "
+                        >
+
+                    </div>
+
+                {% endif %}
 
                 <!-- ===================================== -->
                 <!-- Breakup -->

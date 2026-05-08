@@ -404,6 +404,7 @@ def _get_sku_details_data(warehouse=None, sku=None):
             s.sku_master,
             s.breakup_ref,
             s.old_sku_ref,
+            s.image_url,
             1 AS qty,
             s.selling_price,
             s.gross_weight,
