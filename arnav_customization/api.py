@@ -410,8 +410,7 @@ def _get_sku_details_data(warehouse=None, sku=None):
             s.gross_weight,
             s.net_weight,
             s.huid,
-            s.d_no,
-            s.image
+            s.d_no
 
         FROM `tabSKU` s
 
@@ -457,11 +456,19 @@ def _get_sku_details_data(warehouse=None, sku=None):
         # =====================================================
         # Image URL + Name
         # =====================================================
-        image_path = item.get("image")
+        image_path = item.get("image_url")
 
         if image_path:
-            item["image_url"] = site_url + image_path
+
+            # Convert relative path to full URL
+            if image_path.startswith("/"):
+                full_image_url = site_url + image_path
+            else:
+                full_image_url = image_path
+
+            item["image_url"] = full_image_url
             item["image_name"] = image_path.split("/")[-1]
+
         else:
             item["image_url"] = None
             item["image_name"] = None
