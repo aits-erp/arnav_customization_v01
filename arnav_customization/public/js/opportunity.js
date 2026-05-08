@@ -21,14 +21,14 @@ frappe.ui.form.on("Opportunity", {
         frm.add_custom_button(__("POS"), function () {
 
             frappe.new_doc("POS", {
-                client_name: frm.doc.customer_name || frm.doc.title || "",
+                client_name: frm.doc.customer_name || frm.doc.name || "",
                 email: frm.doc.contact_email || "",
                 opportunity: frm.doc.name,
 
                 lead_owner_1: frm.doc.custom_lead_owner_1 || "",
                 lead_owner_2: frm.doc.custom_lead_owner_2 || "",
 
-                salestype: frm.doc.custom_lead_source || "",
+                salestype: frm.doc.custom_offline_lead_source || frm.doc.custom_offline_lead_source || "",
                 billtype: frm.doc.custom_metal_interest || "",
 
                 mobile_number: frm.doc.whatsapp || frm.doc.contact_mobile || frm.doc.phone || "",
