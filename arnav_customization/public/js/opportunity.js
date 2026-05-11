@@ -46,10 +46,7 @@ frappe.ui.form.on("Opportunity", {
             frappe.new_doc("POS", {
 
                 client_name:
-                    frm.doc.party_name ||
-                    frm.doc.customer_name ||
-                    frm.doc.title ||
-                    "",
+                    frm.doc.party_name || "",
 
                 email:
                     frm.doc.contact_email || "",

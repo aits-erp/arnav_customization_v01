@@ -60,6 +60,7 @@
    "label": "SalesType"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "client_name",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -226,7 +227,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-06 15:37:51.014854",
+ "modified": "2026-05-11 14:54:49.693075",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
