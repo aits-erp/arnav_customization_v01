@@ -451,6 +451,21 @@ def _get_sku_details_data(warehouse=None, sku=None):
             order_by="creation asc"
         )
 
+        # item["breakup"] = breakup_rows or []
+        # =====================================================
+        # Unit Short Forms
+        # =====================================================
+        UNIT_MAP = {
+            "Carat": "cts",
+            "Gram": "gm"
+        }
+
+        for row in breakup_rows:
+            row["unit"] = UNIT_MAP.get(
+                row.get("unit"),
+                row.get("unit")
+            )
+
         item["breakup"] = breakup_rows or []
 
         # =====================================================
