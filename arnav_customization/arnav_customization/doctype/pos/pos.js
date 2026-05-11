@@ -371,13 +371,108 @@ function is_pos(frm) {
 POS MAIN FORM
 ===================================================== */
 
+// frappe.ui.form.on('POS', {
+
+//     setup: function(frm) {
+
+//         frm.set_query("product", "sku_details", function(doc) {
+//             if (!doc.billtype) {
+//                 return { filters: { name: "" } };
+//             }
+
+//             return {
+//                 filters: {
+//                     custom_metal: doc.billtype
+//                 }
+//             };
+//         });
+
+//         frm.set_query("credit_note", "payment_details", function(doc) {
+//             return {
+//                 filters: {
+//                     customer: doc.client_name
+//                 }
+//             };
+//         });
+
+//         frm.set_query("packing_material", "packing_materials", function() {
+//             return {
+//                 filters: {
+//                     // item_group: "Packing"
+//                     item_group: "PACKING METERIALS"
+                    
+//                 }
+//             };
+//         });
+
+//         frm.set_query("client_name", function() {
+//             return {
+//                 query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
+//             };
+//         });
+//     },
+
+
+//     refresh: function(frm) {
+
+//         // Prevent calculations during initial new doc creation
+//         if (frm.is_new()) {
+//             return;
+//         }
+
+//         calculate_all(frm);
+
+//         if (!frm.is_new() && frm.doc.docstatus === 1) {
+//             frm.add_custom_button(__('Sales Return'), function () {
+//                 frappe.model.open_mapped_doc({
+//                     method: "arnav_customization.arnav_customization.doctype.pos.pos.make_credit_note",
+//                     frm: frm
+//                 });
+//             }, __("Create"));
+//         }
+//     },
+
+//     before_submit: function(frm) {
+
+//         let balance = flt(frm.doc.balance_amount);
+
+//         if (Math.abs(balance) > 0.01) {
+//             frappe.throw({
+//                 title: __("Submission Not Allowed"),
+//                 message: __("Cannot submit POS because Balance Amount must be 0.00. Current Balance: ") + balance
+//             });
+//         }
+//     },
+
+//     handling_and_packaging_charges: function(frm) {
+//         calculate_parent_totals(frm);
+//     },
+
+//     total_discount_in_rs: function(frm) {
+//         apply_global_discount(frm);
+//     },
+
+// });
+
 frappe.ui.form.on('POS', {
 
     setup: function(frm) {
 
+        console.log("POS SETUP");
+
+        // =========================================
+        // PRODUCT FILTER
+        // =========================================
+
         frm.set_query("product", "sku_details", function(doc) {
+
             if (!doc.billtype) {
-                return { filters: { name: "" } };
+
+                return {
+                    filters: {
+                        name: ""
+                    }
+                };
             }
 
             return {
@@ -387,53 +482,127 @@ frappe.ui.form.on('POS', {
             };
         });
 
+        // =========================================
+        // CREDIT NOTE FILTER
+        // =========================================
+
         frm.set_query("credit_note", "payment_details", function(doc) {
+
             return {
                 filters: {
-                    customer: doc.client_name
+                    customer: doc.client_name || ""
                 }
             };
         });
+
+        // =========================================
+        // PACKING MATERIAL FILTER
+        // =========================================
 
         frm.set_query("packing_material", "packing_materials", function() {
+
             return {
                 filters: {
-                    // item_group: "Packing"
                     item_group: "PACKING METERIALS"
-                    
                 }
             };
         });
 
+        // =========================================
+        // CLIENT NAME QUERY
+        // =========================================
+
         frm.set_query("client_name", function() {
+
             return {
                 query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
             };
         });
     },
 
+    // =========================================
+    // ONLOAD
+    // =========================================
+
+    onload: function(frm) {
+
+        console.log("POS ONLOAD");
+
+        console.log("CLIENT BEFORE:", frm.doc.client_name);
+
+        // IMPORTANT:
+        // preserve route value during initial load
+
+        if (
+            frm.is_new() &&
+            frappe.route_options &&
+            frappe.route_options.client_name &&
+            !frm.doc.client_name
+        ) {
+
+            frm.set_value(
+                "client_name",
+                frappe.route_options.client_name
+            );
+        }
+
+        console.log("CLIENT AFTER:", frm.doc.client_name);
+    },
+
+    // =========================================
+    // REFRESH
+    // =========================================
 
     refresh: function(frm) {
+
+        console.log("POS REFRESH:", frm.doc.client_name);
+
+        // IMPORTANT:
+        // avoid calculations while new doc initializing
+
+        if (frm.is_new()) {
+            return;
+        }
+
         calculate_all(frm);
 
         if (!frm.is_new() && frm.doc.docstatus === 1) {
+
             frm.add_custom_button(__('Sales Return'), function () {
+
                 frappe.model.open_mapped_doc({
                     method: "arnav_customization.arnav_customization.doctype.pos.pos.make_credit_note",
                     frm: frm
                 });
+
             }, __("Create"));
         }
     },
+
+    // =========================================
+    // VALIDATE
+    // =========================================
+
+    validate: function(frm) {
+
+        console.log("VALIDATE CLIENT:", frm.doc.client_name);
+    },
+
+    // =========================================
+    // BEFORE SUBMIT
+    // =========================================
 
     before_submit: function(frm) {
 
         let balance = flt(frm.doc.balance_amount);
 
         if (Math.abs(balance) > 0.01) {
+
             frappe.throw({
                 title: __("Submission Not Allowed"),
-                message: __("Cannot submit POS because Balance Amount must be 0.00. Current Balance: ") + balance
+                message: __(
+                    "Cannot submit POS because Balance Amount must be 0.00. Current Balance: "
+                ) + balance
             });
         }
     },
@@ -444,10 +613,9 @@ frappe.ui.form.on('POS', {
 
     total_discount_in_rs: function(frm) {
         apply_global_discount(frm);
-    },
+    }
 
 });
-
 
 /* =====================================================
 SKU TABLE
