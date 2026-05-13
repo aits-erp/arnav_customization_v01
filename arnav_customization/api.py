@@ -361,6 +361,8 @@
 import frappe
 import base64
 from io import BytesIO
+from urllib.parse import quote
+from urllib.parse import unquote
 
 # ✅ Safe import (prevents crash if qrcode not installed)
 try:
@@ -529,6 +531,9 @@ def get_sku_details(warehouse=None, sku=None):
     # =========================================================
     # Validation
     # =========================================================
+    if warehouse:
+        warehouse = unquote(warehouse)
+
     if not warehouse and not sku:
         frappe.throw("Warehouse or SKU is required")
 
@@ -557,7 +562,15 @@ def get_location_master_list():
         order_by="name asc"
     )
 
-    return [loc["name"] for loc in locations]
+    # return [loc["name"] for loc in locations]
+
+    return [
+        {
+            "warehouse_name": loc["name"],
+            "warehouse_encoded": quote(loc["name"])
+        }
+        for loc in locations
+    ]
 
 # =========================================================
 # Debug QR Library Check

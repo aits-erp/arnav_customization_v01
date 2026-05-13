@@ -45,46 +45,45 @@ frappe.ui.form.on("Opportunity", {
             console.log("loaded 1st");
             frappe.new_doc("POS", {
 
-                client_name:
-                    frm.doc.party_name ||
-                    frm.doc.customer_name ||
-                    frm.doc.title ||
-                    "",
+    client_name:
+        frm.doc.customer_name ||
+        frm.doc.party_name ||
+        "",
 
-                email:
-                    frm.doc.contact_email || "",
+    email:
+        frm.doc.contact_email || "",
 
-                opportunity:
-                    frm.doc.name || "",
+    opportunity:
+        frm.doc.name || "",
 
-                lead_owner_1:
-                    frm.doc.custom_lead_owner_1 || "",
+    lead_owner_1:
+        frm.doc.custom_lead_owner_1 || "",
 
-                lead_owner_2:
-                    frm.doc.custom_lead_owner_2 || "",
+    lead_owner_2:
+        frm.doc.custom_lead_owner_2 || "",
 
-                salestype:
-                    frm.doc.custom_online_lead_source ||
-                    frm.doc.custom_offline_lead_source ||
-                    frm.doc.custom_lead_source ||
-                    "",
+    salestype:
+        frm.doc.custom_online_lead_source ||
+        frm.doc.custom_offline_lead_source ||
+        frm.doc.custom_lead_source ||
+        "",
 
-                billtype:
-                    frm.doc.custom_metal_interest || "",
+    billtype:
+        frm.doc.custom_metal_interest || "",
 
-                mobile_number:
-                    frm.doc.whatsapp ||
-                    frm.doc.contact_mobile ||
-                    frm.doc.phone ||
-                    "",
+    mobile_number:
+        frm.doc.whatsapp ||
+        frm.doc.contact_mobile ||
+        frm.doc.phone ||
+        "",
 
-                pincode:
-                    frm.doc.custom_pin_code || "",
+    pincode:
+        frm.doc.custom_pin_code || "",
 
-                address:
-                    frm.doc.custom_address || ""
+    address:
+        frm.doc.custom_address || ""
 
-            });
+});
 
         });
 
