@@ -1,16 +1,21 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint
+from frappe.utils import cint, flt
 from frappe.model.mapper import get_mapped_doc
 
 class POS(Document):
 	def validate(self):
-	    # self.calculate_gst_for_items()
+		doc_before_save = self.get_doc_before_save()
+
+		if doc_before_save and doc_before_save.docstatus == 1:
+			return
+
+		# self.calculate_gst_for_items()
 		self.apply_discount_and_calculate_totals()
 
 	def before_submit(self):
 		# 1️⃣ Balance validation
-		if abs(self.balance_amount) > 0.01:
+		if abs(flt(self.balance_amount, self.precision("balance_amount"))) > 0.01:
 			frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
 
 		# 2️⃣ Cash limit validation
@@ -214,7 +219,7 @@ class POS(Document):
 
 			total_price += amount
 
-		self.total_price = total_price
+		self.total_price = flt(total_price, self.precision("total_price"))
 
 		# ================================
 		# DISCOUNT %
@@ -229,7 +234,10 @@ class POS(Document):
 				/ total_price
 			) * 100
 
-		self.discount_percentage = discount_percentage
+		self.discount_percentage = flt(
+			discount_percentage,
+			self.precision("discount_percentage")
+		)
 
 		# ================================
 		# APPLY ROW CALCULATIONS
@@ -242,11 +250,15 @@ class POS(Document):
 
 			amount = (row.price or 0) * (row.qty or 0)
 
-			row.discount = (
-				amount * discount_percentage
-			) / 100
+			row.discount = flt(
+				(amount * discount_percentage) / 100,
+				row.precision("discount")
+			)
 
-			row.final_amount = amount - row.discount
+			row.final_amount = flt(
+				amount - row.discount,
+				row.precision("final_amount")
+			)
 
 			if row.final_amount < 0:
 				row.final_amount = 0
@@ -281,24 +293,29 @@ class POS(Document):
 
 			row.gst_percentage = gst_rate
 
-			row.gst_amount = (
-				row.final_amount * gst_rate
-			) / 100
+			row.gst_amount = flt(
+				(row.final_amount * gst_rate) / 100,
+				row.precision("gst_amount")
+			)
 
 			total_amount += row.final_amount
 			total_gst += row.gst_amount
 
 		packing = self.handling_and_packaging_charges or 0
 
-		self.total_amount_wo_tax = total_amount + packing
-
-		self.total_amount_with_gst = (
-			total_amount + total_gst + packing
+		self.total_amount_wo_tax = flt(
+			total_amount + packing,
+			self.precision("total_amount_wo_tax")
 		)
 
-		self.balance_amount = (
-			self.total_amount_with_gst
-			- (self.paid_amount or 0)
+		self.total_amount_with_gst = flt(
+			total_amount + total_gst + packing,
+			self.precision("total_amount_with_gst")
+		)
+
+		self.balance_amount = flt(
+			self.total_amount_with_gst - (self.paid_amount or 0),
+			self.precision("balance_amount")
 		)
 
 @frappe.whitelist()

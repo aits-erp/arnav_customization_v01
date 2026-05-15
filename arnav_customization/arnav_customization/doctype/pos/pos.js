@@ -636,8 +636,6 @@ frappe.ui.form.on('POS', {
             return;
         }
 
-        calculate_all(frm);
-
         if (!frm.is_new() && frm.doc.docstatus === 1) {
 
             frm.add_custom_button(__('Sales Return'), function () {
@@ -648,7 +646,11 @@ frappe.ui.form.on('POS', {
                 });
 
             }, __("Create"));
+
+            return;
         }
+
+        calculate_all(frm);
     },
 
     // =========================================
@@ -889,6 +891,10 @@ APPLY SAME % TO ALL ROWS
 
 function apply_global_discount(frm) {
 
+    if (is_submitted_pos(frm)) {
+        return;
+    }
+
     let rows = frm.doc.sku_details || [];
 
     let total_price = 0;
@@ -919,7 +925,7 @@ function apply_global_discount(frm) {
         perc = (total_discount / total_price) * 100;
     }
 
-    frm.set_value("discount_percentage", perc);
+    frm.set_value("discount_percentage", flt(perc));
 
     // =========================================
     // APPLY DISCOUNT TO ALL ROWS
@@ -997,6 +1003,10 @@ TOTALS
 
 function calculate_parent_totals(frm) {
 
+    if (is_submitted_pos(frm)) {
+        return;
+    }
+
     let total_amount = 0;
     let total_gst = 0;
 
@@ -1040,6 +1050,10 @@ frappe.ui.form.on('POS Payment Details', {
 
 function calculate_payments(frm) {
 
+    if (is_submitted_pos(frm)) {
+        return;
+    }
+
     let paid = 0;
 
     (frm.doc.payment_details || []).forEach(row => {
@@ -1058,10 +1072,14 @@ BALANCE
 
 function calculate_balance(frm) {
 
+    if (is_submitted_pos(frm)) {
+        return;
+    }
+
     let total = flt(frm.doc.total_amount_with_gst);
     let paid = flt(frm.doc.paid_amount);
 
-    frm.set_value("balance_amount", total - paid);
+    frm.set_value("balance_amount", money(total - paid));
 }
 
 
@@ -1070,6 +1088,10 @@ LOAD
 ===================================================== */
 
 function calculate_all(frm) {
+
+    if (is_submitted_pos(frm)) {
+        return;
+    }
 
     apply_global_discount(frm);
     calculate_payments(frm);
@@ -1082,4 +1104,12 @@ SAFE FLOAT
 
 function flt(val) {
     return parseFloat(val) || 0;
+}
+
+function money(val) {
+    return Math.round((flt(val) + Number.EPSILON) * 100) / 100;
+}
+
+function is_submitted_pos(frm) {
+    return is_pos(frm) && frm.doc.docstatus === 1;
 }

@@ -15,6 +15,7 @@
   "branch",
   "stock_entry_reference",
   "stock_out_ref",
+  "opportunity",
   "column_break_vyrd",
   "client_name",
   "mobile_number",
@@ -201,6 +202,13 @@
    "fieldtype": "Link",
    "label": "Stock Out Ref",
    "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "opportunity",
+   "fieldtype": "Link",
+   "label": "Opportunity",
+   "options": "Opportunity",
    "read_only": 1
   },
   {
