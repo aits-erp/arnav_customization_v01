@@ -667,7 +667,7 @@
   "non_negative": 0,
   "options": null,
   "permlevel": 0,
-  "placeholder": null,
+  "placeholder": null, 
   "precision": "",
   "print_hide": 0,
   "print_hide_if_no_value": 0,
@@ -739,5 +739,22 @@
   "translatable": 0,
   "unique": 0,
   "width": null
+ },
+
+ {
+  "doctype": "Custom Field",
+  "name": "User-branch",
+  "dt": "User",
+  "fieldname": "branch",
+  "label": "Branch",
+  "fieldtype": "Link",
+  "options": "Warehouse",
+  "insert_after": "username",
+  "in_list_view": 1,
+  "reqd": 0,
+  "read_only": 0,
+  "hidden": 0,
+  "module": "arnav_customization"
  }
+
 ]

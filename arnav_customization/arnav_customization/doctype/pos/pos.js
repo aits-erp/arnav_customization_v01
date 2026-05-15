@@ -400,7 +400,7 @@ POS MAIN FORM
 //                 filters: {
 //                     // item_group: "Packing"
 //                     item_group: "PACKING METERIALS"
-                    
+
 //                 }
 //             };
 //         });
@@ -456,7 +456,7 @@ POS MAIN FORM
 
 frappe.ui.form.on('POS', {
 
-    setup: function(frm) {
+    setup: function (frm) {
 
         console.log("POS SETUP");
 
@@ -464,7 +464,7 @@ frappe.ui.form.on('POS', {
         // PRODUCT FILTER
         // =========================================
 
-        frm.set_query("product", "sku_details", function(doc) {
+        frm.set_query("product", "sku_details", function (doc) {
 
             if (!doc.billtype) {
 
@@ -486,7 +486,7 @@ frappe.ui.form.on('POS', {
         // CREDIT NOTE FILTER
         // =========================================
 
-        frm.set_query("credit_note", "payment_details", function(doc) {
+        frm.set_query("credit_note", "payment_details", function (doc) {
 
             return {
                 filters: {
@@ -499,7 +499,7 @@ frappe.ui.form.on('POS', {
         // PACKING MATERIAL FILTER
         // =========================================
 
-        frm.set_query("packing_material", "packing_materials", function() {
+        frm.set_query("packing_material", "packing_materials", function () {
 
             return {
                 filters: {
@@ -512,7 +512,7 @@ frappe.ui.form.on('POS', {
         // CLIENT NAME QUERY
         // =========================================
 
-        frm.set_query("client_name", function() {
+        frm.set_query("client_name", function () {
 
             return {
                 query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
@@ -524,11 +524,83 @@ frappe.ui.form.on('POS', {
     // ONLOAD
     // =========================================
 
-    onload: function(frm) {
+    // onload: function(frm) {
+
+    //     console.log("POS ONLOAD");
+
+    //     console.log("CLIENT BEFORE:", frm.doc.client_name);
+
+    //     // IMPORTANT:
+    //     // preserve route value during initial load
+
+    //     if (
+    //         frm.is_new() &&
+    //         frappe.route_options &&
+    //         frappe.route_options.client_name &&
+    //         !frm.doc.client_name
+    //     ) {
+
+    //         frm.set_value(
+    //             "client_name",
+    //             frappe.route_options.client_name
+    //         );
+    //     }
+
+    //     console.log("CLIENT AFTER:", frm.doc.client_name);
+    // },
+
+
+    // =========================================
+    // ONLOAD
+    // =========================================
+
+    onload: function (frm) {
 
         console.log("POS ONLOAD");
 
         console.log("CLIENT BEFORE:", frm.doc.client_name);
+
+        // =========================================
+        // AUTO FETCH USER BRANCH
+        // =========================================
+
+        if (frm.is_new() && !frm.doc.branch) {
+
+            frappe.call({
+                method: "frappe.client.get_value",
+                args: {
+                    doctype: "User",
+                    filters: {
+                        name: frappe.session.user
+                    },
+                    fieldname: ["branch"]
+                },
+                callback: function (r) {
+
+                    if (r.message && r.message.branch) {
+
+                        frm.set_value(
+                            "branch",
+                            r.message.branch
+                        );
+
+                        // OPTIONAL:
+                        // make branch readonly
+
+                        frm.set_df_property(
+                            "branch",
+                            "read_only",
+                            1
+                        );
+
+                        console.log(
+                            "USER BRANCH:",
+                            r.message.branch
+                        );
+                    }
+                }
+            });
+        }
 
         // IMPORTANT:
         // preserve route value during initial load
@@ -553,7 +625,7 @@ frappe.ui.form.on('POS', {
     // REFRESH
     // =========================================
 
-    refresh: function(frm) {
+    refresh: function (frm) {
 
         console.log("POS REFRESH:", frm.doc.client_name);
 
@@ -583,7 +655,7 @@ frappe.ui.form.on('POS', {
     // VALIDATE
     // =========================================
 
-    validate: function(frm) {
+    validate: function (frm) {
 
         console.log("VALIDATE CLIENT:", frm.doc.client_name);
     },
@@ -592,7 +664,7 @@ frappe.ui.form.on('POS', {
     // BEFORE SUBMIT
     // =========================================
 
-    before_submit: function(frm) {
+    before_submit: function (frm) {
 
         let balance = flt(frm.doc.balance_amount);
 
@@ -607,11 +679,11 @@ frappe.ui.form.on('POS', {
         }
     },
 
-    handling_and_packaging_charges: function(frm) {
+    handling_and_packaging_charges: function (frm) {
         calculate_parent_totals(frm);
     },
 
-    total_discount_in_rs: function(frm) {
+    total_discount_in_rs: function (frm) {
         apply_global_discount(frm);
     }
 
@@ -623,25 +695,25 @@ SKU TABLE
 
 frappe.ui.form.on('POS SKU Details', {
 
-    price: function(frm) {
+    price: function (frm) {
         apply_global_discount(frm);
     },
 
-    qty: function(frm) {
+    qty: function (frm) {
         apply_global_discount(frm);
     },
 
-    gst_percentage: function(frm) {
+    gst_percentage: function (frm) {
         apply_global_discount(frm);
     },
 
-    sku_details_add: function(frm) {
+    sku_details_add: function (frm) {
         setTimeout(() => {
             apply_global_discount(frm);
         }, 200);
     },
 
-    sku_details_remove: function(frm) {
+    sku_details_remove: function (frm) {
         calculate_parent_totals(frm);
     },
 
@@ -685,7 +757,7 @@ frappe.ui.form.on('POS SKU Details', {
     converts to %
     then applies same % to all rows
     ================================================= */
-    discount: function(frm, cdt, cdn) {
+    discount: function (frm, cdt, cdn) {
 
         let row = locals[cdt][cdn];
         let rows = frm.doc.sku_details || [];
@@ -715,7 +787,7 @@ frappe.ui.form.on('POS SKU Details', {
         }
     },
 
-    sku: function(frm, cdt, cdn) {
+    sku: function (frm, cdt, cdn) {
 
         let row = locals[cdt][cdn];
         if (!row.sku) return;
@@ -956,11 +1028,11 @@ PAYMENT
 
 frappe.ui.form.on('POS Payment Details', {
 
-    amount: function(frm) {
+    amount: function (frm) {
         calculate_payments(frm);
     },
 
-    payment_details_remove: function(frm) {
+    payment_details_remove: function (frm) {
         calculate_payments(frm);
     }
 

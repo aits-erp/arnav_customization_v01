@@ -204,10 +204,10 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "discount_percentage",
    "fieldtype": "Float",
-   "label": "Discount Percentage",
-   "read_only": 1
+   "label": "Discount Percentage"
   },
   {
    "fieldname": "total_price",
@@ -227,7 +227,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-11 14:54:49.693075",
+ "modified": "2026-05-15 10:26:15.695550",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",

@@ -59,7 +59,7 @@ doc_events = {
     "Payment Entry": {
         "validate": "arnav_customization.sku_mapping_backend.payment_entry.calculate_custom_paid_amount"
     }
-
+    
 }
-
+fixtures = ["Custom Field"]
 
