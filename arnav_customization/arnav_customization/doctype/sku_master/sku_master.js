@@ -498,6 +498,10 @@ TARGET`,
 
             dialog.show();
 
+            // Load saved breakup rows after dialog grid is ready.
+            dialog.fields_dict.breakup_table.df.data = r.message || [];
+            dialog.fields_dict.breakup_table.grid.refresh();
+
             let grid = dialog.fields_dict.breakup_table.grid;
 
             // 🔥 CRITICAL PART — set doctype before dropdown opens

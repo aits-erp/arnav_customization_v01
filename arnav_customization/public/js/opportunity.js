@@ -43,12 +43,20 @@ frappe.ui.form.on("Opportunity", {
         frm.add_custom_button(__("POS"), function () {
 
             console.log("loaded 1st");
+            let pos_client_name =
+                frm.doc.party_name ||
+                frm.doc.title ||
+                "";
+
+            sessionStorage.setItem(
+                "pending_pos_client_name",
+                pos_client_name
+            );
+
             frappe.new_doc("POS", {
 
     client_name:
-        frm.doc.party_name ||
-        frm.doc.title ||
-        "",
+        pos_client_name,
 
     email:
         frm.doc.contact_email || "",

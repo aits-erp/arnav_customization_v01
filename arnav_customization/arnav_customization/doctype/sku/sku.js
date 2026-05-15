@@ -101,6 +101,10 @@ TARGET`,
 
             dialog.show();
 
+            // Load saved breakup rows after dialog grid is ready.
+            dialog.fields_dict.breakup_table.df.data = r.message || [];
+            dialog.fields_dict.breakup_table.grid.refresh();
+
             // 🔥 same dynamic link logic as SKU Master
             let grid = dialog.fields_dict.breakup_table.grid;
 

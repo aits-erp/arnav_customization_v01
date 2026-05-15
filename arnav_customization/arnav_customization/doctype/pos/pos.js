@@ -621,6 +621,10 @@ frappe.ui.form.on('POS', {
         console.log("CLIENT AFTER:", frm.doc.client_name);
     },
 
+    onload_post_render: function (frm) {
+        apply_opportunity_client_name(frm);
+    },
+
     // =========================================
     // REFRESH
     // =========================================
@@ -633,6 +637,7 @@ frappe.ui.form.on('POS', {
         // avoid calculations while new doc initializing
 
         if (frm.is_new()) {
+            apply_opportunity_client_name(frm);
             return;
         }
 
@@ -1112,4 +1117,70 @@ function money(val) {
 
 function is_submitted_pos(frm) {
     return is_pos(frm) && frm.doc.docstatus === 1;
+}
+
+function apply_opportunity_client_name(frm) {
+
+    if (!frm.is_new()) {
+        return;
+    }
+
+    let pending_client_name = "";
+
+    try {
+        pending_client_name =
+            sessionStorage.getItem("pending_pos_client_name") || "";
+    } catch (e) {
+        pending_client_name = "";
+    }
+
+    pending_client_name =
+        pending_client_name ||
+        (frappe.route_options && frappe.route_options.client_name) ||
+        "";
+
+    if (!pending_client_name) {
+        return;
+    }
+
+    setTimeout(function () {
+        resolve_and_set_client_name(frm, pending_client_name);
+    }, 300);
+}
+
+function resolve_and_set_client_name(frm, value) {
+
+    let client_name = (value || "").trim();
+
+    if (!frm.is_new() || !client_name) {
+        return;
+    }
+
+    frappe.db.get_value("Customer", client_name, "name")
+        .then(function (r) {
+            if (r.message && r.message.name) {
+                return r.message.name;
+            }
+
+            return frappe.db.get_value(
+                "Customer",
+                { customer_name: client_name },
+                "name"
+            ).then(function (customer) {
+                return customer.message && customer.message.name;
+            });
+        })
+        .then(function (customer_name) {
+            if (!customer_name || frm.doc.client_name === customer_name) {
+                return;
+            }
+
+            frm.set_value("client_name", customer_name);
+
+            try {
+                sessionStorage.removeItem("pending_pos_client_name");
+            } catch (e) {
+                // browser storage may be unavailable in private contexts
+            }
+        });
 }
