@@ -453,6 +453,16 @@ def _get_sku_details_data(warehouse=None, sku=None):
             order_by="creation asc"
         )
 
+        # Exclude empty breakup rows from RFID payload; rows with weight, price, or unit stay.
+        breakup_rows = [
+            row for row in breakup_rows
+            if not (
+                frappe.utils.flt(row.get("weight")) == 0
+                and frappe.utils.flt(row.get("price")) == 0
+                and not (row.get("unit") or "").strip()
+            )
+        ]
+
         # item["breakup"] = breakup_rows or []
         # =====================================================
         # Unit Short Forms

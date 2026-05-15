@@ -367,15 +367,36 @@ class SKUMaster(Document):
         
 @frappe.whitelist()
 def get_breakup_rows(sku_master, breakup_ref):
-    return frappe.get_all(
+    fields = [
+        "attribute_type",
+        "attribute_value",
+        "weight",
+        "price",
+        "unit"
+    ]
+
+    rows = frappe.get_all(
         "SKU Breakup",
         filters={
             "sku_master": sku_master,
             "breakup_ref": breakup_ref
         },
-        fields="*",
+        fields=fields,
         order_by="creation asc"
     )
+
+    if not rows and breakup_ref:
+        # Fallback for old breakup rows whose SKU Master link does not match.
+        rows = frappe.get_all(
+            "SKU Breakup",
+            filters={
+                "breakup_ref": breakup_ref
+            },
+            fields=fields,
+            order_by="creation asc"
+        )
+
+    return rows
 
 @frappe.whitelist()
 def save_breakup_rows(sku_master, breakup_ref, rows):

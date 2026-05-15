@@ -22,6 +22,8 @@ frappe.ui.form.on("SKU", {
         },
         callback: function (r) {
 
+            let breakup_rows = r.message || [];
+
             let dynamic_fields = [
                 {
                     fieldname: "attribute_type",
@@ -76,7 +78,7 @@ TARGET`,
                         label: "Breakup Details",
                         in_place_edit: true,
                         cannot_add_rows: false,
-                        data: r.message || [],
+                        data: [],
                         fields: dynamic_fields
                     }
                 ],
@@ -102,8 +104,7 @@ TARGET`,
             dialog.show();
 
             // Load saved breakup rows after dialog grid is ready.
-            dialog.fields_dict.breakup_table.df.data = r.message || [];
-            dialog.fields_dict.breakup_table.grid.refresh();
+            dialog.set_value("breakup_table", breakup_rows);
 
             // 🔥 same dynamic link logic as SKU Master
             let grid = dialog.fields_dict.breakup_table.grid;
