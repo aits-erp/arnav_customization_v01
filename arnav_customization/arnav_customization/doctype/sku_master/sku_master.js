@@ -476,7 +476,8 @@ TARGET`,
                         label: "Breakup Details",
                         in_place_edit: true,
                         cannot_add_rows: false,
-                        data: [],
+                        data: breakup_rows,
+                        get_data: () => breakup_rows,
                         fields: dynamic_fields
                     }
                 ],
@@ -499,9 +500,6 @@ TARGET`,
             });
 
             dialog.show();
-
-            // Load saved breakup rows after dialog grid is ready.
-            dialog.set_value("breakup_table", breakup_rows);
 
             let grid = dialog.fields_dict.breakup_table.grid;
 

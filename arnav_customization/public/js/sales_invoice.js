@@ -2,8 +2,8 @@ frappe.ui.form.on('Sales Invoice', {
 
     refresh(frm) {
 
-        // Hide custom fields in normal Sales Invoice
-        const fields_to_hide = [
+        // Keep custom calculation fields visible in Sales Invoice Item grid.
+        const fields_to_show = [
             "custom_custom_fields",
             "custom_weight",
             "custom_purity",
@@ -12,12 +12,12 @@ frappe.ui.form.on('Sales Invoice', {
 
         if (frm.fields_dict.items && frm.fields_dict.items.grid) {
 
-            fields_to_hide.forEach(field => {
+            fields_to_show.forEach(field => {
 
                 frm.fields_dict.items.grid.update_docfield_property(
                     field,
                     "hidden",
-                    1
+                    0
                 );
 
             });
