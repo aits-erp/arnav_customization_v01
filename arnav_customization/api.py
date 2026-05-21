@@ -437,7 +437,52 @@ def _get_sku_details_data(warehouse=None, sku=None):
         # =====================================================
         # Breakup Data
         # =====================================================
-        breakup_rows = frappe.get_all(
+        # breakup_rows = frappe.get_all(
+        #     "SKU Breakup",
+        #     filters={
+        #         "sku_master": item.get("sku_master"),
+        #         "breakup_ref": item.get("breakup_ref")
+        #     },
+        #     fields=[
+        #         "attribute_type",
+        #         "attribute_value",
+        #         "weight",
+        #         "price",
+        #         "unit"
+        #     ],
+        #     order_by="creation asc"
+        # )
+
+        # =====================================================
+        # Common Attribute Rows
+        # =====================================================
+        common_rows = frappe.get_all(
+            "SKU Breakup",
+            filters={
+                "sku_master": item.get("sku_master"),
+                "attribute_type": ["in", [
+                    "PURITY",
+                    "PRODUCT_TYPE",
+                    "DESIGN",
+                    "TARGET",
+                    "VISUAL",
+                    "COLLECTION"
+                ]]
+            },
+            fields=[
+                "attribute_type",
+                "attribute_value",
+                "weight",
+                "price",
+                "unit"
+            ],
+            order_by="creation asc"
+        )
+
+        # =====================================================
+        # Breakup Specific Rows
+        # =====================================================
+        specific_rows = frappe.get_all(
             "SKU Breakup",
             filters={
                 "sku_master": item.get("sku_master"),
@@ -452,6 +497,12 @@ def _get_sku_details_data(warehouse=None, sku=None):
             ],
             order_by="creation asc"
         )
+
+        # =====================================================
+        # Merge Both
+        # =====================================================
+        breakup_rows = common_rows + specific_rows
+
 
         # Exclude empty breakup rows from RFID payload; rows with weight, price, or unit stay.
         breakup_rows = [

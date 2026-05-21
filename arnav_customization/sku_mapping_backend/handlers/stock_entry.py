@@ -23,7 +23,7 @@ def process(doc, method):
 def material_transfer_qty_handler(doc, method):
 
     # only for material transfer
-    if doc.purpose != "Material Transfer":
+    if doc.purpose != "Material Transfer" or doc.purpose != "Material Issue":
         return
 
     # dynamic switch
