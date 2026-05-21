@@ -48,7 +48,7 @@ frappe.ui.form.on("Stock Entry", {
     refresh(frm) {
 
         // auto enable only for Material Transfer
-        if (frm.doc.purpose === "Material Transfer") {
+        if (frm.doc.purpose === "Material Transfer" || frm.doc.purpose === "Material Issue") {
 
             frm.set_value("custom_use_qty_mode", 1);
 
