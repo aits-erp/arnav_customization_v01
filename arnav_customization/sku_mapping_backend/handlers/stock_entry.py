@@ -55,7 +55,7 @@ def material_transfer_qty_handler(doc, method):
     if doc.purpose not in ["Material Transfer", "Material Issue"]:
         return
 
-    # dynamic switch
+    # switch enabled
     if not doc.custom_use_qty_mode:
         return
 
@@ -64,11 +64,11 @@ def material_transfer_qty_handler(doc, method):
         if not row.custom_gross_weight:
             continue
 
-        original_qty = row.qty
+        # preserve actual gross weight
+        row.custom_gross_weight = row.qty
 
-        # swap
-        row.qty = float(row.custom_gross_weight)
-        row.custom_gross_weight = original_qty
+        # actual stock qty should become custom qty
+        custom_qty = row.custom_qty or 1
 
-        # avoid mismatch
-        row.transfer_qty = float(row.qty)      
+        row.qty = float(custom_qty)
+        row.transfer_qty = float(custom_qty)
