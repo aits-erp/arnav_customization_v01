@@ -501,20 +501,40 @@ def _get_sku_details_data(warehouse=None, sku=None):
         # =====================================================
         # Merge Both
         # =====================================================
-        breakup_rows = common_rows + specific_rows
+        # breakup_rows = common_rows + specific_rows
+        breakup_rows = common_rows[:]
+
+        existing_keys = {
+            (
+                row.get("attribute_type"),
+                row.get("attribute_value")
+            )
+            for row in breakup_rows
+        }
+
+        for row in specific_rows:
+
+            key = (
+                row.get("attribute_type"),
+                row.get("attribute_value")
+            )
+
+            if key not in existing_keys:
+                breakup_rows.append(row)
 
 
         # Exclude empty breakup rows from RFID payload; rows with weight, price, or unit stay.
-        breakup_rows = [
-            row for row in breakup_rows
-            if not (
-                frappe.utils.flt(row.get("weight")) == 0
-                and frappe.utils.flt(row.get("price")) == 0
-                and not (row.get("unit") or "").strip()
-            )
-        ]
+        # breakup_rows = [
+        #     row for row in breakup_rows
+        #     if not (
+        #         frappe.utils.flt(row.get("weight")) == 0
+        #         and frappe.utils.flt(row.get("price")) == 0
+        #         and not (row.get("unit") or "").strip()
+        #     )
+        # ]
 
         # item["breakup"] = breakup_rows or []
+
         # =====================================================
         # Unit Short Forms
         # =====================================================
@@ -523,13 +543,53 @@ def _get_sku_details_data(warehouse=None, sku=None):
             "Gram": "gm"
         }
 
-        for row in breakup_rows:
-            row["unit"] = UNIT_MAP.get(
-                row.get("unit"),
-                row.get("unit")
-            )
+        # for row in breakup_rows:
+        #     row["unit"] = UNIT_MAP.get(
+        #         row.get("unit"),
+        #         row.get("unit")
+        #     )
 
-        item["breakup"] = breakup_rows or []
+        # item["breakup"] = breakup_rows or []
+
+        # =====================================================
+        # Clean Empty / Zero Fields
+        # =====================================================
+        cleaned_breakup_rows = []
+
+        # for row in breakup_rows:
+
+        #     # Unit Mapping
+        #     row["unit"] = UNIT_MAP.get(
+        #         row.get("unit"),
+        #         row.get("unit")
+        #     )
+
+        #     cleaned_row = {}
+
+        #     # Always keep attribute fields
+        #     cleaned_row["attribute_type"] = row.get("attribute_type")
+        #     cleaned_row["attribute_value"] = row.get("attribute_value")
+
+        #     # Keep only meaningful weight
+        #     if frappe.utils.flt(row.get("weight")) != 0:
+        #         cleaned_row["weight"] = row.get("weight")
+
+        #     # Keep only meaningful price
+        #     if frappe.utils.flt(row.get("price")) != 0:
+        #         cleaned_row["price"] = row.get("price")
+
+        #     # Keep only meaningful unit
+        #     # if (row.get("unit") or "").strip():
+        #     #     cleaned_row["unit"] = row.get("unit")
+
+        #     unit_value = (row.get("unit") or "").strip()
+
+        #     if unit_value and unit_value not in ["0", "0.0"]:
+        #         cleaned_row["unit"] = unit_value
+
+        #     cleaned_breakup_rows.append(cleaned_row)
+
+        item["breakup"] = cleaned_breakup_rows
 
         # =====================================================
         # Image URL + Name

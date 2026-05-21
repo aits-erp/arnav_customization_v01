@@ -12,6 +12,9 @@ def process(doc, method):
 
         row.item_code = sku.product
         row.qty = sku.gross_weight
+
+        row.serial_and_batch_bundle = None
+
         row.batch_no = sku.batch_no or row.custom_sku
 
         row.basic_rate = sku.cost_price
@@ -20,10 +23,36 @@ def process(doc, method):
         if not row.s_warehouse and not row.t_warehouse:
             row.t_warehouse = sku.warehouse
 
+# def material_transfer_qty_handler(doc, method):
+
+#     # only for material transfer
+#     if doc.purpose != "Material Transfer" or doc.purpose != "Material Issue":
+#         return
+
+#     # dynamic switch
+#     if not doc.custom_use_qty_mode:
+#         return
+
+#     for row in doc.items:
+
+#         # skip empty rows
+#         if not row.custom_gross_weight:
+#             continue
+
+#         # preserve original gross weight
+#         row.custom_weight = row.qty
+
+#         # IMPORTANT:
+#         # actual stock qty becomes custom qty
+#         row.qty = float(row.custom_gross_weight)
+
+#         # avoid transfer qty mismatch
+#         row.transfer_qty = float(row.custom_gross_weight)
+
 def material_transfer_qty_handler(doc, method):
 
-    # only for material transfer
-    if doc.purpose != "Material Transfer" or doc.purpose != "Material Issue":
+    # only for material transfer / issue
+    if doc.purpose not in ["Material Transfer", "Material Issue"]:
         return
 
     # dynamic switch
@@ -32,16 +61,14 @@ def material_transfer_qty_handler(doc, method):
 
     for row in doc.items:
 
-        # skip empty rows
         if not row.custom_gross_weight:
             continue
 
-        # preserve original gross weight
-        row.custom_weight = row.qty
+        original_qty = row.qty
 
-        # IMPORTANT:
-        # actual stock qty becomes custom qty
+        # swap
         row.qty = float(row.custom_gross_weight)
+        row.custom_gross_weight = original_qty
 
-        # avoid transfer qty mismatch
-        row.transfer_qty = float(row.custom_gross_weight)
+        # avoid mismatch
+        row.transfer_qty = float(row.qty)      
