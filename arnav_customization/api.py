@@ -358,6 +358,7 @@
 #     return [loc["name"] for loc in locations]
 
 
+
 import frappe
 import base64
 from io import BytesIO
@@ -435,25 +436,6 @@ def _get_sku_details_data(warehouse=None, sku=None):
         item["qr_url"] = qr_url
 
         # =====================================================
-        # Breakup Data
-        # =====================================================
-        # breakup_rows = frappe.get_all(
-        #     "SKU Breakup",
-        #     filters={
-        #         "sku_master": item.get("sku_master"),
-        #         "breakup_ref": item.get("breakup_ref")
-        #     },
-        #     fields=[
-        #         "attribute_type",
-        #         "attribute_value",
-        #         "weight",
-        #         "price",
-        #         "unit"
-        #     ],
-        #     order_by="creation asc"
-        # )
-
-        # =====================================================
         # Common Attribute Rows
         # =====================================================
         common_rows = frappe.get_all(
@@ -499,9 +481,8 @@ def _get_sku_details_data(warehouse=None, sku=None):
         )
 
         # =====================================================
-        # Merge Both
+        # Merge Without Duplicates
         # =====================================================
-        # breakup_rows = common_rows + specific_rows
         breakup_rows = common_rows[:]
 
         existing_keys = {
@@ -522,19 +503,6 @@ def _get_sku_details_data(warehouse=None, sku=None):
             if key not in existing_keys:
                 breakup_rows.append(row)
 
-
-        # Exclude empty breakup rows from RFID payload; rows with weight, price, or unit stay.
-        # breakup_rows = [
-        #     row for row in breakup_rows
-        #     if not (
-        #         frappe.utils.flt(row.get("weight")) == 0
-        #         and frappe.utils.flt(row.get("price")) == 0
-        #         and not (row.get("unit") or "").strip()
-        #     )
-        # ]
-
-        # item["breakup"] = breakup_rows or []
-
         # =====================================================
         # Unit Short Forms
         # =====================================================
@@ -543,51 +511,50 @@ def _get_sku_details_data(warehouse=None, sku=None):
             "Gram": "gm"
         }
 
-        # for row in breakup_rows:
-        #     row["unit"] = UNIT_MAP.get(
-        #         row.get("unit"),
-        #         row.get("unit")
-        #     )
-
-        # item["breakup"] = breakup_rows or []
-
         # =====================================================
         # Clean Empty / Zero Fields
         # =====================================================
         cleaned_breakup_rows = []
 
-        # for row in breakup_rows:
+        for row in breakup_rows:
 
-        #     # Unit Mapping
-        #     row["unit"] = UNIT_MAP.get(
-        #         row.get("unit"),
-        #         row.get("unit")
-        #     )
+            # ================================================
+            # Unit Mapping
+            # ================================================
+            row["unit"] = UNIT_MAP.get(
+                row.get("unit"),
+                row.get("unit")
+            )
 
-        #     cleaned_row = {}
+            cleaned_row = {}
 
-        #     # Always keep attribute fields
-        #     cleaned_row["attribute_type"] = row.get("attribute_type")
-        #     cleaned_row["attribute_value"] = row.get("attribute_value")
+            # ================================================
+            # Always Keep These
+            # ================================================
+            cleaned_row["attribute_type"] = row.get("attribute_type")
+            cleaned_row["attribute_value"] = row.get("attribute_value")
 
-        #     # Keep only meaningful weight
-        #     if frappe.utils.flt(row.get("weight")) != 0:
-        #         cleaned_row["weight"] = row.get("weight")
+            # ================================================
+            # Keep Only Valid Weight
+            # ================================================
+            if frappe.utils.flt(row.get("weight")) != 0:
+                cleaned_row["weight"] = row.get("weight")
 
-        #     # Keep only meaningful price
-        #     if frappe.utils.flt(row.get("price")) != 0:
-        #         cleaned_row["price"] = row.get("price")
+            # ================================================
+            # Keep Only Valid Price
+            # ================================================
+            if frappe.utils.flt(row.get("price")) != 0:
+                cleaned_row["price"] = row.get("price")
 
-        #     # Keep only meaningful unit
-        #     # if (row.get("unit") or "").strip():
-        #     #     cleaned_row["unit"] = row.get("unit")
+            # ================================================
+            # Keep Only Valid Unit
+            # ================================================
+            unit_value = (row.get("unit") or "").strip()
 
-        #     unit_value = (row.get("unit") or "").strip()
+            if unit_value and unit_value not in ["0", "0.0"]:
+                cleaned_row["unit"] = unit_value
 
-        #     if unit_value and unit_value not in ["0", "0.0"]:
-        #         cleaned_row["unit"] = unit_value
-
-        #     cleaned_breakup_rows.append(cleaned_row)
+            cleaned_breakup_rows.append(cleaned_row)
 
         item["breakup"] = cleaned_breakup_rows
 
@@ -683,8 +650,6 @@ def get_location_master_list():
         order_by="name asc"
     )
 
-    # return [loc["name"] for loc in locations]
-
     return [
         {
             "warehouse_name": loc["name"],
@@ -692,6 +657,7 @@ def get_location_master_list():
         }
         for loc in locations
     ]
+
 
 # =========================================================
 # Debug QR Library Check
@@ -708,7 +674,11 @@ def debug_qr_install():
         import qrcode
 
         result["qrcode_import"] = "SUCCESS"
-        result["qrcode_version"] = getattr(qrcode, "__version__", "UNKNOWN")
+        result["qrcode_version"] = getattr(
+            qrcode,
+            "__version__",
+            "UNKNOWN"
+        )
 
     except Exception as e:
         result["qrcode_import"] = str(e)
@@ -743,3 +713,393 @@ def debug_qr_install():
         result["qr_generation"] = str(e)
 
     return result
+
+
+
+
+
+# import frappe
+# import base64
+# from io import BytesIO
+# from urllib.parse import quote
+# from urllib.parse import unquote
+
+# # ✅ Safe import (prevents crash if qrcode not installed)
+# try:
+#     import qrcode
+#     QR_AVAILABLE = True
+# except ImportError:
+#     QR_AVAILABLE = False
+
+
+# # =========================================================
+# # Reusable SKU Data Builder
+# # =========================================================
+# def _get_sku_details_data(warehouse=None, sku=None):
+
+#     site_url = frappe.utils.get_url()
+
+#     # =========================================================
+#     # Dynamic Conditions
+#     # =========================================================
+#     conditions = []
+#     filters = {}
+
+#     if warehouse:
+#         conditions.append("s.warehouse = %(warehouse)s")
+#         filters["warehouse"] = warehouse
+
+#     if sku:
+#         conditions.append("s.name = %(sku)s")
+#         filters["sku"] = sku
+
+#     where_clause = " AND ".join(conditions)
+
+#     # =========================================================
+#     # Main SKU Query
+#     # =========================================================
+#     sku_details = frappe.db.sql(f"""
+#         SELECT
+#             s.name AS sku_name,
+#             s.name AS sku,
+#             s.product,
+#             s.sku_master,
+#             s.breakup_ref,
+#             s.old_sku_ref,
+#             s.image_url,
+#             1 AS qty,
+#             s.selling_price,
+#             s.gross_weight,
+#             s.net_weight,
+#             s.huid,
+#             s.d_no
+
+#         FROM `tabSKU` s
+
+#         WHERE {where_clause}
+#     """, filters, as_dict=True)
+
+#     # =========================================================
+#     # Process Each SKU
+#     # =========================================================
+#     for item in sku_details:
+
+#         # =====================================================
+#         # Public QR URL
+#         # =====================================================
+#         qr_url = (
+#             f"{site_url}/sku_qr"
+#             f"?sku={item.get('sku')}"
+#         )
+
+#         item["qr_url"] = qr_url
+
+#         # =====================================================
+#         # Breakup Data
+#         # =====================================================
+#         # breakup_rows = frappe.get_all(
+#         #     "SKU Breakup",
+#         #     filters={
+#         #         "sku_master": item.get("sku_master"),
+#         #         "breakup_ref": item.get("breakup_ref")
+#         #     },
+#         #     fields=[
+#         #         "attribute_type",
+#         #         "attribute_value",
+#         #         "weight",
+#         #         "price",
+#         #         "unit"
+#         #     ],
+#         #     order_by="creation asc"
+#         # )
+
+#         # =====================================================
+#         # Common Attribute Rows
+#         # =====================================================
+#         common_rows = frappe.get_all(
+#             "SKU Breakup",
+#             filters={
+#                 "sku_master": item.get("sku_master"),
+#                 "attribute_type": ["in", [
+#                     "PURITY",
+#                     "PRODUCT_TYPE",
+#                     "DESIGN",
+#                     "TARGET",
+#                     "VISUAL",
+#                     "COLLECTION"
+#                 ]]
+#             },
+#             fields=[
+#                 "attribute_type",
+#                 "attribute_value",
+#                 "weight",
+#                 "price",
+#                 "unit"
+#             ],
+#             order_by="creation asc"
+#         )
+
+#         # =====================================================
+#         # Breakup Specific Rows
+#         # =====================================================
+#         specific_rows = frappe.get_all(
+#             "SKU Breakup",
+#             filters={
+#                 "sku_master": item.get("sku_master"),
+#                 "breakup_ref": item.get("breakup_ref")
+#             },
+#             fields=[
+#                 "attribute_type",
+#                 "attribute_value",
+#                 "weight",
+#                 "price",
+#                 "unit"
+#             ],
+#             order_by="creation asc"
+#         )
+
+#         # =====================================================
+#         # Merge Both
+#         # =====================================================
+#         # breakup_rows = common_rows + specific_rows
+#         breakup_rows = common_rows[:]
+
+#         existing_keys = {
+#             (
+#                 row.get("attribute_type"),
+#                 row.get("attribute_value")
+#             )
+#             for row in breakup_rows
+#         }
+
+#         for row in specific_rows:
+
+#             key = (
+#                 row.get("attribute_type"),
+#                 row.get("attribute_value")
+#             )
+
+#             if key not in existing_keys:
+#                 breakup_rows.append(row)
+
+
+#         # Exclude empty breakup rows from RFID payload; rows with weight, price, or unit stay.
+#         # breakup_rows = [
+#         #     row for row in breakup_rows
+#         #     if not (
+#         #         frappe.utils.flt(row.get("weight")) == 0
+#         #         and frappe.utils.flt(row.get("price")) == 0
+#         #         and not (row.get("unit") or "").strip()
+#         #     )
+#         # ]
+
+#         # item["breakup"] = breakup_rows or []
+
+#         # =====================================================
+#         # Unit Short Forms
+#         # =====================================================
+#         UNIT_MAP = {
+#             "Carat": "cts",
+#             "Gram": "gm"
+#         }
+
+#         # for row in breakup_rows:
+#         #     row["unit"] = UNIT_MAP.get(
+#         #         row.get("unit"),
+#         #         row.get("unit")
+#         #     )
+
+#         # item["breakup"] = breakup_rows or []
+
+#         # =====================================================
+#         # Clean Empty / Zero Fields
+#         # =====================================================
+#         cleaned_breakup_rows = []
+
+#         # for row in breakup_rows:
+
+#         #     # Unit Mapping
+#         #     row["unit"] = UNIT_MAP.get(
+#         #         row.get("unit"),
+#         #         row.get("unit")
+#         #     )
+
+#         #     cleaned_row = {}
+
+#         #     # Always keep attribute fields
+#         #     cleaned_row["attribute_type"] = row.get("attribute_type")
+#         #     cleaned_row["attribute_value"] = row.get("attribute_value")
+
+#         #     # Keep only meaningful weight
+#         #     if frappe.utils.flt(row.get("weight")) != 0:
+#         #         cleaned_row["weight"] = row.get("weight")
+
+#         #     # Keep only meaningful price
+#         #     if frappe.utils.flt(row.get("price")) != 0:
+#         #         cleaned_row["price"] = row.get("price")
+
+#         #     # Keep only meaningful unit
+#         #     # if (row.get("unit") or "").strip():
+#         #     #     cleaned_row["unit"] = row.get("unit")
+
+#         #     unit_value = (row.get("unit") or "").strip()
+
+#         #     if unit_value and unit_value not in ["0", "0.0"]:
+#         #         cleaned_row["unit"] = unit_value
+
+#         #     cleaned_breakup_rows.append(cleaned_row)
+
+#         item["breakup"] = cleaned_breakup_rows
+
+#         # =====================================================
+#         # Image URL + Name
+#         # =====================================================
+#         image_path = item.get("image_url")
+
+#         if image_path:
+
+#             # Convert relative path to full URL
+#             if image_path.startswith("/"):
+#                 full_image_url = site_url + image_path
+#             else:
+#                 full_image_url = image_path
+
+#             item["image_url"] = full_image_url
+#             item["image_name"] = image_path.split("/")[-1]
+
+#         else:
+#             item["image_url"] = None
+#             item["image_name"] = None
+
+#         # =====================================================
+#         # QR Code Generation
+#         # =====================================================
+#         item["qr_code"] = None
+
+#         if QR_AVAILABLE and qr_url:
+
+#             try:
+#                 qr = qrcode.make(qr_url)
+
+#                 buffer = BytesIO()
+#                 qr.save(buffer, format="PNG")
+
+#                 qr_base64 = base64.b64encode(
+#                     buffer.getvalue()
+#                 ).decode()
+
+#                 item["qr_code"] = (
+#                     f"data:image/png;base64,{qr_base64}"
+#                 )
+
+#             except Exception:
+#                 frappe.log_error(
+#                     title="QR Code Generation Failed",
+#                     message=frappe.get_traceback()
+#                 )
+
+#                 item["qr_code"] = None
+
+#     return sku_details
+
+
+# # =========================================================
+# # Public API
+# # =========================================================
+# @frappe.whitelist(allow_guest=True)
+# def get_sku_details(warehouse=None, sku=None):
+
+#     # =========================================================
+#     # Validation
+#     # =========================================================
+#     if warehouse:
+#         warehouse = unquote(warehouse)
+
+#     if not warehouse and not sku:
+#         frappe.throw("Warehouse or SKU is required")
+
+#     sku_details = _get_sku_details_data(
+#         warehouse=warehouse,
+#         sku=sku
+#     )
+
+#     return {
+#         "sku_details": sku_details
+#     }
+
+
+# # =========================================================
+# # Warehouse List API
+# # =========================================================
+# @frappe.whitelist(allow_guest=True)
+# def get_location_master_list():
+
+#     locations = frappe.get_all(
+#         "Warehouse",
+#         filters={
+#             "custom_include_in_rfid": 1
+#         },
+#         fields=["name"],
+#         order_by="name asc"
+#     )
+
+#     # return [loc["name"] for loc in locations]
+
+#     return [
+#         {
+#             "warehouse_name": loc["name"],
+#             "warehouse_encoded": quote(loc["name"])
+#         }
+#         for loc in locations
+#     ]
+
+# # =========================================================
+# # Debug QR Library Check
+# # =========================================================
+# @frappe.whitelist(allow_guest=True)
+# def debug_qr_install():
+
+#     result = {}
+
+#     # =====================================================
+#     # Check qrcode
+#     # =====================================================
+#     try:
+#         import qrcode
+
+#         result["qrcode_import"] = "SUCCESS"
+#         result["qrcode_version"] = getattr(qrcode, "__version__", "UNKNOWN")
+
+#     except Exception as e:
+#         result["qrcode_import"] = str(e)
+
+#     # =====================================================
+#     # Check PIL
+#     # =====================================================
+#     try:
+#         from PIL import Image
+
+#         result["pillow_import"] = "SUCCESS"
+
+#     except Exception as e:
+#         result["pillow_import"] = str(e)
+
+#     # =====================================================
+#     # Try QR Generation
+#     # =====================================================
+#     try:
+#         import qrcode
+#         from io import BytesIO
+
+#         qr = qrcode.make("TEST QR")
+
+#         buffer = BytesIO()
+
+#         qr.save(buffer, format="PNG")
+
+#         result["qr_generation"] = "SUCCESS"
+
+#     except Exception as e:
+#         result["qr_generation"] = str(e)
+
+#     return result
