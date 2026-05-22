@@ -18,7 +18,7 @@ def process(doc, method):
         row.qty = float(sku.gross_weight or 0)
 
         # preserve gross weight separately
-        row.custom_gross_weight = float(sku.gross_weight or 0)
+        row.custom_gross_weight = float(sku.qty or 0)
 
         # IMPORTANT
         row.serial_and_batch_bundle = None

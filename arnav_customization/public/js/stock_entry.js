@@ -24,7 +24,7 @@ frappe.ui.form.on("Stock Entry Detail", {
                 frappe.model.set_value(cdt, cdn, "qty", d.gross_weight);
 
                 // preserve separately
-                frappe.model.set_value(cdt, cdn, "custom_gross_weight", d.gross_weight);
+                frappe.model.set_value(cdt, cdn, "custom_gross_weight", d.qty);
 
                 frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
 
