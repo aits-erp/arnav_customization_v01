@@ -1,7 +1,7 @@
 import frappe
 from arnav_customization.sku_mapping_backend.sku_service import get_sku_data
 
-
+#comment for deployment trigger
 def process(doc, method):
 
     for row in doc.items:
@@ -62,31 +62,3 @@ def material_transfer_qty_handler(doc, method):
 
         # prevent bundle validation issue
         row.serial_and_batch_bundle = None
-
-
-# # def material_transfer_qty_handler(doc, method):
-
-# #     # only for material transfer
-# #     if doc.purpose != "Material Transfer" or doc.purpose != "Material Issue":
-# #         return
-
-# #     # dynamic switch
-# #     if not doc.custom_use_qty_mode:
-# #         return
-
-# #     for row in doc.items:
-
-# #         # skip empty rows
-# #         if not row.custom_gross_weight:
-# #             continue
-
-# #         # preserve original gross weight
-# #         row.custom_weight = row.qty
-
-# #         # IMPORTANT:
-# #         # actual stock qty becomes custom qty
-# #         row.qty = float(row.custom_gross_weight)
-
-# #         # avoid transfer qty mismatch
-# #         row.transfer_qty = float(row.custom_gross_weight)
-
