@@ -39,9 +39,15 @@ def _is_empty_breakup_value(value):
 def _clean_breakup_row(row):
     # Keep attribute_type and attribute_value always.
     # Only hide empty/zero weight, price, and unit.
-    for field in ["weight", "price", "unit"]:
-        if _is_empty_breakup_value(row.get(field)):
-            row.pop(field, None)
+    # for field in ["weight", "price", "unit"]:
+    #     if _is_empty_breakup_value(row.get(field)):
+    #         row.pop(field, None)
+
+    row["attribute_type"] = row.get("attribute_type") or ""
+    row["attribute_value"] = row.get("attribute_value") or ""
+    row["weight"] = frappe.utils.flt(row.get("weight"))
+    row["price"] = frappe.utils.flt(row.get("price"))
+    row["unit"] = row.get("unit") or ""
 
     return row
 
@@ -138,8 +144,8 @@ def _get_sku_details_data(warehouse=None, sku=None):
         cleaned_breakup_rows = []
 
         for row in breakup_rows:
-            if row.get("unit"):
-                row["unit"] = UNIT_MAP.get(row.get("unit"), row.get("unit"))
+            unit = row.get("unit") or ""
+            row["unit"] = UNIT_MAP.get(unit, unit)
 
             row = _clean_breakup_row(row)
             cleaned_breakup_rows.append(row)
