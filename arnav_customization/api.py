@@ -358,7 +358,7 @@ def _get_sku_details_data(warehouse=None, sku=None):
         item["sku"] = stock_row.get("sku")
         item["product"] = stock_row.get("product") or sku_meta.get("sku_product")
         item["warehouse"] = stock_row.get("warehouse")
-        item["qty"] = frappe.utils.flt(stock_row.get("qty"))
+        item["qty"] = frappe.utils.cint(stock_row.get("qty"))
 
         # =====================================================
         # Public QR URL
