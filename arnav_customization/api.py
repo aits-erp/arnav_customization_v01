@@ -55,54 +55,310 @@ def _clean_breakup_row(row):
 # =========================================================
 # Reusable SKU Data Builder
 # =========================================================
+# def _get_sku_details_data(warehouse=None, sku=None):
+
+#     site_url = frappe.utils.get_url()
+
+#     # =========================================================
+#     # Dynamic Conditions
+#     # =========================================================
+#     conditions = []
+#     filters = {}
+
+#     if warehouse:
+#         conditions.append("s.warehouse = %(warehouse)s")
+#         filters["warehouse"] = warehouse
+
+#     if sku:
+#         conditions.append("s.name = %(sku)s")
+#         filters["sku"] = sku
+
+#     where_clause = " AND ".join(conditions)
+
+#     # =========================================================
+#     # Main SKU Query
+#     # =========================================================
+#     sku_details = frappe.db.sql(f"""
+#         SELECT
+#             s.name AS sku_name,
+#             s.name AS sku,
+#             s.product,
+#             s.sku_master,
+#             s.breakup_ref,
+#             s.old_sku_ref,
+#             s.image_url,
+#             1 AS qty,
+#             s.selling_price,
+#             s.gross_weight,
+#             s.net_weight,
+#             s.huid,
+#             s.d_no
+
+#         FROM `tabSKU` s
+
+#         WHERE {where_clause}
+#     """, filters, as_dict=True)
+
+#     # =========================================================
+#     # Process Each SKU
+#     # =========================================================
+#     for item in sku_details:
+
+#         # =====================================================
+#         # Public QR URL
+#         # =====================================================
+#         qr_url = (
+#             f"{site_url}/sku_qr"
+#             f"?sku={quote(item.get('sku') or '')}"
+#         )
+
+#         item["qr_url"] = qr_url
+
+#         # =====================================================
+#         # Breakup Rows
+#         # =====================================================
+#         breakup_rows = frappe.get_all(
+#             "SKU Breakup",
+#             filters={
+#                 "sku_master": item.get("sku_master"),
+#                 "breakup_ref": item.get("breakup_ref")
+#             },
+#             fields=[
+#                 "attribute_type",
+#                 "attribute_value",
+#                 "weight",
+#                 "price",
+#                 "unit"
+#             ],
+#             order_by="creation asc"
+#         )
+
+#         # =====================================================
+#         # Unit Short Forms
+#         # =====================================================
+#         UNIT_MAP = {
+#             "Carat": "cts",
+#             "Gram": "gm"
+#         }
+
+#         cleaned_breakup_rows = []
+
+#         for row in breakup_rows:
+#             unit = row.get("unit") or ""
+#             row["unit"] = UNIT_MAP.get(unit, unit)
+
+#             row = _clean_breakup_row(row)
+#             cleaned_breakup_rows.append(row)
+
+#         item["breakup"] = cleaned_breakup_rows or []
+
+#         # =====================================================
+#         # Image URL + Name
+#         # =====================================================
+#         image_path = item.get("image_url")
+
+#         if image_path:
+
+#             # Convert relative path to full URL
+#             if image_path.startswith("/"):
+#                 full_image_url = site_url + image_path
+#             else:
+#                 full_image_url = image_path
+
+#             item["image_url"] = full_image_url
+#             item["image_name"] = image_path.split("/")[-1]
+
+#         else:
+#             item["image_url"] = None
+#             item["image_name"] = None
+
+#         # =====================================================
+#         # QR Code Generation
+#         # =====================================================
+#         item["qr_code"] = None
+
+#         if QR_AVAILABLE and qr_url:
+
+#             try:
+#                 qr = qrcode.make(qr_url)
+
+#                 buffer = BytesIO()
+#                 qr.save(buffer, format="PNG")
+
+#                 qr_base64 = base64.b64encode(
+#                     buffer.getvalue()
+#                 ).decode()
+
+#                 item["qr_code"] = (
+#                     f"data:image/png;base64,{qr_base64}"
+#                 )
+
+#             except Exception:
+#                 frappe.log_error(
+#                     title="QR Code Generation Failed",
+#                     message=frappe.get_traceback()
+#                 )
+
+#                 item["qr_code"] = None
+
+#     return sku_details
+
 def _get_sku_details_data(warehouse=None, sku=None):
 
     site_url = frappe.utils.get_url()
 
     # =========================================================
-    # Dynamic Conditions
+    # Current Stock Balance Query
+    # Qty + warehouse must come from ledger, not SKU table.
     # =========================================================
-    conditions = []
-    filters = {}
+    stock_filters = {}
+
+    direct_conditions = [
+        "sle.docstatus < 2",
+        "IFNULL(sle.is_cancelled, 0) = 0",
+        "IFNULL(sle.batch_no, '') != ''",
+        "IFNULL(sle.serial_and_batch_bundle, '') = ''",
+        "IFNULL(batch.disabled, 0) = 0",
+    ]
+
+    bundle_conditions = [
+        "sle.docstatus < 2",
+        "IFNULL(sle.is_cancelled, 0) = 0",
+        "sbb.docstatus = 1",
+        "sbe.docstatus = 1",
+        "IFNULL(sbe.batch_no, '') != ''",
+        "IFNULL(batch.disabled, 0) = 0",
+    ]
 
     if warehouse:
-        conditions.append("s.warehouse = %(warehouse)s")
-        filters["warehouse"] = warehouse
+        direct_conditions.append("sle.warehouse = %(warehouse)s")
+        bundle_conditions.append("sle.warehouse = %(warehouse)s")
+        stock_filters["warehouse"] = warehouse
 
     if sku:
-        conditions.append("s.name = %(sku)s")
-        filters["sku"] = sku
+        direct_conditions.append("sle.batch_no = %(sku)s")
+        bundle_conditions.append("sbe.batch_no = %(sku)s")
+        stock_filters["sku"] = sku
 
-    where_clause = " AND ".join(conditions)
+    direct_where = " AND ".join(direct_conditions)
+    bundle_where = " AND ".join(bundle_conditions)
+
+    direct_stock_rows = frappe.db.sql(f"""
+        SELECT
+            sle.batch_no AS sku,
+            sle.item_code AS product,
+            sle.warehouse,
+            SUM(sle.actual_qty) AS qty,
+            MAX(sle.posting_datetime) AS latest_posting_datetime
+        FROM `tabStock Ledger Entry` sle
+        INNER JOIN `tabBatch` batch
+            ON batch.name = sle.batch_no
+        WHERE {direct_where}
+        GROUP BY sle.batch_no, sle.item_code, sle.warehouse
+    """, stock_filters, as_dict=True)
+
+    bundle_stock_rows = frappe.db.sql(f"""
+        SELECT
+            sbe.batch_no AS sku,
+            sle.item_code AS product,
+            sle.warehouse,
+            SUM(sbe.qty) AS qty,
+            MAX(sle.posting_datetime) AS latest_posting_datetime
+        FROM `tabStock Ledger Entry` sle
+        INNER JOIN `tabSerial and Batch Entry` sbe
+            ON sbe.parent = sle.serial_and_batch_bundle
+        INNER JOIN `tabSerial and Batch Bundle` sbb
+            ON sbb.name = sbe.parent
+        INNER JOIN `tabBatch` batch
+            ON batch.name = sbe.batch_no
+        WHERE {bundle_where}
+        GROUP BY sbe.batch_no, sle.item_code, sle.warehouse
+    """, stock_filters, as_dict=True)
+
+    stock_map = {}
+
+    for row in direct_stock_rows + bundle_stock_rows:
+        key = (row.get("sku"), row.get("product"), row.get("warehouse"))
+
+        if key not in stock_map:
+            stock_map[key] = frappe._dict({
+                "sku": row.get("sku"),
+                "product": row.get("product"),
+                "warehouse": row.get("warehouse"),
+                "qty": 0,
+                "latest_posting_datetime": row.get("latest_posting_datetime"),
+            })
+
+        stock_map[key]["qty"] += frappe.utils.flt(row.get("qty"))
+
+        if (
+            row.get("latest_posting_datetime")
+            and (
+                not stock_map[key].get("latest_posting_datetime")
+                or row.get("latest_posting_datetime") > stock_map[key].get("latest_posting_datetime")
+            )
+        ):
+            stock_map[key]["latest_posting_datetime"] = row.get("latest_posting_datetime")
+
+    stock_rows = [
+        row for row in stock_map.values()
+        if frappe.utils.flt(row.get("qty")) > 0
+    ]
+
+    stock_rows.sort(
+        key=lambda row: str(row.get("latest_posting_datetime") or ""),
+        reverse=True
+    )
+
+    if not stock_rows:
+        return []
+
+    sku_names = list({row.get("sku") for row in stock_rows if row.get("sku")})
 
     # =========================================================
-    # Main SKU Query
+    # SKU Metadata Query
+    # Only metadata comes from SKU table.
     # =========================================================
-    sku_details = frappe.db.sql(f"""
+    sku_meta_rows = frappe.db.sql("""
         SELECT
             s.name AS sku_name,
             s.name AS sku,
-            s.product,
+            s.product AS sku_product,
             s.sku_master,
             s.breakup_ref,
             s.old_sku_ref,
             s.image_url,
-            1 AS qty,
             s.selling_price,
             s.gross_weight,
             s.net_weight,
             s.huid,
             s.d_no
-
         FROM `tabSKU` s
+        WHERE s.name IN %(sku_names)s
+    """, {
+        "sku_names": tuple(sku_names)
+    }, as_dict=True)
 
-        WHERE {where_clause}
-    """, filters, as_dict=True)
+    sku_meta_map = {
+        row.get("sku"): row
+        for row in sku_meta_rows
+    }
 
-    # =========================================================
-    # Process Each SKU
-    # =========================================================
-    for item in sku_details:
+    sku_details = []
+
+    for stock_row in stock_rows:
+        sku_meta = sku_meta_map.get(stock_row.get("sku"))
+
+        if not sku_meta:
+            continue
+
+        item = frappe._dict(sku_meta)
+
+        item["sku_name"] = stock_row.get("sku")
+        item["sku"] = stock_row.get("sku")
+        item["product"] = stock_row.get("product") or sku_meta.get("sku_product")
+        item["warehouse"] = stock_row.get("warehouse")
+        item["qty"] = frappe.utils.flt(stock_row.get("qty"))
 
         # =====================================================
         # Public QR URL
@@ -133,9 +389,6 @@ def _get_sku_details_data(warehouse=None, sku=None):
             order_by="creation asc"
         )
 
-        # =====================================================
-        # Unit Short Forms
-        # =====================================================
         UNIT_MAP = {
             "Carat": "cts",
             "Gram": "gm"
@@ -158,8 +411,6 @@ def _get_sku_details_data(warehouse=None, sku=None):
         image_path = item.get("image_url")
 
         if image_path:
-
-            # Convert relative path to full URL
             if image_path.startswith("/"):
                 full_image_url = site_url + image_path
             else:
@@ -200,6 +451,8 @@ def _get_sku_details_data(warehouse=None, sku=None):
                 )
 
                 item["qr_code"] = None
+
+        sku_details.append(item)
 
     return sku_details
 
