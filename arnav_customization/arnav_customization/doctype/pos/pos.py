@@ -389,6 +389,18 @@ def get_sku_details(sku):
     }
 
 @frappe.whitelist()
+# def make_credit_note(source_name, target_doc=None):
+
+#     # ===============================
+#     # HEADER POST PROCESS
+#     # ===============================
+#     def set_missing_values(source, target):
+#         target.is_return = 1
+#         target.update_stock = 1
+
+#         # Optional linkage
+#         # target.return_against = source.sales_invoice_ref
+
 def make_credit_note(source_name, target_doc=None):
 
     # ===============================
@@ -397,6 +409,23 @@ def make_credit_note(source_name, target_doc=None):
     def set_missing_values(source, target):
         target.is_return = 1
         target.update_stock = 1
+
+        client_name = (source.client_name or "").strip()
+
+        if client_name:
+            customer = (
+                frappe.db.exists("Customer", client_name)
+                or frappe.db.get_value(
+                    "Customer",
+                    {"customer_name": client_name},
+                    "name"
+                )
+            )
+
+            if customer:
+                target.customer = customer
+            else:
+                target.customer_name = client_name
 
         # Optional linkage
         # target.return_against = source.sales_invoice_ref
@@ -448,7 +477,7 @@ def make_credit_note(source_name, target_doc=None):
             "POS": {
                 "doctype": "Sales Invoice",
                 "field_map": {
-                    "client_name": "customer",
+                    # "client_name": "customer", --- IGNORE ---
                     "mobile_number": "contact_mobile",
                     "email": "contact_email",
                     "address": "address_display",

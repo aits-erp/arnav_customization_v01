@@ -512,12 +512,12 @@ frappe.ui.form.on('POS', {
         // CLIENT NAME QUERY
         // =========================================
 
-        frm.set_query("client_name", function () {
+        // frm.set_query("client_name", function () {
 
-            return {
-                query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
-            };
-        });
+        //     return {
+        //         query: "arnav_customization.arnav_customization.doctype.pos.pos.customer_search_by_mobile"
+        //     };
+        // });
     },
 
     // =========================================
@@ -1155,32 +1155,43 @@ function resolve_and_set_client_name(frm, value) {
     if (!frm.is_new() || !client_name) {
         return;
     }
+    if (frm.doc.client_name !== client_name) {
+        frm.set_value("client_name", client_name);
+    }
+    try {
+        sessionStorage.removeItem("pending_pos_client_name");
+    } catch (e) {
+        // browser storage may be unavailable in private contexts
+    }
 
-    frappe.db.get_value("Customer", client_name, "name")
-        .then(function (r) {
-            if (r.message && r.message.name) {
-                return r.message.name;
-            }
+    // frappe.db.get_value("Customer", client_name, "name")
+    //     .then(function (r) {
+    //         if (r.message && r.message.name) {
+    //             return r.message.name;
+    //         }
 
-            return frappe.db.get_value(
-                "Customer",
-                { customer_name: client_name },
-                "name"
-            ).then(function (customer) {
-                return customer.message && customer.message.name;
-            });
-        })
-        .then(function (customer_name) {
-            if (!customer_name || frm.doc.client_name === customer_name) {
-                return;
-            }
+    //         return frappe.db.get_value(
+    //             "Customer",
+    //             { customer_name: client_name },
+    //             "name"
+    //         ).then(function (customer) {
+    //             return customer.message && customer.message.name;
+    //         });
+    //     })
+    //     .then(function (customer_name) {
+    //         if (!customer_name || frm.doc.client_name === customer_name) {
+    //             return;
+    //         }
 
-            frm.set_value("client_name", customer_name);
+    //         frm.set_value("client_name", customer_name);
 
-            try {
-                sessionStorage.removeItem("pending_pos_client_name");
-            } catch (e) {
-                // browser storage may be unavailable in private contexts
-            }
-        });
+    //         try {
+    //             sessionStorage.removeItem("pending_pos_client_name");
+    //         } catch (e) {
+    //             // browser storage may be unavailable in private contexts
+    //         }
+    //     });
+
+
 }
+
