@@ -371,7 +371,7 @@
   "insert_after": "custom_custom_fields",
   "is_system_generated": 0,
   "is_virtual": 0,
-  "label": "Weight",
+  "label": "Net Weight",
   "length": 0,
   "link_filters": null,
   "mandatory_depends_on": null,
