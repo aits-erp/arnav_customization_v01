@@ -1,4 +1,5 @@
 import frappe
+from arnav_customization.arnav_customization.doctype.sku_master.sku_master import get_breakup_rows_for_reference
 
 @frappe.whitelist()
 def get_sku_data(sku):
@@ -7,20 +8,9 @@ def get_sku_data(sku):
         return {}
 
     sku_doc = frappe.get_doc("SKU", sku)
-    breakup = frappe.get_all(
-        "SKU Breakup",
-        filters={
-            "sku_master": sku_doc.sku_master,
-            "breakup_ref": sku_doc.breakup_ref
-        },
-        fields=[
-            "attribute_type",
-            "attribute_value",
-            "weight",
-            "price",
-            "unit"
-        ],
-        order_by="creation asc"
+    breakup = get_breakup_rows_for_reference(
+        sku_doc.sku_master,
+        sku_doc.breakup_ref
     )
 
     return {

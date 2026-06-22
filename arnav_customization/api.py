@@ -1,4 +1,5 @@
 import frappe
+from arnav_customization.arnav_customization.doctype.sku_master.sku_master import get_breakup_rows_for_reference
 import base64
 from io import BytesIO
 from urllib.parse import quote
@@ -373,20 +374,9 @@ def _get_sku_details_data(warehouse=None, sku=None):
         # =====================================================
         # Breakup Rows
         # =====================================================
-        breakup_rows = frappe.get_all(
-            "SKU Breakup",
-            filters={
-                "sku_master": item.get("sku_master"),
-                "breakup_ref": item.get("breakup_ref")
-            },
-            fields=[
-                "attribute_type",
-                "attribute_value",
-                "weight",
-                "price",
-                "unit"
-            ],
-            order_by="creation asc"
+        breakup_rows = get_breakup_rows_for_reference(
+            item.get("sku_master"),
+            item.get("breakup_ref")
         )
 
         UNIT_MAP = {

@@ -7,11 +7,15 @@ frappe.ui.form.on("SKU", {
         }
     },
 
-    breakup_info(frm) {
+    async breakup_info(frm) {
 
     // ✅ generate breakup_ref if missing editable field to link breakup rows to this SKU
     if (!frm.doc.breakup_ref) {
-        frm.set_value("breakup_ref", frappe.utils.get_random(12));
+        await frm.set_value("breakup_ref", frappe.utils.get_random(12));
+    }
+
+    if (frm.is_dirty()) {
+        await frm.save();
     }
 
     frappe.call({

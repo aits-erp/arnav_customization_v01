@@ -83,6 +83,7 @@
    "label": "Breakup"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "breakup_ref",
    "fieldtype": "Data",
    "hidden": 1,
