@@ -365,44 +365,77 @@ class SKUMaster(Document):
 
         return f"{prefix}{sequence_str}"
         
-@frappe.whitelist()
-def get_breakup_rows(sku_master, breakup_ref):
-    fields = [
-        "attribute_type",
-        "attribute_value",
-        "weight",
-        "price",
-        "unit"
-    ]
+BREAKUP_FIELDS = [
+    "attribute_type",
+    "attribute_value",
+    "weight",
+    "price",
+    "unit"
+]
 
-    rows = frappe.get_all(
+
+def _resolve_breakup_ref(sku_master, breakup_ref):
+    if breakup_ref and frappe.db.exists("SKU Breakup", {
+        "sku_master": sku_master,
+        "breakup_ref": breakup_ref
+    }):
+        return breakup_ref
+
+    refs = frappe.get_all(
         "SKU Breakup",
-        filters={
-            "sku_master": sku_master,
-            "breakup_ref": breakup_ref
-        },
-        fields=fields,
-        order_by="creation asc"
+        filters={"sku_master": sku_master},
+        fields=["breakup_ref"]
     )
+    refs = {row.breakup_ref for row in refs if row.breakup_ref}
 
-    if not rows and breakup_ref:
-        # Fallback for old breakup rows whose SKU Master link does not match.
+    # Safe recovery for old single-item masters whose saved ref became stale.
+    if len(refs) == 1 and frappe.db.count(
+        "SKU Details", {"parent": sku_master}
+    ) == 1:
+        return refs.pop()
+
+    return breakup_ref
+
+
+def get_breakup_rows_for_reference(sku_master, breakup_ref):
+    resolved_ref = _resolve_breakup_ref(sku_master, breakup_ref)
+    rows = []
+
+    if resolved_ref:
         rows = frappe.get_all(
             "SKU Breakup",
             filters={
-                "breakup_ref": breakup_ref
+                "sku_master": sku_master,
+                "breakup_ref": resolved_ref
             },
-            fields=fields,
+            fields=BREAKUP_FIELDS,
+            order_by="creation asc"
+        )
+
+    if not rows and breakup_ref:
+        # Legacy rows may contain the right ref but the wrong master link.
+        rows = frappe.get_all(
+            "SKU Breakup",
+            filters={"breakup_ref": breakup_ref},
+            fields=BREAKUP_FIELDS,
             order_by="creation asc"
         )
 
     return rows
+
+
+@frappe.whitelist()
+def get_breakup_rows(sku_master, breakup_ref):
+    return get_breakup_rows_for_reference(sku_master, breakup_ref)
 
 @frappe.whitelist()
 def save_breakup_rows(sku_master, breakup_ref, rows):
     import json
 
     rows = json.loads(rows)
+    requested_ref = breakup_ref
+    breakup_ref = _resolve_breakup_ref(sku_master, breakup_ref)
+    breakup_ref = breakup_ref or frappe.generate_hash(length=12)
 
     # delete old rows
     frappe.db.delete("SKU Breakup", {
@@ -425,6 +458,22 @@ def save_breakup_rows(sku_master, breakup_ref, rows):
                 doc.set(fname, r.get(fname))
 
         doc.insert(ignore_permissions=True)
+
+    # Repair stale references after safely resolving an old single-item master.
+    if requested_ref and requested_ref != breakup_ref:
+        for child in frappe.get_all(
+            "SKU Details",
+            filters={"parent": sku_master, "breakup_ref": requested_ref},
+            pluck="name"
+        ):
+            frappe.db.set_value("SKU Details", child, "breakup_ref", breakup_ref)
+
+        for sku in frappe.get_all(
+            "SKU",
+            filters={"sku_master": sku_master, "breakup_ref": requested_ref},
+            pluck="name"
+        ):
+            frappe.db.set_value("SKU", sku, "breakup_ref", breakup_ref)
 
     frappe.db.commit()
     return "success"

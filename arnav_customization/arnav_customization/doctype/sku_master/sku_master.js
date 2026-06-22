@@ -251,12 +251,16 @@ frappe.ui.form.on("SKU Details", {
         calculate_weight_totals(frm);
     },
 
-    breakup(frm, cdt, cdn) {
+    async breakup(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
 
         if (!row.breakup_ref) {
-            row.breakup_ref = frappe.utils.get_random(12);
-            frm.refresh_field("sku_details");
+            await frappe.model.set_value(
+                cdt,
+                cdn,
+                "breakup_ref",
+                frappe.utils.get_random(12)
+            );
         }
 
         if (frm.is_new()) {
@@ -266,6 +270,11 @@ frappe.ui.form.on("SKU Details", {
                 indicator: "orange"
             });
             return;
+        }
+
+        if (frm.is_dirty()) {
+            await frm.save();
+            row = locals[cdt][cdn];
         }
 
         open_dynamic_breakup_dialog(frm, row);
