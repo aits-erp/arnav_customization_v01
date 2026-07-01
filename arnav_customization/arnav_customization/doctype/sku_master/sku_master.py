@@ -4,6 +4,19 @@ from frappe.utils import getdate
 from frappe.utils import flt
 
 class SKUMaster(Document):
+    def validate(self):
+        total_out_weight = flt(self.net_quantiity)
+        total_in_weight = sum(flt(row.gross_weight) for row in self.sku_details)
+
+        if total_in_weight > total_out_weight:
+            frappe.throw(
+                f"""
+                Total Gross Weight ({total_in_weight:.3f})
+                cannot be greater than Net Quantity ({total_out_weight:.3f}).
+
+                Please reduce the Gross Weight in SKU Details before saving.
+                """
+            )     
 
     def on_submit(self):
         self.apply_supplier_margin()  
@@ -34,10 +47,40 @@ class SKUMaster(Document):
         # ---------------------------------------------
         # CALCULATE TOTAL OUT WEIGHT (FROM NET QUANTITY)
         # ---------------------------------------------
-        total_out_weight = flt(self.net_quantiity)
+        # total_out_weight = flt(self.net_quantiity)
 
-        if total_out_weight <= 0:
-            frappe.throw("Net Quantity must be greater than zero.")
+        # if total_out_weight <= 0:
+        #     frappe.throw("Net Quantity must be greater than zero.")
+        
+        # total_out_weight = flt(self.net_quantiity)
+
+        # if total_out_weight <= 0:
+        #     frappe.throw("Net Quantity must be greater than zero.")
+
+        # ---------------------------------------------
+        # CALCULATE TOTAL IN WEIGHT (FROM SKU DETAILS)
+        # ---------------------------------------------
+        # total_in_weight = 0
+
+        # for row in self.sku_details:
+        #     if flt(row.gross_weight) <= 0:
+        #         frappe.throw(f"Gross Weight must be greater than zero in row {row.idx}")
+
+        #     total_in_weight += flt(row.gross_weight)
+
+        # # ---------------------------------------------
+        # # VALIDATION
+        # # ---------------------------------------------
+        # if total_in_weight > total_out_weight:
+        #     frappe.throw(
+        #         f"""
+        #         Total SKU Gross Weight ({total_in_weight:.3f})
+        #         cannot be greater than Net Quantity ({total_out_weight:.3f}).
+
+        #         Please reduce the Gross Weight in SKU Details.
+        #         """
+        #     )
+
 
         # ---------------------------------------------
         # CALCULATE TOTAL IN WEIGHT (FROM SKU DETAILS)
