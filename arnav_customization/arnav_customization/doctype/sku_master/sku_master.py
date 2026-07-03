@@ -47,11 +47,13 @@ class SKUMaster(Document):
         # ---------------------------------------------
         # CALCULATE TOTAL OUT WEIGHT (FROM NET QUANTITY)
         # ---------------------------------------------
-        # total_out_weight = flt(self.net_quantiity)
-
-        # if total_out_weight <= 0:
-        #     frappe.throw("Net Quantity must be greater than zero.")
         
+        total_out_weight = flt(self.net_quantiity or 0)
+
+        if total_out_weight <= 0:
+            frappe.throw("Net Quantity must be greater than zero.")
+        
+
         # total_out_weight = flt(self.net_quantiity)
 
         # if total_out_weight <= 0:
