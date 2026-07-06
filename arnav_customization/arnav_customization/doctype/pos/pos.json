@@ -145,7 +145,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Email",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "pincode",
@@ -158,7 +158,7 @@
    "fieldname": "address",
    "fieldtype": "Small Text",
    "label": "Address",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "total_amount_with_gst",
