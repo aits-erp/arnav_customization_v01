@@ -4,6 +4,15 @@ from frappe.utils import getdate
 from frappe.utils import flt
 
 class SKUMaster(Document):
+    def before_insert(self):
+        # When SKU Master is amended from cancelled document,
+        # do not carry old cancelled Stock Entry reference
+        if self.amended_from:
+            self.stock_entry = None
+
+            for row in self.sku_details:
+                row.sku = None
+                row.old_sku_ref = None
     def validate(self):
         total_out_weight = flt(self.net_quantiity)
         total_in_weight = sum(flt(row.gross_weight) for row in self.sku_details)

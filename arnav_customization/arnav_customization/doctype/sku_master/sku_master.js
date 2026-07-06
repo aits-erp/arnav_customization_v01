@@ -1,4 +1,17 @@
 frappe.ui.form.on("SKU Master", {
+    onload(frm) {
+        if (frm.is_new() && frm.doc.amended_from) {
+            frm.set_value("stock_entry", "");
+
+            (frm.doc.sku_details || []).forEach(row => {
+                row.sku = "";
+                row.old_sku_ref = "";
+            });
+
+            frm.refresh_field("stock_entry");
+            frm.refresh_field("sku_details");
+        }
+    },
 
     setup(frm) {
 
@@ -643,3 +656,4 @@ frappe.ui.form.on("SKU Master", {
 //         });
 //     }
 // });
+ 
