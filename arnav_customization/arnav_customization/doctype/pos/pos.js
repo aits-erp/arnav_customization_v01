@@ -166,7 +166,10 @@ frappe.ui.form.on('POS', {
             return;
         }
 
+        // calculate_all(frm);
+    if (!frm.is_dirty()) {
         calculate_all(frm);
+}
     },
 
     // =========================================
