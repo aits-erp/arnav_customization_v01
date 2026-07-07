@@ -128,7 +128,7 @@ frappe.ui.form.on('Payment Entry', {
     before_submit: function(frm) {
         let total = 0;
         (frm.doc.custom_payment_details_table || []).forEach(row => {
-            total += flt(row.custom_amount);
+            total += flt(row.amount);
         });
 
         if (flt(total, 2) !== flt(frm.doc.paid_amount, 2)) {
