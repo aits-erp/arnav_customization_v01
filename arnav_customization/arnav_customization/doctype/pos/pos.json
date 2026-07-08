@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "add_orders_section",
+  "naming_series",
   "date",
   "lead_owner_1",
   "lead_owner_2",
@@ -144,8 +145,7 @@
    "fieldname": "email",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Email",
-   "reqd": 0
+   "label": "Email"
   },
   {
    "fieldname": "pincode",
@@ -157,8 +157,7 @@
   {
    "fieldname": "address",
    "fieldtype": "Small Text",
-   "label": "Address",
-   "reqd": 0
+   "label": "Address"
   },
   {
    "fieldname": "total_amount_with_gst",
@@ -228,13 +227,21 @@
   {
    "fieldname": "column_break_lhie",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Naming Series",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-15 10:26:15.695550",
+ "modified": "2026-07-08 15:47:20.596232",
  "modified_by": "Administrator",
  "module": "arnav_customization",
  "name": "POS",
@@ -242,11 +249,10 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -254,6 +260,7 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],
