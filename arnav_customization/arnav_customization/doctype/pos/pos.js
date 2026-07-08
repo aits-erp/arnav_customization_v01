@@ -821,8 +821,8 @@ SKU TABLE
 
 frappe.ui.form.on('POS SKU Details', {
 
-    price: function (frm) {
-        apply_global_discount(frm);
+    price: function (frm, cdt, cdn) {
+        validate_sku_min_price(frm, cdt, cdn);
     },
 
     qty: function (frm) {
@@ -886,7 +886,7 @@ frappe.ui.form.on('POS SKU Details', {
         frappe.model.set_value(cdt, cdn, "batch_no", row.sku);
 
         frappe.db.get_value("SKU", row.sku,
-            ["product", "gross_weight", "net_weight"]
+            ["product", "gross_weight", "net_weight","selling_price"]
         ).then(r => {
 
             if (!r.message) return;
@@ -896,6 +896,10 @@ frappe.ui.form.on('POS SKU Details', {
             frappe.model.set_value(cdt, cdn, "product", item);
             frappe.model.set_value(cdt, cdn, "gross_weight", r.message.gross_weight);
             frappe.model.set_value(cdt, cdn, "net_weight", r.message.net_weight);
+
+            if (!flt(row.price)) {
+            frappe.model.set_value(cdt, cdn, "price", r.message.selling_price);
+            }
 
             return frappe.db.get_doc("Item", item);
 
@@ -1182,5 +1186,41 @@ function resolve_and_set_client_name(frm, value) {
         } catch (e) {
             // browser storage may be unavailable in private contexts
         }
+    });
+}
+
+function validate_sku_min_price(frm, cdt, cdn) {
+
+    let row = locals[cdt][cdn];
+
+    if (!row.sku) {
+        apply_global_discount(frm);
+        return;
+    }
+
+    frappe.db.get_value("SKU", row.sku, "selling_price").then(r => {
+
+        if (!r.message) {
+            apply_global_discount(frm);
+            return;
+        }
+
+        let min_price = flt(r.message.selling_price);
+        let entered_price = flt(row.price);
+
+        if (entered_price < min_price) {
+
+            frappe.msgprint(
+                __("Price cannot be less than SKU Selling Price ₹ {0}", [min_price])
+            );
+
+            frappe.model.set_value(cdt, cdn, "price", min_price).then(() => {
+                apply_global_discount(frm);
+            });
+
+            return;
+        }
+
+        apply_global_discount(frm);
     });
 }
