@@ -10,8 +10,8 @@ class POS(Document):
 		if doc_before_save and doc_before_save.docstatus == 1:
 			return
 
-		# self.calculate_gst_for_items()
-		self.validate_sku_price()
+		self.calculate_gst_for_items()
+		# self.validate_sku_price()
 		self.apply_discount_and_calculate_totals()
 
 	def before_submit(self):
@@ -205,22 +205,6 @@ class POS(Document):
 		self.stock_out_ref = stock_entry.name
 
         frappe.msgprint(f"Stock Entry Created: {stock_entry.name}")
-
-	def validate_sku_price(self):
-		for row in self.sku_details:
-			if not row.sku:
-				continue
-
-			sku_selling_price = frappe.db.get_value(
-				"SKU",
-				row.sku,
-				"selling_price"
-			)
-
-			if flt(row.price) < flt(sku_selling_price):
-				frappe.throw(
-					f"Row {row.idx}: Price cannot be less than SKU Selling Price ₹{flt(sku_selling_price):.3f}"
-				)
 
 	def apply_discount_and_calculate_totals(self):
 	
