@@ -10,8 +10,7 @@ class POS(Document):
 		if doc_before_save and doc_before_save.docstatus == 1:
 			return
 
-		self.calculate_gst_for_items()
-		# self.validate_sku_price()
+		# self.calculate_gst_for_items()
 		self.apply_discount_and_calculate_totals()
 
 	def before_submit(self):
@@ -204,10 +203,9 @@ class POS(Document):
 
 		self.stock_out_ref = stock_entry.name
 
-        frappe.msgprint(f"Stock Entry Created: {stock_entry.name}")
+		frappe.msgprint(f"Stock Entry Created: {stock_entry.name}")
 
 	def apply_discount_and_calculate_totals(self):
-	
 
 		total_price = 0
 
