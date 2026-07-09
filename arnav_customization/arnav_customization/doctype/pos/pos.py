@@ -3,6 +3,9 @@ from frappe.model.document import Document
 from frappe.utils import cint, flt
 from frappe.model.mapper import get_mapped_doc
 
+def money(value):
+	return flt(value, 2)
+
 class POS(Document):
 	def validate(self):
 		doc_before_save = self.get_doc_before_save()
@@ -39,10 +42,10 @@ class POS(Document):
 				f"Total Cash payment cannot exceed ₹{CASH_LIMIT}. "
 				f"Total Cash entered: ₹{total_cash}"
 			)
-		
+
 		# 3️⃣ Create Stock Entry for Packing Materials
 		self.create_packing_material_issue()
-		
+
 		# 4️⃣ Create Stock Entry for SKUs
 		self.create_stock_out_entry()
 
@@ -55,7 +58,7 @@ class POS(Document):
 
 				if se.docstatus == 1:
 					se.cancel()
-					
+
 	def create_packing_material_issue(self):
 		if not self.branch:
 			frappe.throw("Warehouse (Branch) is mandatory to create Stock Entry.")
@@ -78,7 +81,7 @@ class POS(Document):
 
 			if not row.qty or row.qty <= 0:
 				continue
-			
+
 			item_code = row.packing_material
 			qty = row.qty
 			batch_no = None
@@ -105,7 +108,7 @@ class POS(Document):
 				"s_warehouse": self.branch,
 				"batch_no": batch_no
 			})
-			
+
 			# stock_entry.append("items", {
 			# 	"item_code": row.packing_material,
 			# 	"qty": row.qty,
@@ -215,11 +218,12 @@ class POS(Document):
 
 		for row in self.sku_details:
 
-			amount = (row.price or 0) * (row.qty or 0)
+			amount = money((row.price or 0) * (row.qty or 0))
 
 			total_price += amount
 
-		self.total_price = flt(total_price, self.precision("total_price"))
+		# self.total_price = flt(total_price, self.precision("total_price"))
+		self.total_price = money(total_price)
 
 		# ================================
 		# DISCOUNT %
@@ -234,11 +238,11 @@ class POS(Document):
 				/ total_price
 			) * 100
 
-		self.discount_percentage = flt(
-			discount_percentage,
-			self.precision("discount_percentage")
-		)
-
+		# self.discount_percentage = flt(
+		# 	discount_percentage,
+		# 	self.precision("discount_percentage")
+		# )
+		self.discount_percentage = money(discount_percentage)
 		# ================================
 		# APPLY ROW CALCULATIONS
 		# ================================
@@ -248,17 +252,19 @@ class POS(Document):
 
 		for row in self.sku_details:
 
-			amount = (row.price or 0) * (row.qty or 0)
+			amount = money((row.price or 0) * (row.qty or 0))
 
-			row.discount = flt(
-				(amount * discount_percentage) / 100,
-				row.precision("discount")
-			)
+			# row.discount = flt(
+			# 	(amount * discount_percentage) / 100,
+			# 	row.precision("discount")
+			# )
+			row.discount = money((amount * discount_percentage) / 100)
 
-			row.final_amount = flt(
-				amount - row.discount,
-				row.precision("final_amount")
-			)
+			# row.final_amount = flt(
+			# 	amount - row.discount,
+			# 	row.precision("final_amount")
+			# )
+			row.final_amount = money(amount - row.discount)
 
 			if row.final_amount < 0:
 				row.final_amount = 0
@@ -293,100 +299,102 @@ class POS(Document):
 
 			row.gst_percentage = gst_rate
 
-			row.gst_amount = flt(
-				(row.final_amount * gst_rate) / 100,
-				row.precision("gst_amount")
-			)
+			# row.gst_amount = flt(
+			# 	(row.final_amount * gst_rate) / 100,
+			# 	row.precision("gst_amount")
+			# )
+			row.gst_amount = money((row.final_amount * gst_rate) / 100)
 
 			total_amount += row.final_amount
 			total_gst += row.gst_amount
 
 		packing = self.handling_and_packaging_charges or 0
 
-		self.total_amount_wo_tax = flt(
-			total_amount + packing,
-			self.precision("total_amount_wo_tax")
+		# self.total_amount_wo_tax = flt(
+		# 	total_amount + packing,
+		# 	self.precision("total_amount_wo_tax")
+		# )
+		self.total_amount_wo_tax = money(
+			total_amount + packing
 		)
 
-		self.total_amount_with_gst = flt(
-			total_amount + total_gst + packing,
-			self.precision("total_amount_with_gst")
+		self.total_amount_with_gst = money(
+			total_amount + total_gst + packing
 		)
 
-		self.balance_amount = flt(
-			self.total_amount_with_gst - (self.paid_amount or 0),
-			self.precision("balance_amount")
+		self.balance_amount = money(
+			self.total_amount_with_gst - (self.paid_amount or 0)
 		)
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def customer_search_by_mobile(doctype, txt, searchfield, start, page_len, filters):
 
-    return frappe.db.sql("""
-        SELECT
-            name,
-            customer_name,
-            mobile_no
-        FROM `tabCustomer`
-        WHERE
-            docstatus < 2
-            AND (
-                name LIKE %(txt)s
-                OR customer_name LIKE %(txt)s
-                OR mobile_no LIKE %(txt)s
-            )
-        ORDER BY name
-        LIMIT %(start)s, %(page_len)s
-    """, {
-        "txt": f"%{txt}%",
-        "start": cint(start),
-        "page_len": cint(page_len)
-    })
+	return frappe.db.sql("""
+		SELECT
+			name,
+			customer_name,
+			mobile_no
+		FROM `tabCustomer`
+		WHERE
+			docstatus < 2
+			AND (
+				name LIKE %(txt)s
+				OR customer_name LIKE %(txt)s
+				OR mobile_no LIKE %(txt)s
+			)
+		ORDER BY name
+		LIMIT %(start)s, %(page_len)s
+	""", {
+		"txt": f"%{txt}%",
+		"start": cint(start),
+		"page_len": cint(page_len)
+	})
 
 @frappe.whitelist()
 def get_sku_details(sku):
 
-    if not sku:
-        return {}
+	if not sku:
+		return {}
 
-    sku_doc = frappe.db.get_value(
-        "SKU",
-        sku,
-        ["product", "gross_weight", "net_weight"],
-        as_dict=True
-    )
+	sku_doc = frappe.db.get_value(
+		"SKU",
+		sku,
+		["product", "gross_weight", "net_weight"],
+		as_dict=True
+	)
 
-    if not sku_doc:
-        return {}
+	if not sku_doc:
+		return {}
 
-    item_code = sku_doc.product
+	item_code = sku_doc.product
 
-    item_doc = frappe.get_doc("Item", item_code)
+	item_doc = frappe.get_doc("Item", item_code)
 
-    gst_rate = 0
-    item_tax_template = None
+	gst_rate = 0
+	item_tax_template = None
 
-    if item_doc.taxes:
-        for row in item_doc.taxes:
-            if row.item_tax_template:
-                item_tax_template = row.item_tax_template
-                break
+	if item_doc.taxes:
+		for row in item_doc.taxes:
+			if row.item_tax_template:
+				item_tax_template = row.item_tax_template
+				break
 
-    if item_tax_template:
+	if item_tax_template:
 
-        gst_rate = frappe.db.get_value(
-            "Item Tax Template",
-            item_tax_template,
-            "gst_rate"
-        ) or 0
+		gst_rate = frappe.db.get_value(
+			"Item Tax Template",
+			item_tax_template,
+			"gst_rate"
+		) or 0
 
-    return {
-        "item": item_code,
-        "hsn": item_doc.gst_hsn_code,
-        "gross_weight": sku_doc.gross_weight,
-        "net_weight": sku_doc.net_weight,
-        "gst_rate": gst_rate
-    }
+	return {
+		"item": item_code,
+		"hsn": item_doc.gst_hsn_code,
+		"gross_weight": sku_doc.gross_weight,
+		"net_weight": sku_doc.net_weight,
+		"gst_rate": gst_rate
+	}
 
 @frappe.whitelist()
 # def make_credit_note(source_name, target_doc=None):
@@ -403,118 +411,118 @@ def get_sku_details(sku):
 
 def make_credit_note(source_name, target_doc=None):
 
-    # ===============================
-    # HEADER POST PROCESS
-    # ===============================
-    def set_missing_values(source, target):
-        target.is_return = 1
-        target.update_stock = 1
+	# ===============================
+	# HEADER POST PROCESS
+	# ===============================
+	def set_missing_values(source, target):
+		target.is_return = 1
+		target.update_stock = 1
 
-        client_name = (source.client_name or "").strip()
+		client_name = (source.client_name or "").strip()
 
-        if client_name:
-            customer = (
-                frappe.db.exists("Customer", client_name)
-                or frappe.db.get_value(
-                    "Customer",
-                    {"customer_name": client_name},
-                    "name"
-                )
-            )
+		if client_name:
+			customer = (
+				frappe.db.exists("Customer", client_name)
+				or frappe.db.get_value(
+					"Customer",
+					{"customer_name": client_name},
+					"name"
+				)
+			)
 
-            if customer:
-                target.customer = customer
-            else:
-                target.customer_name = client_name
+			if customer:
+				target.customer = customer
+			else:
+				target.customer_name = client_name
 
-        # Optional linkage
-        # target.return_against = source.sales_invoice_ref
+		# Optional linkage
+		# target.return_against = source.sales_invoice_ref
 
-    # ===============================
-    # SKU → SALES INVOICE ITEM
-    # ===============================
-    def map_items(source, target, source_parent):
+	# ===============================
+	# SKU → SALES INVOICE ITEM
+	# ===============================
+	def map_items(source, target, source_parent):
 
-        # 🔁 CORE FIELD MAPPING
-        target.item_code = source.product
+		# 🔁 CORE FIELD MAPPING
+		target.item_code = source.product
 
-        # ⚠️ CRITICAL REVERSAL LOGIC
-        # POS.qty → Sales Invoice custom_gross_weight
-        # POS.gross_weight → Sales Invoice qty
+		# ⚠️ CRITICAL REVERSAL LOGIC
+		# POS.qty → Sales Invoice custom_gross_weight
+		# POS.gross_weight → Sales Invoice qty
 
-        target.qty = -1 * (source.gross_weight or 0)   # Qty = Gross Weight
-        target.custom_gross_weight = source.qty        # Custom Qty field
+		target.qty = -1 * (source.gross_weight or 0)   # Qty = Gross Weight
+		target.custom_gross_weight = source.qty        # Custom Qty field
 
-        # Additional fields
-        target.rate = source.price
-        target.amount = source.final_amount
-        target.discount_amount = source.discount
+		# Additional fields
+		target.rate = source.price
+		target.amount = source.final_amount
+		target.discount_amount = source.discount
 
-        # Custom fields
-        target.custom_sku = source.sku
-        target.custom_net_weight = source.net_weight
+		# Custom fields
+		target.custom_sku = source.sku
+		target.custom_net_weight = source.net_weight
 
-        # Batch & HSN
-        target.batch_no = source.batch_no
-        target.gst_hsn_code = source.hsn
+		# Batch & HSN
+		target.batch_no = source.batch_no
+		target.gst_hsn_code = source.hsn
 
-    # ===============================
-    # PACKING MATERIALS MAPPING
-    # ===============================
-    def map_packing_materials(source, target, source_parent):
+	# ===============================
+	# PACKING MATERIALS MAPPING
+	# ===============================
+	def map_packing_materials(source, target, source_parent):
 
-        target.packing_material = source.packing_material
-        target.qty = source.qty
-        target.rate_optional = source.rate_optional
+		target.packing_material = source.packing_material
+		target.qty = source.qty
+		target.rate_optional = source.rate_optional
 
-    doc = get_mapped_doc(
-        "POS",
-        source_name,
-        {
-            # ===============================
-            # HEADER
-            # ===============================
-            "POS": {
-                "doctype": "Sales Invoice",
-                "field_map": {
-                    # "client_name": "customer", --- IGNORE ---
-                    "mobile_number": "contact_mobile",
-                    "email": "contact_email",
-                    "address": "address_display",
-                    "branch": "set_warehouse",
+	doc = get_mapped_doc(
+		"POS",
+		source_name,
+		{
+			# ===============================
+			# HEADER
+			# ===============================
+			"POS": {
+				"doctype": "Sales Invoice",
+				"field_map": {
+					# "client_name": "customer", --- IGNORE ---
+					"mobile_number": "contact_mobile",
+					"email": "contact_email",
+					"address": "address_display",
+					"branch": "set_warehouse",
 
-                    # Totals
-                    "total_amount_with_gst": "grand_total",
-                    "total_amount_wo_tax": "total"
-                }
-            },
+					# Totals
+					"total_amount_with_gst": "grand_total",
+					"total_amount_wo_tax": "total"
+				}
+			},
 
-            # ===============================
-            # ITEMS TABLE
-            # ===============================
-            "POS SKU Details": {
-                "doctype": "Sales Invoice Item",
-                "postprocess": map_items
-            },
+			# ===============================
+			# ITEMS TABLE
+			# ===============================
+			"POS SKU Details": {
+				"doctype": "Sales Invoice Item",
+				"postprocess": map_items
+			},
 
-            # ===============================
-            # PACKING MATERIAL TABLE
-            # POS: packing_materials
-            # SI: custom_packing_materials
-            # ===============================
-            "Packing Materials": {
-                "doctype": "Packing Materials",
-                "field_map": {
-                    # direct mapping (same fieldnames)
-                    "packing_material": "packing_material",
-                    "qty": "qty",
-                    "rate_optional": "rate_optional"
-                }
-            }
+			# ===============================
+			# PACKING MATERIAL TABLE
+			# POS: packing_materials
+			# SI: custom_packing_materials
+			# ===============================
+			"Packing Materials": {
+				"doctype": "Packing Materials",
+				"field_map": {
+					# direct mapping (same fieldnames)
+					"packing_material": "packing_material",
+					"qty": "qty",
+					"rate_optional": "rate_optional"
+				}
+			}
 
-        },
-        target_doc,
-        set_missing_values
-    )
+		},
+		target_doc,
+		set_missing_values
+	)
 
-    return doc
+	return doc
