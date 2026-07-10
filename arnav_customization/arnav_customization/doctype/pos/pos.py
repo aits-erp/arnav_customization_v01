@@ -109,12 +109,6 @@ class POS(Document):
 				"batch_no": batch_no
 			})
 
-			# stock_entry.append("items", {
-			# 	"item_code": row.packing_material,
-			# 	"qty": row.qty,
-			# 	"s_warehouse": self.branch
-			# })
-
 		if not stock_entry.items:
 			return
 
@@ -176,7 +170,6 @@ class POS(Document):
 
 		stock_entry = frappe.new_doc("Stock Entry")
 
-		# ✅ FIX ADDED HERE
 		stock_entry.stock_entry_type = "Material Issue"
 
 		stock_entry.company = frappe.defaults.get_user_default("Company")
@@ -222,7 +215,6 @@ class POS(Document):
 
 			total_price += amount
 
-		# self.total_price = flt(total_price, self.precision("total_price"))
 		self.total_price = money(total_price)
 
 		# ================================
@@ -238,11 +230,8 @@ class POS(Document):
 				/ total_price
 			) * 100
 
-		# self.discount_percentage = flt(
-		# 	discount_percentage,
-		# 	self.precision("discount_percentage")
-		# )
 		self.discount_percentage = money(discount_percentage)
+
 		# ================================
 		# APPLY ROW CALCULATIONS
 		# ================================
@@ -254,16 +243,8 @@ class POS(Document):
 
 			amount = money((row.price or 0) * (row.qty or 0))
 
-			# row.discount = flt(
-			# 	(amount * discount_percentage) / 100,
-			# 	row.precision("discount")
-			# )
 			row.discount = money((amount * discount_percentage) / 100)
 
-			# row.final_amount = flt(
-			# 	amount - row.discount,
-			# 	row.precision("final_amount")
-			# )
 			row.final_amount = money(amount - row.discount)
 
 			if row.final_amount < 0:
@@ -299,10 +280,6 @@ class POS(Document):
 
 			row.gst_percentage = gst_rate
 
-			# row.gst_amount = flt(
-			# 	(row.final_amount * gst_rate) / 100,
-			# 	row.precision("gst_amount")
-			# )
 			row.gst_amount = money((row.final_amount * gst_rate) / 100)
 
 			total_amount += row.final_amount
@@ -310,39 +287,37 @@ class POS(Document):
 
 		packing = self.handling_and_packaging_charges or 0
 
-		# self.total_amount_wo_tax = flt(
-		# 	total_amount + packing,
-		# 	self.precision("total_amount_wo_tax")
-		# )
 		self.total_amount_wo_tax = money(
 			total_amount + packing
 		)
 
-		# self.total_amount_with_gst = money(
-		# 	total_amount + total_gst + packing
-		# )
+		# ================================
+		# ROUND OFF — AUTO or MANUAL
+		# ================================
+		# NEW FIELD REQUIRED: auto_calculate_round_off (Check, default 1)
+		# - Checked   → system auto-calculates custom_round_off (old behavior)
+		# - Unchecked → user enters custom_round_off manually, system just uses it
+		# ================================
 
 		original_total = money(
-		    total_amount + total_gst + packing
+			total_amount + total_gst + packing
 		)
 
-		rounded_total = round(original_total)
-
-		self.custom_round_off = money(
-			rounded_total - original_total
-		)
+		if cint(self.auto_calculate_round_off):
+			# AUTO MODE
+			rounded_total = round(original_total)
+			self.custom_round_off = money(rounded_total - original_total)
+		else:
+			# MANUAL MODE — trust whatever value user typed
+			self.custom_round_off = money(self.custom_round_off or 0)
 
 		self.total_amount_with_gst = money(
-			rounded_total
+			original_total + (self.custom_round_off or 0)
 		)
 
 		self.balance_amount = money(
 			self.total_amount_with_gst - (self.paid_amount or 0)
 		)
-
-		# self.balance_amount = money(
-		# 	self.total_amount_with_gst - (self.paid_amount or 0)
-		# )
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
@@ -415,18 +390,6 @@ def get_sku_details(sku):
 	}
 
 @frappe.whitelist()
-# def make_credit_note(source_name, target_doc=None):
-
-#     # ===============================
-#     # HEADER POST PROCESS
-#     # ===============================
-#     def set_missing_values(source, target):
-#         target.is_return = 1
-#         target.update_stock = 1
-
-#         # Optional linkage
-#         # target.return_against = source.sales_invoice_ref
-
 def make_credit_note(source_name, target_doc=None):
 
 	# ===============================
@@ -453,34 +416,23 @@ def make_credit_note(source_name, target_doc=None):
 			else:
 				target.customer_name = client_name
 
-		# Optional linkage
-		# target.return_against = source.sales_invoice_ref
-
 	# ===============================
 	# SKU → SALES INVOICE ITEM
 	# ===============================
 	def map_items(source, target, source_parent):
 
-		# 🔁 CORE FIELD MAPPING
 		target.item_code = source.product
 
-		# ⚠️ CRITICAL REVERSAL LOGIC
-		# POS.qty → Sales Invoice custom_gross_weight
-		# POS.gross_weight → Sales Invoice qty
+		target.qty = -1 * (source.gross_weight or 0)
+		target.custom_gross_weight = source.qty
 
-		target.qty = -1 * (source.gross_weight or 0)   # Qty = Gross Weight
-		target.custom_gross_weight = source.qty        # Custom Qty field
-
-		# Additional fields
 		target.rate = source.price
 		target.amount = source.final_amount
 		target.discount_amount = source.discount
 
-		# Custom fields
 		target.custom_sku = source.sku
 		target.custom_net_weight = source.net_weight
 
-		# Batch & HSN
 		target.batch_no = source.batch_no
 		target.gst_hsn_code = source.hsn
 
@@ -497,41 +449,27 @@ def make_credit_note(source_name, target_doc=None):
 		"POS",
 		source_name,
 		{
-			# ===============================
-			# HEADER
-			# ===============================
 			"POS": {
 				"doctype": "Sales Invoice",
 				"field_map": {
-					# "client_name": "customer", --- IGNORE ---
 					"mobile_number": "contact_mobile",
 					"email": "contact_email",
 					"address": "address_display",
 					"branch": "set_warehouse",
 
-					# Totals
 					"total_amount_with_gst": "grand_total",
 					"total_amount_wo_tax": "total"
 				}
 			},
 
-			# ===============================
-			# ITEMS TABLE
-			# ===============================
 			"POS SKU Details": {
 				"doctype": "Sales Invoice Item",
 				"postprocess": map_items
 			},
 
-			# ===============================
-			# PACKING MATERIAL TABLE
-			# POS: packing_materials
-			# SI: custom_packing_materials
-			# ===============================
 			"Packing Materials": {
 				"doctype": "Packing Materials",
 				"field_map": {
-					# direct mapping (same fieldnames)
 					"packing_material": "packing_material",
 					"qty": "qty",
 					"rate_optional": "rate_optional"
