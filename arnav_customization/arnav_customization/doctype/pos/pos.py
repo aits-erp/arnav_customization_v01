@@ -318,13 +318,31 @@ class POS(Document):
 			total_amount + packing
 		)
 
+		# self.total_amount_with_gst = money(
+		# 	total_amount + total_gst + packing
+		# )
+
+		original_total = money(
+		    total_amount + total_gst + packing
+		)
+
+		rounded_total = round(original_total)
+
+		self.custom_round_off = money(
+			rounded_total - original_total
+		)
+
 		self.total_amount_with_gst = money(
-			total_amount + total_gst + packing
+			rounded_total
 		)
 
 		self.balance_amount = money(
 			self.total_amount_with_gst - (self.paid_amount or 0)
 		)
+
+		# self.balance_amount = money(
+		# 	self.total_amount_with_gst - (self.paid_amount or 0)
+		# )
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
