@@ -20,7 +20,10 @@ def process(doc, method):
         # preserve gross weight separately
         row.custom_gross_weight = float(sku.qty or 0)
 
-        # IMPORTANT
+        # Use the app's legacy batch-field flow.  If this is left false,
+        # ERPNext can auto-create a Serial and Batch Bundle in addition to
+        # batch_no and rejects the row because both are populated.
+        row.use_serial_batch_fields = 1
         row.serial_and_batch_bundle = None
 
         row.batch_no = sku.batch_no or row.custom_sku
@@ -61,4 +64,5 @@ def material_transfer_qty_handler(doc, method):
         row.transfer_qty = actual_qty
 
         # prevent bundle validation issue
+        row.use_serial_batch_fields = 1
         row.serial_and_batch_bundle = None

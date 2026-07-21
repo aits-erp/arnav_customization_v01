@@ -157,6 +157,11 @@ class POS(Document):
 				"item_code": item_code,
 				"qty": qty,
 				"s_warehouse": self.branch,
+				# This app uses the legacy Batch field for SKU traceability. Without
+				# this flag ERPNext can also create a Serial and Batch Bundle, which
+				# conflicts with a populated batch_no.
+				"use_serial_batch_fields": 1,
+				"serial_and_batch_bundle": None,
 				"batch_no": batch_no
 			})
 
@@ -235,6 +240,10 @@ class POS(Document):
 				"item_code": sku.product,
 				"qty": row.qty,
 				"s_warehouse": self.branch,
+				# Use only the legacy batch fields. ERPNext must not auto-create a
+				# Serial and Batch Bundle for this row as well.
+				"use_serial_batch_fields": 1,
+				"serial_and_batch_bundle": None,
 				"batch_no": sku.batch_no,
 			})
 
