@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, get_datetime
 from frappe.model.mapper import get_mapped_doc
 
 def money(value):
@@ -43,6 +43,10 @@ class POS(Document):
 				f"Total Cash entered: ₹{total_cash}"
 			)
 
+		# The POS grid is client-controlled. Validate every SKU against its
+		# authoritative SKU record before any stock movement is created.
+		self.validate_sku_details_for_stock_issue()
+
 		# 3️⃣ Create Stock Entry for Packing Materials
 		self.create_packing_material_issue()
 
@@ -50,14 +54,61 @@ class POS(Document):
 		self.create_stock_out_entry()
 
 	def on_cancel(self):
-		if self.stock_entry_reference:
+		# Reverse SKU stock first, then packing stock.  Previously only the
+		# packing entry was cancelled, leaving the SKU stock permanently issued.
+		self.cancel_linked_stock_entry(self.stock_out_ref)
+		self.cancel_linked_stock_entry(self.stock_entry_reference)
 
-			if frappe.db.exists("Stock Entry", self.stock_entry_reference):
+		for row in self.sku_details:
+			if row.sku and frappe.db.exists("SKU", row.sku):
+				frappe.db.set_value("SKU", row.sku, "status", "Available", update_modified=False)
 
-				se = frappe.get_doc("Stock Entry", self.stock_entry_reference)
+	def cancel_linked_stock_entry(self, stock_entry_name):
+		if not stock_entry_name or not frappe.db.exists("Stock Entry", stock_entry_name):
+			return
 
-				if se.docstatus == 1:
-					se.cancel()
+		stock_entry = frappe.get_doc("Stock Entry", stock_entry_name)
+		if stock_entry.docstatus == 1:
+			stock_entry.cancel()
+
+	def validate_sku_details_for_stock_issue(self):
+		"""Validate and normalize POS rows from the database SKU record."""
+		if not self.sku_details:
+			frappe.throw("At least one SKU detail is required before submitting POS.")
+
+		seen_skus = set()
+		for row in self.sku_details:
+			if not row.sku:
+				frappe.throw(f"SKU is required in row {row.idx}.")
+			if row.sku in seen_skus:
+				frappe.throw(f"SKU {row.sku} is entered more than once in this POS.")
+			seen_skus.add(row.sku)
+
+			if flt(row.qty) <= 0:
+				frappe.throw(f"Quantity must be greater than zero for SKU {row.sku} (row {row.idx}).")
+
+			sku = frappe.db.get_value(
+				"SKU",
+				row.sku,
+				["name", "product", "batch_no", "status"],
+				as_dict=True,
+			)
+			if not sku:
+				frappe.throw(f"SKU {row.sku} in row {row.idx} no longer exists.")
+			if not sku.product:
+				frappe.throw(f"SKU {row.sku} has no linked Item/Product.")
+			if not sku.batch_no:
+				frappe.throw(f"SKU {row.sku} has no linked Batch. Please correct the SKU record before sale.")
+			if sku.status != "Available":
+				frappe.throw(f"SKU {row.sku} is {sku.status or 'not available'} and cannot be sold.")
+			if row.product and row.product != sku.product:
+				frappe.throw(
+					f"SKU {row.sku} belongs to Item {sku.product}, but row {row.idx} contains {row.product}."
+				)
+
+			# Use database values for both display and the later Stock Entry.
+			row.product = sku.product
+			row.batch_no = sku.batch_no
 
 	def create_packing_material_issue(self):
 		if not self.branch:
@@ -165,39 +216,59 @@ class POS(Document):
 		if not self.branch:
 			frappe.throw("No Branch")
 
-		if not self.sku_details:
-			frappe.throw("No SKU details")
-
 		stock_entry = frappe.new_doc("Stock Entry")
 
 		stock_entry.stock_entry_type = "Material Issue"
 
 		stock_entry.company = frappe.defaults.get_user_default("Company")
-		stock_entry.date = frappe.utils.nowdate()
+		posting_datetime = get_datetime(self.date) if self.date else None
+		stock_entry.posting_date = posting_datetime.date() if posting_datetime else frappe.utils.nowdate()
+		stock_entry.posting_time = posting_datetime.time() if posting_datetime else frappe.utils.nowtime()
+		stock_entry.set_posting_time = 1
 
 		for row in self.sku_details:
-
-			if not row.sku or not row.qty:
-				continue
-
-			item_code = frappe.db.get_value("SKU", row.sku, "product")
-
-			if not item_code:
-				continue
+			sku = frappe.db.get_value(
+				"SKU", row.sku, ["product", "batch_no"], as_dict=True
+			)
 
 			stock_entry.append("items", {
-				"item_code": item_code,
+				"item_code": sku.product,
 				"qty": row.qty,
-				"s_warehouse": self.branch
+				"s_warehouse": self.branch,
+				"batch_no": sku.batch_no,
 			})
 
 		if not stock_entry.items:
 			frappe.throw("No items added → Stock Entry not created")
 
-		stock_entry.insert(ignore_permissions=True)
-		stock_entry.submit()
+		try:
+			stock_entry.insert(ignore_permissions=True)
+			stock_entry.submit()
+		except frappe.ValidationError as exc:
+			frappe.log_error(
+				frappe.get_traceback(),
+				f"POS Stock Issue Failed: {self.name or 'new POS'}",
+			)
+			frappe.throw(
+				"Unable to issue the selected SKU batch from warehouse {0}.<br><br>{1}"
+				.format(self.branch, frappe.utils.strip_html(str(exc))),
+				title="POS Stock Not Available",
+			)
+		except Exception:
+			frappe.log_error(
+				frappe.get_traceback(),
+				f"Unexpected POS Stock Issue Error: {self.name or 'new POS'}",
+			)
+			frappe.throw(
+				"An unexpected error occurred while creating the POS stock issue. "
+				"Technical details have been logged for the administrator.",
+				title="POS Stock Issue Failed",
+			)
 
 		self.stock_out_ref = stock_entry.name
+
+		for row in self.sku_details:
+			frappe.db.set_value("SKU", row.sku, "status", "Sold", update_modified=False)
 
 		frappe.msgprint(f"Stock Entry Created: {stock_entry.name}")
 

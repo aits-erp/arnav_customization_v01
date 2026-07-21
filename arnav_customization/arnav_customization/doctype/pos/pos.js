@@ -882,17 +882,22 @@ frappe.ui.form.on('POS SKU Details', {
         let row = locals[cdt][cdn];
         if (!row.sku) return;
 
-        frappe.model.set_value(cdt, cdn, "batch_no", row.sku);
-
         frappe.db.get_value("SKU", row.sku,
-            ["product", "gross_weight", "net_weight"]
+            ["product", "gross_weight", "net_weight", "batch_no"]
         ).then(r => {
 
-            if (!r.message) return;
+            if (!r.message) {
+                frappe.throw(__("The selected SKU no longer exists."));
+            }
 
             let item = r.message.product;
 
+            if (!r.message.batch_no) {
+                frappe.throw(__("The selected SKU has no linked Batch. Please contact an administrator."));
+            }
+
             frappe.model.set_value(cdt, cdn, "product", item);
+            frappe.model.set_value(cdt, cdn, "batch_no", r.message.batch_no);
             frappe.model.set_value(cdt, cdn, "gross_weight", r.message.gross_weight);
             frappe.model.set_value(cdt, cdn, "net_weight", r.message.net_weight);
 
@@ -928,6 +933,16 @@ frappe.ui.form.on('POS SKU Details', {
             }
 
             apply_global_discount(frm);
+        }).catch(error => {
+            frappe.model.set_value(cdt, cdn, "product", "");
+            frappe.model.set_value(cdt, cdn, "batch_no", "");
+            frappe.msgprint({
+                title: __("SKU Lookup Failed"),
+                indicator: "red",
+                message: error && error.message
+                    ? error.message
+                    : __("Unable to load SKU details. Please select the SKU again.")
+            });
         });
     }
 
