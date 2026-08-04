@@ -120,6 +120,9 @@ class POS(Document):
 		# Create Stock Entry
 		stock_entry = frappe.new_doc("Stock Entry")
 		stock_entry.stock_entry_type = "Material Issue"
+
+		stock_entry.custom_pos = self.name
+
 		stock_entry.company = frappe.defaults.get_user_default("Company")
 		stock_entry.posting_date = self.posting_date if hasattr(self, "posting_date") else frappe.utils.nowdate()
 		stock_entry.posting_time = frappe.utils.nowtime()
@@ -224,6 +227,7 @@ class POS(Document):
 		stock_entry = frappe.new_doc("Stock Entry")
 
 		stock_entry.stock_entry_type = "Material Issue"
+		stock_entry.custom_pos = self.name
 
 		stock_entry.company = frappe.defaults.get_user_default("Company")
 		posting_datetime = get_datetime(self.date) if self.date else None
@@ -245,6 +249,7 @@ class POS(Document):
 				"use_serial_batch_fields": 1,
 				"serial_and_batch_bundle": None,
 				"batch_no": sku.batch_no,
+				"custom_sku": row.sku,
 			})
 
 		if not stock_entry.items:
