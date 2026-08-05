@@ -15,10 +15,22 @@ def process(doc, method):
 
         # DEFAULT UI DISPLAY
         # show gross weight in qty initially
-        row.qty = float(sku.gross_weight or 0)
+        # row.qty = float(sku.gross_weight or 0)
 
         # preserve gross weight separately
-        row.custom_gross_weight = float(sku.qty or 0)
+        # row.custom_gross_weight = float(sku.qty or 0)
+
+        # `qty` is ERPNext's stock movement quantity (normally 1 per RFID
+        # SKU).  Never replace it with the jewellery's gross weight: doing
+        # so makes a one-piece sale issue (for example) 4.330 stock units.
+        # POS supplies qty itself; direct/manual Stock Entries receive the
+        # SKU's configured stock quantity as a default.
+        if not row.qty:
+            row.qty = float(sku.qty or 1)
+
+        # Gross weight is reference data only and must stay out of ERPNext's
+        # stock quantity fields.
+        row.custom_gross_weight = float(sku.gross_weight or 0)
 
         # Use the app's legacy batch-field flow.  If this is left false,
         # ERPNext can auto-create a Serial and Batch Bundle in addition to
@@ -45,24 +57,35 @@ def material_transfer_qty_handler(doc, method):
     if not doc.custom_use_qty_mode:
         return
 
+    # for row in doc.items:
+
+    #     # skip invalid rows
+    #     if not row.item_code:
+    #         continue
+
+    #     # preserve gross weight before switching
+    #     if row.qty and not row.custom_gross_weight:
+    #         row.custom_gross_weight = row.qty
+
+    #     # actual stock movement qty
+    #     actual_qty = float(row.custom_gross_weight or 1)
+
+    #     # IMPORTANT:
+    #     # ERP stock movement fields
+    #     row.qty = actual_qty
+    #     row.transfer_qty = actual_qty
+
+    #     # prevent bundle validation issue
+    #     row.use_serial_batch_fields = 1
+    #     row.serial_and_batch_bundle = None
+    
     for row in doc.items:
 
-        # skip invalid rows
-        if not row.item_code:
+        # Only SKU rows use this app's legacy batch-field compatibility
+        # setting.  Do not derive qty/transfer_qty from gross weight here;
+        # ERPNext must use the quantity already supplied by POS or the user.
+        if not row.custom_sku:
             continue
 
-        # preserve gross weight before switching
-        if row.qty and not row.custom_gross_weight:
-            row.custom_gross_weight = row.qty
-
-        # actual stock movement qty
-        actual_qty = float(row.custom_gross_weight or 1)
-
-        # IMPORTANT:
-        # ERP stock movement fields
-        row.qty = actual_qty
-        row.transfer_qty = actual_qty
-
-        # prevent bundle validation issue
         row.use_serial_batch_fields = 1
         row.serial_and_batch_bundle = None

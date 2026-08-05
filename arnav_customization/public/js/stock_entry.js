@@ -21,10 +21,15 @@ frappe.ui.form.on("Stock Entry Detail", {
                 frappe.model.set_value(cdt, cdn, "item_code", d.item_code);
 
                 // UI display qty as gross weight
-                frappe.model.set_value(cdt, cdn, "qty", d.gross_weight);
+                // frappe.model.set_value(cdt, cdn, "qty", d.gross_weight);
 
-                // preserve separately
-                frappe.model.set_value(cdt, cdn, "custom_gross_weight", d.qty);
+                // // preserve separately
+                // frappe.model.set_value(cdt, cdn, "custom_gross_weight", d.qty);
+
+                // `qty` is the ERPNext stock movement quantity. Gross weight
+                // is stored separately and must never be used as stock qty.
+                frappe.model.set_value(cdt, cdn, "qty", d.qty || 1);
+                frappe.model.set_value(cdt, cdn, "custom_gross_weight", d.gross_weight);
 
                 frappe.model.set_value(cdt, cdn, "batch_no", d.batch_no);
 
