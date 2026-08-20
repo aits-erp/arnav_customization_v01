@@ -31,6 +31,25 @@ class SKUMaster(Document):
         self.apply_supplier_margin()  
         self.create_repack_stock_entry()
 
+    def on_update_after_submit(self):
+        for row in self.sku_details:
+            if not row.sku or not frappe.db.exists("SKU", row.sku):
+                continue
+
+            frappe.db.set_value(
+                "SKU",
+                row.sku,
+                {
+                    "product": row.product,
+                    "d_no": row.d_no,
+                    "selling_price": row.selling_price,
+                    "gross_weight": row.gross_weight,
+                    "net_weight": row.net_weight,
+                    "huid": row.huid,
+                },
+                update_modified=False,
+            )
+
     def on_cancel(self):
         if getattr(self, "stock_entry", None):
             se = frappe.get_doc("Stock Entry", self.stock_entry)
