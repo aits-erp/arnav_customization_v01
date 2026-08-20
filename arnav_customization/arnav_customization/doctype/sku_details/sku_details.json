@@ -96,11 +96,13 @@
    "label": "Dealer Code"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "d_no",
    "fieldtype": "Data",
    "label": "D. No."
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "huid",
    "fieldtype": "Data",
    "label": "HUID"
@@ -158,8 +160,8 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-18 12:36:26.060390",
- "modified_by": "Administrator",
+ "modified": "2026-08-20 15:18:07.857167",
+ "modified_by": "nikhil@aitsind.com",
  "module": "arnav_customization",
  "name": "SKU Details",
  "owner": "Administrator",

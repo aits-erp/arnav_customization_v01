@@ -4,12 +4,12 @@ from frappe.model.document import Document
 
 class SKU(Document):
 
-    def before_save(self):
-        self.set_d_no()
+    # def before_save(self):
+    #     self.set_d_no()
 
-    def onload(self):
-        # ensures value is visible even if old record is opened
-        self.set_d_no()
+    # def onload(self):
+    #     # ensures value is visible even if old record is opened
+    #     self.set_d_no()
 
     def set_d_no(self):
         if not self.sku_master or not self.name:
