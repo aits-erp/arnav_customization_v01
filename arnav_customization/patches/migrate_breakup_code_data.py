@@ -14,9 +14,9 @@ def _copy_existing_code_values(doctype, old_field, new_field):
 	table = f"tab{doctype}"
 
 	if not (
-		frappe.db.table_exists(table)
-		and frappe.db.has_column(table, old_field)
-		and frappe.db.has_column(table, new_field)
+		frappe.db.table_exists(doctype)
+		and frappe.db.has_column(doctype, old_field)
+		and frappe.db.has_column(doctype, new_field)
 	):
 		return
 
@@ -32,7 +32,7 @@ def _copy_existing_code_values(doctype, old_field, new_field):
 def _migrate_breakup_attribute_types(doctype):
 	table = f"tab{doctype}"
 
-	if not frappe.db.table_exists(table):
+	if not frappe.db.table_exists(doctype):
 		return
 
 	frappe.db.sql(
