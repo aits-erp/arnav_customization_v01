@@ -24,6 +24,14 @@ fixtures = [
     }
 ]
 
+# Frappe's orphan-DocType cleanup can misidentify newly introduced standard
+# DocTypes during migrate. Explicit controller registration keeps these source
+# backed DocTypes available after the cleanup phase.
+override_doctype_class = {
+    "ELEMENT_CODE": "arnav_customization.breakup_doctypes.doctype.element_code.element_code.ElementCode",
+    "SET_CODE": "arnav_customization.breakup_doctypes.doctype.set_code.set_code.SetCode",
+}
+
 
 
 doc_events = {
