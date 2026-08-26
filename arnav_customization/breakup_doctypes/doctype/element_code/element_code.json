@@ -1,18 +1,18 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:product_type",
+ "autoname": "field:element_code",
  "creation": "2026-03-06 12:17:32.088400",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "product_type"
+  "element_code"
  ],
  "fields": [
   {
-   "fieldname": "product_type",
+   "fieldname": "element_code",
    "fieldtype": "Data",
-   "label": "Product Type",
+   "label": "Element Code",
    "unique": 1
   }
  ],
@@ -22,7 +22,7 @@
  "modified": "2026-03-06 12:18:08.882634",
  "modified_by": "Administrator",
  "module": "Breakup doctypes",
- "name": "PRODUCT_TYPE",
+ "name": "ELEMENT_CODE",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [

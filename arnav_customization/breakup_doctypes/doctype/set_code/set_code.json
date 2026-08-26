@@ -5,13 +5,13 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "collection_name"
+  "set_code"
  ],
  "fields": [
   {
-   "fieldname": "collection_name",
+   "fieldname": "set_code",
    "fieldtype": "Data",
-   "label": "Collection Name"
+   "label": "Set Code"
   }
  ],
  "grid_page_length": 50,
@@ -20,7 +20,7 @@
  "modified": "2026-02-19 23:29:52.614871",
  "modified_by": "Administrator",
  "module": "Breakup doctypes",
- "name": "COLLECTION",
+ "name": "SET_CODE",
  "owner": "Administrator",
  "permissions": [
   {

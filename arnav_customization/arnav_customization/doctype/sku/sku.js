@@ -34,10 +34,10 @@ frappe.ui.form.on("SKU", {
                     label: "Attribute Type",
                     fieldtype: "Select",
                     options: `
-PRODUCT_TYPE
+ELEMENT_CODE
 PURITY
 STONE
-COLLECTION
+SET_CODE
 DESIGN
 VISUAL
 USAGE

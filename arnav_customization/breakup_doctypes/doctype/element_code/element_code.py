@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class PRODUCT_TYPE(Document):
+class ElementCode(Document):
 	pass

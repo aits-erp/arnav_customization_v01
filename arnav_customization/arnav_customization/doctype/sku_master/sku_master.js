@@ -440,10 +440,10 @@ function open_dynamic_breakup_dialog(frm, row) {
             label: "Attribute Type",
             fieldtype: "Select",
            options: `
-PRODUCT_TYPE
+ELEMENT_CODE
 PURITY
 STONE
-COLLECTION
+SET_CODE
 DESIGN
 VISUAL
 USAGE
@@ -656,4 +656,3 @@ frappe.ui.form.on("SKU Master", {
 //         });
 //     }
 // });
- 

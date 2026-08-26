@@ -14,6 +14,8 @@ class SKUMaster(Document):
                 row.sku = None
                 row.old_sku_ref = None
     def validate(self):
+        self.validate_required_codes()
+
         total_out_weight = flt(self.net_quantiity)
         total_in_weight = sum(flt(row.gross_weight) for row in self.sku_details)
 
@@ -25,12 +27,27 @@ class SKUMaster(Document):
 
                 Please reduce the Gross Weight in SKU Details before saving.
                 """
-            )     
+            )
+
+    def validate_required_codes(self):
+        required_codes = {
+            "Element Code": "element_code",
+            "Set Code": "set_code",
+            "Design Code": "design_code",
+        }
+
+        for row in self.sku_details:
+            for label, fieldname in required_codes.items():
+                if not str(row.get(fieldname) or "").strip():
+                    frappe.throw(f"{label} is required in SKU Details row {row.idx}.")
 
     def on_submit(self):
-        self.apply_supplier_margin()  
+        self.sync_breakup_code_rows()
+        self.apply_supplier_margin()
         self.create_repack_stock_entry()
 
+    def sync_breakup_code_rows(self):
+        sync_breakup_code_rows(self.name, self.sku_details)
     def on_update_after_submit(self):
         for row in self.sku_details:
             if not row.sku or not frappe.db.exists("SKU", row.sku):
@@ -46,9 +63,14 @@ class SKUMaster(Document):
                     "gross_weight": row.gross_weight,
                     "net_weight": row.net_weight,
                     "huid": row.huid,
+                    "element_code": row.element_code,
+                    "set_code": row.set_code,
+                    "design_code": row.design_code,
                 },
                 update_modified=False,
             )
+
+        self.sync_breakup_code_rows()
 
     def on_cancel(self):
         if getattr(self, "stock_entry", None):
@@ -264,6 +286,9 @@ class SKUMaster(Document):
         
             sku_doc.sku_code = batch_name
             sku_doc.product = row.product
+            sku_doc.element_code = row.element_code
+            sku_doc.set_code = row.set_code
+            sku_doc.design_code = row.design_code
             sku_doc.batch_no = batch_name
             sku_doc.warehouse = self.warehouse
 
@@ -446,6 +471,51 @@ BREAKUP_FIELDS = [
     "unit"
 ]
 
+BREAKUP_CODE_ATTRIBUTE_MAP = {
+    "ELEMENT_CODE": "element_code",
+    "SET_CODE": "set_code",
+}
+
+
+def sync_breakup_code_rows(sku_master, sku_details=None):
+    """Keep Element and Set Code values available in each SKU's breakup data."""
+    if sku_details is None:
+        sku_details = frappe.get_all(
+            "SKU Details",
+            filters={"parent": sku_master},
+            fields=["name", "breakup_ref", *BREAKUP_CODE_ATTRIBUTE_MAP.values()],
+        )
+
+    for row in sku_details:
+        breakup_ref = row.get("breakup_ref")
+        if not breakup_ref:
+            breakup_ref = frappe.generate_hash(length=12)
+            row.breakup_ref = breakup_ref
+
+            if row.get("name"):
+                frappe.db.set_value("SKU Details", row.name, "breakup_ref", breakup_ref)
+
+        # Do not rewrite historical breakup rows that predate the mandatory fields.
+        if not all(str(row.get(fieldname) or "").strip() for fieldname in BREAKUP_CODE_ATTRIBUTE_MAP.values()):
+            continue
+
+        frappe.db.delete(
+            "SKU Breakup",
+            {
+                "sku_master": sku_master,
+                "breakup_ref": breakup_ref,
+                "attribute_type": ["in", list(BREAKUP_CODE_ATTRIBUTE_MAP)],
+            },
+        )
+
+        for attribute_type, fieldname in BREAKUP_CODE_ATTRIBUTE_MAP.items():
+            doc = frappe.new_doc("SKU Breakup")
+            doc.sku_master = sku_master
+            doc.breakup_ref = breakup_ref
+            doc.attribute_type = attribute_type
+            doc.attribute_value = str(row.get(fieldname)).strip()
+            doc.insert(ignore_permissions=True)
+
 
 def _resolve_breakup_ref(sku_master, breakup_ref):
     if breakup_ref and frappe.db.exists("SKU Breakup", {
@@ -506,6 +576,10 @@ def save_breakup_rows(sku_master, breakup_ref, rows):
     import json
 
     rows = json.loads(rows)
+    rows = [
+        row for row in rows
+        if row.get("attribute_type") not in BREAKUP_CODE_ATTRIBUTE_MAP
+    ]
     requested_ref = breakup_ref
     breakup_ref = _resolve_breakup_ref(sku_master, breakup_ref)
     breakup_ref = breakup_ref or frappe.generate_hash(length=12)
@@ -531,6 +605,9 @@ def save_breakup_rows(sku_master, breakup_ref, rows):
                 doc.set(fname, r.get(fname))
 
         doc.insert(ignore_permissions=True)
+
+    # Element and Set Code always come from the SKU Details row, not dialog edits.
+    sync_breakup_code_rows(sku_master)
 
     # Repair stale references after safely resolving an old single-item master.
     if requested_ref and requested_ref != breakup_ref:

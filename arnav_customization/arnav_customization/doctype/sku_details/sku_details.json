@@ -8,6 +8,9 @@
  "field_order": [
   "sku",
   "product",
+  "element_code",
+  "set_code",
+  "design_code",
   "gross_weight",
   "cost_price",
   "selling_price",
@@ -40,6 +43,29 @@
    "fieldtype": "Link",
    "label": "Product",
    "options": "Item"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "element_code",
+   "fieldtype": "Link",
+   "label": "Element Code",
+   "options": "ELEMENT_CODE",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "set_code",
+   "fieldtype": "Link",
+   "label": "Set Code",
+   "options": "SET_CODE",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "design_code",
+   "fieldtype": "Data",
+   "label": "Design Code",
+   "reqd": 1
   },
   {
    "allow_on_submit": 1,
