@@ -49,23 +49,20 @@
    "fieldname": "element_code",
    "fieldtype": "Link",
    "label": "Element Code",
-   "options": "ELEMENT_CODE",
-   "reqd": 1
+   "options": "ELEMENT_CODE"
   },
   {
    "allow_on_submit": 1,
    "fieldname": "set_code",
    "fieldtype": "Link",
    "label": "Set Code",
-   "options": "SET_CODE",
-   "reqd": 1
+   "options": "SET_CODE"
   },
   {
    "allow_on_submit": 1,
    "fieldname": "design_code",
    "fieldtype": "Data",
-   "label": "Design Code",
-   "reqd": 1
+   "label": "Design Code"
   },
   {
    "allow_on_submit": 1,

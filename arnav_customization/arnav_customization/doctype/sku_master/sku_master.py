@@ -14,7 +14,7 @@ class SKUMaster(Document):
                 row.sku = None
                 row.old_sku_ref = None
     def validate(self):
-        self.validate_required_codes()
+        # self.validate_required_codes()
 
         total_out_weight = flt(self.net_quantiity)
         total_in_weight = sum(flt(row.gross_weight) for row in self.sku_details)
@@ -29,17 +29,17 @@ class SKUMaster(Document):
                 """
             )
 
-    def validate_required_codes(self):
-        required_codes = {
-            "Element Code": "element_code",
-            "Set Code": "set_code",
-            "Design Code": "design_code",
-        }
+    # def validate_required_codes(self):
+    #     required_codes = {
+    #         "Element Code": "element_code",
+    #         "Set Code": "set_code",
+    #         "Design Code": "design_code",
+    #     }
 
-        for row in self.sku_details:
-            for label, fieldname in required_codes.items():
-                if not str(row.get(fieldname) or "").strip():
-                    frappe.throw(f"{label} is required in SKU Details row {row.idx}.")
+    #     for row in self.sku_details:
+    #         for label, fieldname in required_codes.items():
+    #             if not str(row.get(fieldname) or "").strip():
+    #                 frappe.throw(f"{label} is required in SKU Details row {row.idx}.")
 
     def on_submit(self):
         self.sync_breakup_code_rows()
