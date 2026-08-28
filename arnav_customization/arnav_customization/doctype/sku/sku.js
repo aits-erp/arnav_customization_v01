@@ -97,7 +97,11 @@ TARGET`,
                             breakup_ref: frm.doc.breakup_ref,
                             rows: JSON.stringify(values.breakup_table || [])
                         },
-                        callback() {
+                        callback(r) {
+                            const saved_breakup = r.message || {};
+                            if (saved_breakup.breakup_ref && saved_breakup.breakup_ref !== frm.doc.breakup_ref) {
+                                frm.set_value("breakup_ref", saved_breakup.breakup_ref);
+                            }
                             frappe.msgprint("Breakup updated successfully");
                             dialog.hide();
                             frm.reload_doc();

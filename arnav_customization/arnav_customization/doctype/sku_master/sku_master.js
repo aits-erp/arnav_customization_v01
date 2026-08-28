@@ -513,9 +513,14 @@ TARGET`,
                             breakup_ref: row.breakup_ref,
                             rows: JSON.stringify(values.breakup_table || [])
                         },
-                        callback() {
+                        callback(r) {
+                            const saved_breakup = r.message || {};
+                            if (saved_breakup.breakup_ref) {
+                                row.breakup_ref = saved_breakup.breakup_ref;
+                            }
                             frappe.msgprint("Breakup saved successfully");
                             dialog.hide();
+                            frm.reload_doc();
                         }
                     });
                 }
@@ -573,14 +578,9 @@ frappe.ui.form.on("SKU Master", {
         frm.add_custom_button("View All Breakups", () => {
 
             frappe.call({
-                method: "frappe.client.get_list",
+                method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_all_breakup_rows",
                 args: {
-                    doctype: "SKU Breakup",
-                    filters: {
-                        sku_master: frm.doc.name
-                    },
-                    fields: ["*"],
-                    limit_page_length: 1000
+                    sku_master: frm.doc.name
                 },
                 callback(r) {
 

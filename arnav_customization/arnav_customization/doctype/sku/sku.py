@@ -4,26 +4,34 @@ from frappe.model.document import Document
 
 class SKU(Document):
 
-    # def before_save(self):
-    #     self.set_d_no()
+    def on_update(self):
+        if self.has_value_changed("d_no"):
+            self.sync_d_no_to_sku_details()
 
-    # def onload(self):
-    #     # ensures value is visible even if old record is opened
-    #     self.set_d_no()
-
-    def set_d_no(self):
+    def sync_d_no_to_sku_details(self):
         if not self.sku_master or not self.name:
             return
 
-        # Fetch d_no from SKU Details child table
-        d_no = frappe.db.get_value(
+        sku_detail_rows = frappe.get_all(
             "SKU Details",
-            {
+            filters={
                 "parent": self.sku_master,
-                "sku": self.name   # your field is DATA, not link
+                "sku": self.name,
             },
-            "d_no"
+            pluck="name",
         )
 
-        if d_no:
-            self.d_no = d_no
+        if len(sku_detail_rows) > 1:
+            frappe.throw(
+                f"Multiple SKU Details rows are linked to SKU {self.name}. "
+                "D. No. cannot be synchronized safely."
+            )
+
+        if sku_detail_rows:
+            frappe.db.set_value(
+                "SKU Details",
+                sku_detail_rows[0],
+                "d_no",
+                self.d_no,
+                update_modified=False,
+            )
