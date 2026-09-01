@@ -432,7 +432,7 @@ product(frm, cdt, cdn) {
     
 });
 
-function open_dynamic_breakup_dialog(frm, row) {
+function open_dynamic_breakup_dialog_legacy(frm, row) {
     const method_base = "arnav_customization.arnav_customization.doctype.sku_master.sku_master";
 
     frappe.call({
@@ -462,6 +462,24 @@ function open_dynamic_breakup_dialog(frm, row) {
                     dialog.show();
                 }
             });
+        }
+    });
+}
+
+function open_dynamic_breakup_dialog(frm, row) {
+    if (!arnav_customization.design_code || !arnav_customization.design_code.open_breakup_dialog) {
+        frappe.throw(__("Design Code breakup controls are not loaded. Please clear cache and reload the page."));
+    }
+
+    arnav_customization.design_code.open_breakup_dialog({
+        title: __("Breakup - {0}", [row.product || ""]),
+        sku_master: frm.doc.name,
+        breakup_ref: row.breakup_ref,
+        on_saved(saved_breakup) {
+            if (saved_breakup.breakup_ref) {
+                row.breakup_ref = saved_breakup.breakup_ref;
+            }
+            frm.reload_doc();
         }
     });
 }

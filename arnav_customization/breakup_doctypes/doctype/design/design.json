@@ -6,13 +6,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "design"
+  "design",
+  "abbreviation"
  ],
  "fields": [
   {
    "fieldname": "design",
    "fieldtype": "Data",
    "label": "Design",
+   "unique": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
    "unique": 1
   }
  ],

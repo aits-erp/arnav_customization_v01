@@ -487,8 +487,8 @@ BREAKUP_FIELDS = [
 
 CLASSIFICATION_ATTRIBUTE_TYPES = ("SET_CODE", "ELEMENT_CODE")
 CODE_VALUE_FIELDS = {
-    "SET_CODE": "set_code",
-    "ELEMENT_CODE": "element_code",
+    "SET_CODE": "abbreviation",
+    "ELEMENT_CODE": "abbreviation",
 }
 
 
@@ -532,7 +532,9 @@ def _get_classification_values(classification):
         fieldname = CODE_VALUE_FIELDS[attribute_type]
         value = frappe.db.get_value(attribute_type, document_name, fieldname)
         if not value:
-            frappe.throw(f"{attribute_type.replace('_', ' ').title()} '{document_name}' has no code value.")
+            frappe.throw(
+                f"{attribute_type.replace('_', ' ').title()} '{document_name}' needs an Abbreviation before a Design Code can be generated."
+            )
         values[attribute_type] = _normalise_code(value, attribute_type.replace("_", " ").title())
     return values
 

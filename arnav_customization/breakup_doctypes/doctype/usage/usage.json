@@ -1,16 +1,27 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:usage",
  "creation": "2026-03-06 12:22:51.846032",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_3ym6"
+  "usage",
+  "abbreviation"
  ],
  "fields": [
   {
-   "fieldname": "section_break_3ym6",
-   "fieldtype": "Section Break"
+   "fieldname": "usage",
+   "fieldtype": "Data",
+   "label": "Usage",
+   "unique": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
@@ -20,6 +31,7 @@
  "modified_by": "Administrator",
  "module": "Breakup doctypes",
  "name": "USAGE",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

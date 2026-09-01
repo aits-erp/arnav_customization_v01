@@ -6,13 +6,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "element_code"
+  "element_code",
+  "abbreviation"
  ],
  "fields": [
   {
    "fieldname": "element_code",
    "fieldtype": "Data",
    "label": "Element Code",
+   "unique": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
    "unique": 1
   }
  ],
