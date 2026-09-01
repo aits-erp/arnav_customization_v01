@@ -433,121 +433,217 @@ product(frm, cdt, cdn) {
 });
 
 function open_dynamic_breakup_dialog(frm, row) {
+    const method_base = "arnav_customization.arnav_customization.doctype.sku_master.sku_master";
 
-    let dynamic_fields = [
+    frappe.call({
+        method: `${method_base}.get_breakup_rows`,
+        args: { sku_master: frm.doc.name, breakup_ref: row.breakup_ref },
+        callback: function (breakup_response) {
+            frappe.call({
+                method: `${method_base}.get_breakup_design_state`,
+                args: { sku_master: frm.doc.name, breakup_ref: row.breakup_ref },
+                callback: function (state_response) {
+                    const breakup_rows = breakup_response.message || [];
+                    const state = state_response.message || {};
+                    const dialog = create_design_breakup_dialog({
+                        title: "Breakup - " + (row.product || ""),
+                        sku_master: frm.doc.name,
+                        breakup_ref: row.breakup_ref,
+                        breakup_rows,
+                        state,
+                        on_saved(saved_breakup) {
+                            if (saved_breakup.breakup_ref) {
+                                row.breakup_ref = saved_breakup.breakup_ref;
+                            }
+                            dialog.hide();
+                            frm.reload_doc();
+                        }
+                    });
+                    dialog.show();
+                }
+            });
+        }
+    });
+}
+
+function create_design_breakup_dialog(options) {
+    const method_base = "arnav_customization.arnav_customization.doctype.sku_master.sku_master";
+    const state = options.state || {};
+    const classification_locked = Boolean(state.classification_locked);
+    const dynamic_fields = [
         {
             fieldname: "attribute_type",
             label: "Attribute Type",
             fieldtype: "Select",
-           options: `
-ELEMENT_CODE
-PURITY
-STONE
-SET_CODE
-DESIGN
-VISUAL
-USAGE
-TARGET`,
+            options: "\nELEMENT_CODE\nPURITY\nSTONE\nSET_CODE\nDESIGN\nVISUAL\nUSAGE\nTARGET",
             in_list_view: 1
         },
         {
             fieldname: "attribute_value",
             label: "Attribute Value",
             fieldtype: "Link",
-            options: "",   // will set dynamically
+            options: "",
             in_list_view: 1
         },
-        {
-            fieldname: "weight",
-            label: "Weight",
-            fieldtype: "Float",
-            in_list_view: 1
-        },
-        {
-            fieldname: "price",
-            label: "Price",
-            fieldtype: "Float",
-            in_list_view: 1
-        },
-        {
-            fieldname: "unit",
-            label: "Unit",
-            fieldtype: "Select",
-            options: "\nGram\nCarat",
-            in_list_view: 1
-        }
+        { fieldname: "weight", label: "Weight", fieldtype: "Float", in_list_view: 1 },
+        { fieldname: "price", label: "Price", fieldtype: "Float", in_list_view: 1 },
+        { fieldname: "unit", label: "Unit", fieldtype: "Select", options: "\nGram\nCarat", in_list_view: 1 }
     ];
 
-    frappe.call({
-        method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_breakup_rows",
-        args: {
-            sku_master: frm.doc.name,
-            breakup_ref: row.breakup_ref
-        },
-        callback: function(r) {
-
-            let breakup_rows = r.message || [];
-
-            let dialog = new frappe.ui.Dialog({
-                title: "Breakup - " + (row.product || ""),
-                size: "extra-large",
-                fields: [
-                    {
-                        fieldname: "breakup_table",
-                        fieldtype: "Table",
-                        label: "Breakup Details",
-                        in_place_edit: true,
-                        cannot_add_rows: false,
-                        data: breakup_rows,
-                        get_data: () => breakup_rows,
-                        fields: dynamic_fields
+    const dialog = new frappe.ui.Dialog({
+        title: options.title,
+        size: "extra-large",
+        fields: [
+            {
+                fieldname: "design_code_display",
+                label: "Design Code",
+                fieldtype: "Data",
+                read_only: 1,
+                default: state.design_code || __("Not generated")
+            },
+            {
+                fieldname: "existing_design_code",
+                label: "Use Existing Design Code",
+                fieldtype: "Link",
+                options: "Design Code",
+                hidden: classification_locked,
+                get_query: () => ({
+                    filters: {
+                        status: "Active",
+                        set_code: state.set_code || "",
+                        element_code: state.element_code || ""
                     }
-                ],
-                primary_action_label: "Save",
-                primary_action(values) {
+                })
+            },
+            {
+                fieldname: "assign_existing_design_code",
+                label: "Assign Existing Design Code",
+                fieldtype: "Button",
+                hidden: classification_locked
+            },
+            {
+                fieldname: "breakup_table",
+                fieldtype: "Table",
+                label: "Breakup Details",
+                in_place_edit: true,
+                cannot_add_rows: false,
+                data: options.breakup_rows,
+                get_data: () => options.breakup_rows,
+                fields: dynamic_fields
+            }
+        ],
+        primary_action_label: __("Save Breakup")
+    });
 
-                    frappe.call({
-                        method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.save_breakup_rows",
-                        args: {
-                            sku_master: frm.doc.name,
-                            breakup_ref: row.breakup_ref,
-                            rows: JSON.stringify(values.breakup_table || [])
-                        },
-                        callback(r) {
-                            const saved_breakup = r.message || {};
-                            if (saved_breakup.breakup_ref) {
-                                row.breakup_ref = saved_breakup.breakup_ref;
+    const save_breakup = (after_save) => {
+        const values = dialog.get_values() || {};
+        frappe.call({
+            method: `${method_base}.save_breakup_rows`,
+            args: {
+                sku_master: options.sku_master,
+                breakup_ref: options.breakup_ref,
+                rows: JSON.stringify(values.breakup_table || [])
+            },
+            callback: (response) => after_save(response.message || {})
+        });
+    };
+
+    dialog.set_primary_action(__("Save Breakup"), () => {
+        save_breakup((saved_breakup) => {
+            frappe.show_alert({ message: __("Breakup saved"), indicator: "green" });
+            options.on_saved(saved_breakup);
+        });
+    });
+
+    dialog.set_secondary_action(
+        classification_locked ? __("Correct Classification") : __("Generate Design Code"),
+        () => {
+            if (classification_locked) {
+                frappe.prompt(
+                    [{ fieldname: "reason", label: __("Correction reason"), fieldtype: "Small Text", reqd: 1 }],
+                    (values) => {
+                        frappe.call({
+                            method: `${method_base}.release_design_code_assignment`,
+                            args: {
+                                sku_master: options.sku_master,
+                                breakup_ref: options.breakup_ref,
+                                reason: values.reason
+                            },
+                            callback: () => {
+                                frappe.show_alert({ message: __("Classification unlocked"), indicator: "orange" });
+                                options.on_saved({ breakup_ref: options.breakup_ref });
                             }
-                            frappe.msgprint("Breakup saved successfully");
-                            dialog.hide();
-                            frm.reload_doc();
+                        });
+                    },
+                    __("Correct Design Classification"),
+                    __("Unlock")
+                );
+                return;
+            }
+
+            frappe.confirm(
+                __("This will save the breakup, generate a permanent Design Code, and lock Set Code and Element Code. Continue?"),
+                () => save_breakup((saved_breakup) => {
+                    frappe.call({
+                        method: `${method_base}.generate_design_code`,
+                        args: { sku_master: options.sku_master, breakup_ref: saved_breakup.breakup_ref },
+                        callback: (response) => {
+                            const result = response.message || {};
+                            frappe.msgprint({
+                                title: __("Design Code Assigned"),
+                                message: __("Design Code {0} is now fixed.", [result.design_code]),
+                                indicator: "green"
+                            });
+                            options.on_saved(saved_breakup);
                         }
                     });
+                })
+            );
+        }
+    );
+
+    dialog.show = ((original_show) => function () {
+        original_show.call(dialog);
+        const grid = dialog.fields_dict.breakup_table.grid;
+        grid.wrapper.on("focus", "input[data-fieldname='attribute_value']", function () {
+            const grid_row = $(this).closest(".grid-row").data("grid_row");
+            if (grid_row && grid_row.doc.attribute_type) {
+                grid.update_docfield_property("attribute_value", "options", grid_row.doc.attribute_type);
+            }
+        });
+
+        if (classification_locked) {
+            (grid.grid_rows || []).forEach((grid_row) => {
+                if (["SET_CODE", "ELEMENT_CODE"].includes(grid_row.doc.attribute_type)) {
+                    grid_row.toggle_editable("attribute_type", false);
+                    grid_row.toggle_editable("attribute_value", false);
                 }
             });
-
-            dialog.show();
-
-            let grid = dialog.fields_dict.breakup_table.grid;
-
-            // 🔥 CRITICAL PART — set doctype before dropdown opens
-            grid.wrapper.on("focus", "input[data-fieldname='attribute_value']", function () {
-
-                let grid_row = $(this).closest(".grid-row").data("grid_row");
-                if (!grid_row) return;
-
-                let row_doc = grid_row.doc;
-                if (!row_doc.attribute_type) return;
-
-                grid.update_docfield_property(
-                    "attribute_value",
-                    "options",
-                    row_doc.attribute_type
-                );
-            });
-
         }
-    });
+
+        if (!classification_locked) {
+            dialog.fields_dict.assign_existing_design_code.$input.on("click", () => {
+                const design_code = dialog.get_value("existing_design_code");
+                if (!design_code) {
+                    frappe.msgprint(__("Select an existing Design Code first."));
+                    return;
+                }
+                save_breakup((saved_breakup) => {
+                    frappe.call({
+                        method: `${method_base}.assign_existing_design_code`,
+                        args: {
+                            sku_master: options.sku_master,
+                            breakup_ref: saved_breakup.breakup_ref,
+                            design_code
+                        },
+                        callback: () => options.on_saved(saved_breakup)
+                    });
+                });
+            });
+        }
+    })(dialog.show);
+
+    return dialog;
 }
 
 function calculate_final_amount(row) {

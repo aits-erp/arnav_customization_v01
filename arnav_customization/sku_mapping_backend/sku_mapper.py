@@ -27,5 +27,6 @@ def get_sku_data(sku):
         "qty": sku_doc.qty,
         "d_no": sku_doc.d_no,
         "huid": sku_doc.huid,
+        "design_code": sku_doc.design_code,
         "breakup": breakup
     }

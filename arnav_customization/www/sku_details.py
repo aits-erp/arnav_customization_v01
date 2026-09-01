@@ -11,6 +11,7 @@ def get_context(context):
     data = frappe.db.sql("""
         SELECT
             sd.sku,
+            sd.design_code,
             i.item_name,
             sd.selling_price,
             sd.image
