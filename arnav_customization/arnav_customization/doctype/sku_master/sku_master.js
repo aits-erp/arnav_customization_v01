@@ -294,39 +294,14 @@ frappe.ui.form.on("SKU Details", {
     },
 
     cost_price(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
 
-        let row = locals[cdt][cdn];
+        // Supplier-margin pricing is intentionally disabled. Selling Price is
+        // entered manually (or supplied by another approved pricing process).
+        // row.selling_price = flt(row.cost_price) * supplier_margin;
 
-        if (!frm.doc.supplier_name) {
-            frappe.msgprint({
-                title: "Supplier Required",
-                message: "Please select Supplier before entering Cost Price.",
-                indicator: "orange"
-            });
-            return;
-        }
-
-        frappe.db.get_value("Supplier", frm.doc.supplier_name, "custom_supplier_margin")
-            .then(r => {
-
-                let margin = flt(r.message.custom_supplier_margin || 0);
-
-                if (!margin) {
-                    frappe.msgprint({
-                        title: "Supplier Margin Missing",
-                        message: "Supplier Margin is not defined for selected Supplier.",
-                        indicator: "red"
-                    });
-                    return;
-                }
-
-                row.selling_price = flt(row.cost_price) * margin;
-
-                // 🔥 ADD THIS LINE
-                calculate_final_amount(row);
-                
-                frm.refresh_field("sku_details");
-            });
+        calculate_final_amount(row);
+        frm.refresh_field("sku_details");
     },
     
     // selling_price(frm, cdt, cdn) {

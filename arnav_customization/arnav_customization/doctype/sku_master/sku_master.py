@@ -51,8 +51,10 @@ class SKUMaster(Document):
     #                 frappe.throw(f"{label} is required in SKU Details row {row.idx}.")
 
     def on_submit(self):
-        if not frappe.flags.in_import:
-            self.apply_supplier_margin()
+        # Supplier-margin pricing is intentionally disabled. Selling Price is
+        # retained as manually entered (or set by another approved process).
+        # if not frappe.flags.in_import:
+        #     self.apply_supplier_margin()
         self.create_repack_stock_entry()
 
     def before_submit(self):
@@ -371,33 +373,21 @@ class SKUMaster(Document):
         )
     
     def apply_supplier_margin(self):
-
-        if not self.supplier_name:
-            frappe.throw("Supplier must be selected before calculating selling price.")
-
-        margin = frappe.db.get_value(
-            "Supplier",
-            self.supplier_name,
-            "custom_supplier_margin"
-        )
-
-        if margin is None:
-            frappe.throw(
-                f"Supplier '{self.supplier_name}' does not have Supplier Margin defined."
-            )
-
-        margin = flt(margin)
-
-        if margin <= 0:
-            frappe.throw(
-                f"Supplier Margin must be greater than zero for Supplier {self.supplier_name}."
-            )
-
-        for row in self.sku_details:
-            if flt(row.cost_price) <= 0:
-                frappe.throw(f"Cost Price must be greater than zero in row {row.idx}")
-
-            row.selling_price = flt(row.cost_price) * margin
+        # Kept as an inert method so any legacy caller cannot overwrite a
+        # manually entered Selling Price.
+        #
+        # if not self.supplier_name:
+        #     frappe.throw("Supplier must be selected before calculating selling price.")
+        #
+        # margin = frappe.db.get_value(
+        #     "Supplier",
+        #     self.supplier_name,
+        #     "custom_supplier_margin"
+        # )
+        #
+        # for row in self.sku_details:
+        #     row.selling_price = flt(row.cost_price) * flt(margin)
+        return
             
     def generate_custom_batch_name(self, posting_date):
         from frappe.utils import getdate
