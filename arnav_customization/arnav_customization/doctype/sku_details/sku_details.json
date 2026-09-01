@@ -48,21 +48,26 @@
    "allow_on_submit": 1,
    "fieldname": "element_code",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Element Code",
-   "options": "ELEMENT_CODE"
+   "options": "ELEMENT_CODE",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
    "fieldname": "set_code",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Set Code",
-   "options": "SET_CODE"
+   "options": "SET_CODE",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
    "fieldname": "design_code",
    "fieldtype": "Data",
-   "label": "Design Code"
+   "label": "Design Code",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
