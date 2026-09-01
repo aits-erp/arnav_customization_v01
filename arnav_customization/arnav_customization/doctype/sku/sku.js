@@ -112,7 +112,7 @@ function create_sku_design_breakup_dialog(frm, breakup_rows, state) {
         });
     });
 
-    dialog.set_secondary_action(locked ? __("Correct Classification") : __("Generate Design Code"), () => {
+    dialog.set_secondary_action(() => {
         if (locked) {
             frappe.prompt(
                 [{ fieldname: "reason", label: __("Correction reason"), fieldtype: "Small Text", reqd: 1 }],
@@ -142,7 +142,7 @@ function create_sku_design_breakup_dialog(frm, breakup_rows, state) {
                 }
             }))
         );
-    });
+    }, locked ? __("Correct Classification") : __("Generate Design Code"));
 
     const original_show = dialog.show;
     dialog.show = function () {

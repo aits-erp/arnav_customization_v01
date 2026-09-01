@@ -556,7 +556,6 @@ function create_design_breakup_dialog(options) {
     });
 
     dialog.set_secondary_action(
-        classification_locked ? __("Correct Classification") : __("Generate Design Code"),
         () => {
             if (classification_locked) {
                 frappe.prompt(
@@ -599,7 +598,8 @@ function create_design_breakup_dialog(options) {
                     });
                 })
             );
-        }
+        },
+        classification_locked ? __("Correct Classification") : __("Generate Design Code")
     );
 
     dialog.show = ((original_show) => function () {
