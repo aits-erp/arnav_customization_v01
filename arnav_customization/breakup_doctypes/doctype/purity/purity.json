@@ -6,13 +6,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "purity"
+  "purity",
+  "abbreviation"
  ],
  "fields": [
   {
    "fieldname": "purity",
    "fieldtype": "Data",
    "label": "Purity",
+   "unique": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
    "unique": 1
   }
  ],

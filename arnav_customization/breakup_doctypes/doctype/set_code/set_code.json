@@ -5,13 +5,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "set_code"
+  "set_code",
+  "abbreviation"
  ],
  "fields": [
   {
    "fieldname": "set_code",
    "fieldtype": "Data",
    "label": "Set Code"
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,

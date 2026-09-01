@@ -6,13 +6,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "visual"
+  "visual",
+  "abbreviation"
  ],
  "fields": [
   {
    "fieldname": "visual",
    "fieldtype": "Data",
    "label": "Visual",
+   "unique": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
    "unique": 1
   }
  ],
