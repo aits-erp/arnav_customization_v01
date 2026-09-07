@@ -57,9 +57,6 @@ class SKUMaster(Document):
         #     self.apply_supplier_margin()
         self.create_repack_stock_entry()
 
-    def before_submit(self):
-        validate_design_codes_for_submission(self)
-
     def on_update_after_submit(self):
         for row in self.sku_details:
             if not row.sku or not frappe.db.exists("SKU", row.sku):
@@ -279,9 +276,6 @@ class SKUMaster(Document):
 
             if flt(row.gross_weight) <= 0:
                 frappe.throw(f"Gross weight must be entered in row {row.idx}")
-
-            if not row.breakup_ref:
-                row.breakup_ref = frappe.generate_hash(length=12)
 
             # 1️⃣ Generate Batch Name
             batch_name = self.generate_custom_batch_name(self.date_of_invoice)
