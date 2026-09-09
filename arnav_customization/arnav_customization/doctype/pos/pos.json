@@ -152,8 +152,10 @@
    "fieldname": "mobile_number",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Mobile Number",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "email",
@@ -195,6 +197,7 @@
    "default": "Now",
    "fieldname": "date",
    "fieldtype": "Datetime",
+   "in_standard_filter": 1,
    "label": "Date"
   },
   {

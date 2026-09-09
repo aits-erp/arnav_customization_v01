@@ -53,14 +53,14 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Attribute Type",
-   "options": "ELEMENT_CODE\nPURITY\nSTONE\nSET_CODE\nDESIGN\nVISUAL\nUSAGE\nTARGET"
+   "options": "ELEMENT_CODE\nPURITY\nSTONE\nSET_CODE\nDESIGN\nVISUAL\nDESIGN_CODE\nTARGET"
   },
   {
    "fieldname": "attribute_value",
-   "fieldtype": "Dynamic Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Attribute Value",
-   "options": "attribute_type"
+   "description": "Enter a manual value when Attribute Type is Design Code."
   }
  ],
  "grid_page_length": 50,
