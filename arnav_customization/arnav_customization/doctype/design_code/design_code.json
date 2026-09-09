@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "design_code",
+  "generation_mode",
   "status",
   "set_code",
   "set_code_value",
@@ -28,6 +29,16 @@
    "read_only": 1,
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "default": "Auto",
+   "fieldname": "generation_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Generation Mode",
+   "options": "Auto\nManual",
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "default": "Active",
@@ -75,8 +86,7 @@
    "fieldname": "sequence_no",
    "fieldtype": "Int",
    "label": "Sequence No.",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "created_from_sku_master",

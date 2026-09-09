@@ -24,6 +24,7 @@ class SKUMaster(Document):
                 row.design_code = None
     def validate(self):
         # self.validate_required_codes()
+        self.validate_existing_design_code_assignments()
 
         total_out_weight = flt(self.net_quantiity)
         total_in_weight = sum(flt(row.gross_weight) for row in self.sku_details)
@@ -37,6 +38,23 @@ class SKUMaster(Document):
                 Please reduce the Gross Weight in SKU Details before saving.
                 """
             )
+
+    def validate_existing_design_code_assignments(self):
+        """Only the Design Code lifecycle API may change an existing assignment."""
+        previous = self.get_doc_before_save()
+        if not previous:
+            return
+
+        previous_codes = {
+            row.name: row.design_code
+            for row in previous.sku_details
+            if row.name
+        }
+        for row in self.sku_details:
+            if row.name in previous_codes and row.design_code != previous_codes[row.name]:
+                frappe.throw(
+                    f"Design Code in SKU Details row {row.idx} is immutable. Use Replace Design Code from Breakup."
+                )
 
     # def validate_required_codes(self):
     #     required_codes = {
@@ -89,7 +107,8 @@ class SKUMaster(Document):
         for sku in frappe.get_all("SKU", filters={"sku_master": self.name}, pluck="name"):
             frappe.db.set_value("SKU", sku, "status", "Cancelled", update_modified=False)
 
-        void_unshared_design_codes_for_cancelled_master(self)
+        # Design Code is an independent registry. Cancelling SKU Master must
+        # never void, delete, or reuse a Design Code.
 
     def create_repack_stock_entry(self):
 
@@ -470,6 +489,18 @@ BREAKUP_FIELDS = [
 ]
 
 CLASSIFICATION_ATTRIBUTE_TYPES = ("SET_CODE", "ELEMENT_CODE")
+BREAKUP_ATTRIBUTE_TYPES = (
+    "ELEMENT_CODE",
+    "PURITY",
+    "STONE",
+    "SET_CODE",
+    "DESIGN",
+    "VISUAL",
+    "DESIGN_CODE",
+    "TARGET",
+)
+LEGACY_BREAKUP_ATTRIBUTE_TYPES = ("USAGE",)
+MANUAL_BREAKUP_ATTRIBUTE_TYPES = ("DESIGN_CODE",)
 CODE_VALUE_FIELDS = {
     "SET_CODE": "abbreviation",
     "ELEMENT_CODE": "abbreviation",
@@ -480,6 +511,13 @@ def _normalise_code(value, label):
     value = str(value or "").strip().upper()
     if not re.fullmatch(r"[A-Z0-9]+", value):
         frappe.throw(f"{label} must contain only uppercase letters and numbers.")
+    return value
+
+
+def _normalise_manual_design_code(value):
+    value = str(value or "").strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]+(?:-[A-Z0-9]+)*", value):
+        frappe.throw("Manual Design Code may contain only uppercase letters, numbers, and single hyphens.")
     return value
 
 
@@ -508,6 +546,48 @@ def _get_classification_from_rows(rows, require_complete=False):
         frappe.throw("Set Code and Element Code are required before generating a Design Code.")
 
     return classification
+
+
+def _get_manual_design_code_from_rows(rows):
+    values = [
+        row.get("attribute_value")
+        for row in rows
+        if row.get("attribute_type") == "DESIGN_CODE" and row.get("attribute_value")
+    ]
+    if len(values) > 1:
+        frappe.throw("Only one manual Design Code is allowed per breakup.")
+    return _normalise_manual_design_code(values[0]) if values else None
+
+
+def _validate_breakup_rows(rows):
+    """Validate current breakup rows while allowing legacy USAGE rows to persist."""
+    valid_attribute_types = set(BREAKUP_ATTRIBUTE_TYPES + LEGACY_BREAKUP_ATTRIBUTE_TYPES)
+
+    for index, row in enumerate(rows, start=1):
+        attribute_type = str(row.get("attribute_type") or "").strip().upper()
+        attribute_value = str(row.get("attribute_value") or "").strip()
+
+        if not attribute_type:
+            continue
+
+        if attribute_type not in valid_attribute_types:
+            frappe.throw(f"Invalid Attribute Type in breakup row {index}.")
+
+        row["attribute_type"] = attribute_type
+        row["attribute_value"] = attribute_value
+
+        # DESIGN_CODE is the one intentionally free-text breakup value. Every
+        # other current type remains tied to its corresponding master DocType.
+        if (
+            attribute_type not in MANUAL_BREAKUP_ATTRIBUTE_TYPES
+            and attribute_value
+            and not frappe.db.exists(attribute_type, attribute_value)
+        ):
+            frappe.throw(
+                f"{attribute_value} is not a valid {attribute_type.replace('_', ' ').title()} in breakup row {index}."
+            )
+
+    _get_manual_design_code_from_rows(rows)
 
 
 def _get_classification_values(classification):
@@ -604,6 +684,10 @@ def _ensure_locked_classification_is_unchanged(sku_master, breakup_ref, rows):
     classification = _get_classification_from_rows(rows, require_complete=True)
     _validate_design_code_matches_classification(design_code, classification)
 
+    previous_rows = get_breakup_rows_for_reference(sku_master, breakup_ref)
+    if _get_manual_design_code_from_rows(rows) != _get_manual_design_code_from_rows(previous_rows):
+        frappe.throw("The manual Design Code value is immutable after assignment. Use Replace Design Code instead.")
+
 
 def _get_active_design_code_count_outside_master(design_code, sku_master):
     return frappe.db.sql(
@@ -640,10 +724,14 @@ def _void_design_code(design_code, reason):
     if design.status == "Voided":
         return
 
-    design.status = "Voided"
-    design.void_reason = reason
-    design.voided_on = now_datetime()
-    design.save(ignore_permissions=True)
+    frappe.flags.design_code_lifecycle_update = True
+    try:
+        design.status = "Voided"
+        design.void_reason = reason
+        design.voided_on = now_datetime()
+        design.save(ignore_permissions=True)
+    finally:
+        frappe.flags.design_code_lifecycle_update = False
 
 
 def void_unshared_design_codes_for_cancelled_master(sku_master_doc):
@@ -741,10 +829,16 @@ def get_breakup_design_state(sku_master, breakup_ref):
     classification = _get_classification_from_rows(rows)
     values = _get_classification_values(classification) if classification else {}
     design_code = _get_design_code_for_breakup(sku_master, breakup_ref)
+    manual_design_code = _get_manual_design_code_from_rows(rows)
+    generation_mode = None
+    if design_code and frappe.db.exists("Design Code", design_code):
+        generation_mode = frappe.db.get_value("Design Code", design_code, "generation_mode")
 
     return {
         "breakup_ref": breakup_ref,
         "design_code": design_code,
+        "manual_design_code": manual_design_code,
+        "generation_mode": generation_mode,
         "classification_locked": bool(design_code),
         "set_code": classification.get("SET_CODE"),
         "set_code_value": values.get("SET_CODE"),
@@ -756,6 +850,29 @@ def get_breakup_design_state(sku_master, breakup_ref):
 
 def _get_design_code_sequence(design_code):
     return int(design_code.rsplit("-", 1)[1])
+
+
+def _create_design_code_registry_entry(
+    design_code,
+    generation_mode,
+    classification,
+    values,
+    sku_master,
+    breakup_ref,
+):
+    design = frappe.new_doc("Design Code")
+    design.design_code = design_code
+    design.generation_mode = generation_mode
+    design.status = "Active"
+    design.set_code = classification["SET_CODE"]
+    design.set_code_value = values["SET_CODE"]
+    design.element_code = classification["ELEMENT_CODE"]
+    design.element_code_value = values["ELEMENT_CODE"]
+    design.sequence_no = _get_design_code_sequence(design_code) if generation_mode == "Auto" else None
+    design.created_from_sku_master = sku_master
+    design.created_from_breakup_ref = breakup_ref
+    design.insert(ignore_permissions=True)
+    return design
 
 
 def _validate_breakup_can_be_assigned(sku_master, breakup_ref):
@@ -783,24 +900,48 @@ def generate_design_code(sku_master, breakup_ref):
 
     classification = _validate_breakup_can_be_assigned(sku_master, breakup_ref)
     values = _get_classification_values(classification)
-    generated_design_code = make_autoname(
-        f"{values['SET_CODE']}-{values['ELEMENT_CODE']}-.####"
-    )
+    rows = get_breakup_rows_for_reference(sku_master, breakup_ref)
+    manual_design_code = _get_manual_design_code_from_rows(rows)
 
-    design = frappe.new_doc("Design Code")
-    design.design_code = generated_design_code
-    design.status = "Active"
-    design.set_code = classification["SET_CODE"]
-    design.set_code_value = values["SET_CODE"]
-    design.element_code = classification["ELEMENT_CODE"]
-    design.element_code_value = values["ELEMENT_CODE"]
-    design.sequence_no = _get_design_code_sequence(generated_design_code)
-    design.created_from_sku_master = sku_master
-    design.created_from_breakup_ref = breakup_ref
-    design.insert(ignore_permissions=True)
+    if manual_design_code:
+        if frappe.db.exists("Design Code", manual_design_code):
+            existing_design = _validate_design_code_matches_classification(manual_design_code, classification)
+            _set_design_code_for_breakup(sku_master, breakup_ref, manual_design_code)
+            return {
+                "design_code": manual_design_code,
+                "generation_mode": existing_design.generation_mode,
+                "already_assigned": True,
+                "used_existing": True,
+            }
 
-    _set_design_code_for_breakup(sku_master, breakup_ref, generated_design_code)
-    return {"design_code": generated_design_code, "already_assigned": False}
+        design = _create_design_code_registry_entry(
+            manual_design_code,
+            "Manual",
+            classification,
+            values,
+            sku_master,
+            breakup_ref,
+        )
+    else:
+        generated_design_code = make_autoname(
+            f"{values['SET_CODE']}-{values['ELEMENT_CODE']}-.####"
+        )
+        design = _create_design_code_registry_entry(
+            generated_design_code,
+            "Auto",
+            classification,
+            values,
+            sku_master,
+            breakup_ref,
+        )
+
+    _set_design_code_for_breakup(sku_master, breakup_ref, design.name)
+    return {
+        "design_code": design.name,
+        "generation_mode": design.generation_mode,
+        "already_assigned": False,
+        "used_existing": False,
+    }
 
 
 @frappe.whitelist()
@@ -812,6 +953,10 @@ def assign_existing_design_code(sku_master, breakup_ref, design_code):
 
     classification = _validate_breakup_can_be_assigned(sku_master, breakup_ref)
     _validate_design_code_matches_classification(design_code, classification)
+    rows = get_breakup_rows_for_reference(sku_master, breakup_ref)
+    manual_design_code = _get_manual_design_code_from_rows(rows)
+    if manual_design_code and manual_design_code != design_code:
+        frappe.throw("The manual Design Code value must match the selected existing Design Code.")
     _set_design_code_for_breakup(sku_master, breakup_ref, design_code)
     return {"design_code": design_code}
 
@@ -821,10 +966,6 @@ def release_design_code_assignment(sku_master, breakup_ref, reason):
     _require_sku_master_write_permission(sku_master)
     if not (reason or "").strip():
         frappe.throw("A correction reason is required.")
-
-    sku_master_doc = frappe.get_doc("SKU Master", sku_master)
-    if sku_master_doc.docstatus != 0:
-        frappe.throw("Cancel and amend the SKU Master before correcting an assigned Design Code.")
 
     breakup_ref = _resolve_breakup_ref(sku_master, breakup_ref)
     design_code = _get_design_code_for_breakup(sku_master, breakup_ref)
@@ -842,6 +983,7 @@ def release_design_code_assignment(sku_master, breakup_ref, reason):
 def save_breakup_rows(sku_master, breakup_ref, rows):
     _require_sku_master_write_permission(sku_master)
     rows = json.loads(rows)
+    _validate_breakup_rows(rows)
     requested_ref = breakup_ref
     breakup_ref = _resolve_breakup_ref(sku_master, breakup_ref)
     breakup_ref = breakup_ref or frappe.generate_hash(length=12)
