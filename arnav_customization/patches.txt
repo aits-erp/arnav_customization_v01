@@ -6,3 +6,4 @@
 arnav_customization.patches.clean_custom_weight
 arnav_customization.patches.migrate_breakup_code_data
 arnav_customization.patches.repair_breakup_code_doctypes
+arnav_customization.patches.backfill_pos_date
