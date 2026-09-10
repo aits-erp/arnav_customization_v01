@@ -9,6 +9,7 @@
   "add_orders_section",
   "naming_series",
   "date",
+  "pos_date",
   "lead_owner_1",
   "lead_owner_2",
   "salestype",
@@ -198,6 +199,14 @@
    "fieldname": "date",
    "fieldtype": "Datetime",
    "label": "Date"
+  },
+  {
+   "fieldname": "pos_date",
+   "fieldtype": "Date",
+   "in_standard_filter": 1,
+   "label": "POS Date",
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "lead_owner_1",

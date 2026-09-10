@@ -17,10 +17,6 @@ doctype_js = {
     "Payment Entry": "public/js/payment_entry.js"
 }
 
-doctype_list_js = {
-    "POS": "public/js/pos_list.js"
-}
-
 fixtures = [
     {
         "dt": "Custom Field",

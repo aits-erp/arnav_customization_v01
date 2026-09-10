@@ -13,6 +13,10 @@ class POS(Document):
 		if doc_before_save and doc_before_save.docstatus == 1:
 			return
 
+		# A date-only projection makes list filtering independent of the
+		# time stored in the operational POS DateTime field.
+		self.pos_date = get_datetime(self.date).date() if self.date else None
+
 		# self.calculate_gst_for_items()
 		self.apply_discount_and_calculate_totals()
 
