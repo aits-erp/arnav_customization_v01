@@ -197,7 +197,6 @@
    "default": "Now",
    "fieldname": "date",
    "fieldtype": "Datetime",
-   "in_standard_filter": 1,
    "label": "Date"
   },
   {
