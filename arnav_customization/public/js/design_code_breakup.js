@@ -37,6 +37,10 @@ frappe.provide("arnav_customization.design_code");
         ));
     }
 
+    function can_generate_design_code(dialog) {
+        return Boolean(get_manual_design_code(dialog)) || has_complete_classification(dialog);
+    }
+
     function set_button_enabled(dialog, fieldname, enabled) {
         const field = dialog.fields_dict[fieldname];
         if (field && field.$input) {
@@ -180,7 +184,11 @@ frappe.provide("arnav_customization.design_code");
             dialog.hide();
         };
 
+        let events_bound = false;
         dialog.on_page_show = () => {
+            if (events_bound) return;
+            events_bound = true;
+
             const grid = dialog.fields_dict.breakup_table.grid;
             grid.wrapper.on("change", "select[data-fieldname='attribute_type']", function () {
                 const grid_row = $(this).closest(".grid-row").data("grid_row");
@@ -194,7 +202,7 @@ frappe.provide("arnav_customization.design_code");
             });
 
             const refresh_generate_button = () => {
-                set_button_enabled(dialog, "generate_design_code", !locked && has_complete_classification(dialog));
+                set_button_enabled(dialog, "generate_design_code", !locked && can_generate_design_code(dialog));
                 const manual_design_code = get_manual_design_code(dialog);
                 const button = dialog.fields_dict.generate_design_code;
                 if (button && button.$input) {
@@ -212,8 +220,8 @@ frappe.provide("arnav_customization.design_code");
 
             if (!locked) {
                 dialog.fields_dict.generate_design_code.$input.on("click", () => {
-                    if (!has_complete_classification(dialog)) {
-                        frappe.msgprint(__("Add exactly one Set Code and one Element Code before generating a Design Code."));
+                    if (!can_generate_design_code(dialog)) {
+                        frappe.msgprint(__("Enter a Manual Design Code, or add exactly one Set Code and one Element Code for automatic generation."));
                         return;
                     }
 
