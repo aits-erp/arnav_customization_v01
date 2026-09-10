@@ -56,15 +56,13 @@
    "in_list_view": 1,
    "label": "Set Code",
    "options": "SET_CODE",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "set_code_value",
    "fieldtype": "Data",
    "label": "Set Code Value",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "element_code",
@@ -72,15 +70,13 @@
    "in_list_view": 1,
    "label": "Element Code",
    "options": "ELEMENT_CODE",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "element_code_value",
    "fieldtype": "Data",
    "label": "Element Code Value",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "sequence_no",

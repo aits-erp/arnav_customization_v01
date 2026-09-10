@@ -25,8 +25,19 @@ class DesignCode(Document):
 		if self.generation_mode == "Auto":
 			if not re.fullmatch(r"[A-Z0-9]+-[A-Z0-9]+-[0-9]{4}", self.design_code):
 				frappe.throw("Automatic Design Code must use the format SET-ELEMENT-0001.")
+			if not all((self.set_code, self.set_code_value, self.element_code, self.element_code_value)):
+				frappe.throw("Automatic Design Code requires Set Code and Element Code.")
 		elif not re.fullmatch(r"[A-Z0-9]+(?:-[A-Z0-9]+)*", self.design_code):
 			frappe.throw("Manual Design Code may contain only uppercase letters, numbers, and single hyphens.")
+
+		classification_values = (
+			self.set_code,
+			self.set_code_value,
+			self.element_code,
+			self.element_code_value,
+		)
+		if self.generation_mode == "Manual" and any(classification_values) and not all(classification_values):
+			frappe.throw("Manual Design Code must have both Set Code and Element Code, or neither.")
 
 		previous = self.get_doc_before_save()
 		if previous:

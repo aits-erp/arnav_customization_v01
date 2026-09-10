@@ -603,6 +603,12 @@ def _get_classification_values(classification):
     return values
 
 
+def _validate_optional_manual_classification(classification):
+    """Manual codes may omit classification, but never retain a partial pair."""
+    if classification and len(classification) != len(CLASSIFICATION_ATTRIBUTE_TYPES):
+        frappe.throw("Manual Design Code must have both Set Code and Element Code, or neither.")
+
+
 def _get_design_code_for_breakup(sku_master, breakup_ref):
     if not breakup_ref:
         return None
@@ -659,19 +665,24 @@ def _get_design_code_doc(design_code):
 
 def _validate_design_code_matches_classification(design_code, classification):
     design = _get_design_code_doc(design_code)
-    values = _get_classification_values(classification)
 
     if design.status != "Active":
         frappe.throw(f"Design Code {design_code} is {design.status} and cannot be assigned.")
 
-    if design.set_code != classification["SET_CODE"] or design.element_code != classification["ELEMENT_CODE"]:
-        frappe.throw(f"Design Code {design_code} does not match this breakup's Set Code and Element Code.")
+    if classification:
+        _validate_optional_manual_classification(classification)
+        values = _get_classification_values(classification)
 
-    if (
-        design.set_code_value != values["SET_CODE"]
-        or design.element_code_value != values["ELEMENT_CODE"]
-    ):
-        frappe.throw(f"Design Code {design_code} no longer matches the configured master-code values.")
+        if design.set_code != classification["SET_CODE"] or design.element_code != classification["ELEMENT_CODE"]:
+            frappe.throw(f"Design Code {design_code} does not match this breakup's Set Code and Element Code.")
+
+        if (
+            design.set_code_value != values["SET_CODE"]
+            or design.element_code_value != values["ELEMENT_CODE"]
+        ):
+            frappe.throw(f"Design Code {design_code} no longer matches the configured master-code values.")
+    elif design.set_code or design.element_code:
+        frappe.throw(f"Design Code {design_code} requires Set Code and Element Code for assignment.")
 
     return design
 
@@ -681,7 +692,13 @@ def _ensure_locked_classification_is_unchanged(sku_master, breakup_ref, rows):
     if not design_code:
         return
 
-    classification = _get_classification_from_rows(rows, require_complete=True)
+    design = _get_design_code_doc(design_code)
+    classification = _get_classification_from_rows(
+        rows,
+        require_complete=design.generation_mode == "Auto",
+    )
+    if design.generation_mode == "Manual":
+        _validate_optional_manual_classification(classification)
     _validate_design_code_matches_classification(design_code, classification)
 
     previous_rows = get_breakup_rows_for_reference(sku_master, breakup_ref)
@@ -864,10 +881,10 @@ def _create_design_code_registry_entry(
     design.design_code = design_code
     design.generation_mode = generation_mode
     design.status = "Active"
-    design.set_code = classification["SET_CODE"]
-    design.set_code_value = values["SET_CODE"]
-    design.element_code = classification["ELEMENT_CODE"]
-    design.element_code_value = values["ELEMENT_CODE"]
+    design.set_code = classification.get("SET_CODE")
+    design.set_code_value = values.get("SET_CODE")
+    design.element_code = classification.get("ELEMENT_CODE")
+    design.element_code_value = values.get("ELEMENT_CODE")
     design.sequence_no = _get_design_code_sequence(design_code) if generation_mode == "Auto" else None
     design.created_from_sku_master = sku_master
     design.created_from_breakup_ref = breakup_ref
@@ -884,7 +901,13 @@ def _validate_breakup_can_be_assigned(sku_master, breakup_ref):
         frappe.throw("A Design Code cannot be assigned to a cancelled SKU Master.")
 
     rows = get_breakup_rows_for_reference(sku_master, breakup_ref)
-    classification = _get_classification_from_rows(rows, require_complete=True)
+    manual_design_code = _get_manual_design_code_from_rows(rows)
+    classification = _get_classification_from_rows(
+        rows,
+        require_complete=not manual_design_code,
+    )
+    if manual_design_code:
+        _validate_optional_manual_classification(classification)
     if not _has_design_code_assignment_target(sku_master, breakup_ref):
         frappe.throw("This breakup is not linked to a SKU Details row or SKU record.")
     return classification
