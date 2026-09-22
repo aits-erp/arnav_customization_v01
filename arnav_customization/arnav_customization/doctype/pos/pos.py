@@ -534,14 +534,11 @@ def make_credit_note(source_name, target_doc=None):
 		target.uom = item_doc.stock_uom
 		target.stock_uom = item_doc.stock_uom
 
-		target.custom_custom_rate = source.price
-
 		target.qty = -1 * (source.qty or 0)
 		target.custom_gross_weight = source.gross_weight
 
 		target.rate = source.price
 		target.custom_custom_rate = source.price
-		target.amount = source.final_amount
 		target.discount_amount = source.discount
 
 		target.custom_sku = source.sku
