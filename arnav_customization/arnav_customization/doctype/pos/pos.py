@@ -1,4 +1,3 @@
-from apps.arnav_customization.arnav_customization.breakup_doctypes.doctype import target
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_datetime
