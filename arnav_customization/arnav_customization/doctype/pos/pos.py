@@ -1,3 +1,4 @@
+from apps.arnav_customization.arnav_customization.breakup_doctypes.doctype import target
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_datetime
@@ -7,6 +8,18 @@ def money(value):
 	return flt(value, 2)
 
 class POS(Document):
+
+	def get_data():
+		return {
+			"fieldname": "custom_pos",
+			"transactions": [
+				{
+					"label": "Sales Return",
+					"items": ["Sales Invoice"]
+				}
+			]
+		}
+	
 	def validate(self):
 		doc_before_save = self.get_doc_before_save()
 
@@ -487,6 +500,7 @@ def make_credit_note(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		target.is_return = 1
 		target.update_stock = 1
+		target.custom_pos = source.name
 
 		client_name = (source.client_name or "").strip()
 
@@ -512,10 +526,22 @@ def make_credit_note(source_name, target_doc=None):
 
 		target.item_code = source.product
 
-		target.qty = -1 * (source.gross_weight or 0)
-		target.custom_gross_weight = source.qty
+		item_doc = frappe.get_cached_doc(
+			"Item",
+			source.product
+		)
+
+		target.item_name = item_doc.item_name
+		target.uom = item_doc.stock_uom
+		target.stock_uom = item_doc.stock_uom
+
+		target.custom_custom_rate = source.price
+
+		target.qty = -1 * (source.qty or 0)
+		target.custom_gross_weight = source.gross_weight
 
 		target.rate = source.price
+		target.custom_custom_rate = source.price
 		target.amount = source.final_amount
 		target.discount_amount = source.discount
 
