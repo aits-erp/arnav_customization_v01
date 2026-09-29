@@ -38,7 +38,9 @@ class POS(Document):
 			frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
 
 		# 2️⃣ Cash limit validation
-		CASH_LIMIT = 195000
+		# CASH_LIMIT = 195000
+		CASH_LIMIT = 199900 
+
 		total_cash = 0
 
 		for row in self.payment_details:
