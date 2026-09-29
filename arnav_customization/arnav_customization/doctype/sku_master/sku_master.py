@@ -272,10 +272,28 @@ class SKUMaster(Document):
 
             issue_qty = min(available_qty, remaining_issue_qty)
 
+            # Check whether source item is batch tracked
+            has_batch_no = frappe.db.get_value(
+                "Item",
+                item.item_code,
+                "has_batch_no"
+            )
+
+            # Batch-tracked item must have an exact source batch
+            if has_batch_no and not item.batch_no:
+                frappe.throw(
+                    f"Batch No is mandatory for Item {item.item_code} "
+                    f"in Purchase Invoice row {item.idx}."
+                )
+
+
             se.append("items", {
                 "item_code": item.item_code,
                 "qty": issue_qty,
-                "s_warehouse": self.warehouse
+                "s_warehouse": self.warehouse,
+                "batch_no": item.batch_no if has_batch_no else None,
+                "use_serial_batch_fields": 1,
+                "serial_and_batch_bundle": None,
             })
 
             remaining_issue_qty -= issue_qty
@@ -354,14 +372,25 @@ class SKUMaster(Document):
             if not row.cost_price:
                 frappe.throw(f"Cost Price is required for row {row.idx}")
 
-            #5️⃣ Add to Stock Entry
+            # 5️⃣ Add to Stock Entry
+            # se.append("items", {
+            #     "item_code": row.product,
+            #     # "qty": flt(row.gross_weight),
+            #     "qty": flt(row.qty),
+            #     "t_warehouse": self.warehouse,
+            #     "batch_no": batch_name,
+            #     # "is_finished_item": 1,
+            #     "set_basic_rate_manually": 1,
+            #     "basic_rate": flt(row.cost_price)
+            # })
+
             se.append("items", {
                 "item_code": row.product,
-                # "qty": flt(row.gross_weight),
                 "qty": flt(row.qty),
                 "t_warehouse": self.warehouse,
                 "batch_no": batch_name,
-                # "is_finished_item": 1,
+                "use_serial_batch_fields": 1,
+                "serial_and_batch_bundle": None,
                 "set_basic_rate_manually": 1,
                 "basic_rate": flt(row.cost_price)
             })
