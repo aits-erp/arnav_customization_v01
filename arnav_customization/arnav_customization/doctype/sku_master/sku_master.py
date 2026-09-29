@@ -273,25 +273,25 @@ class SKUMaster(Document):
             issue_qty = min(available_qty, remaining_issue_qty)
 
             # Check whether source item is batch tracked
-            has_batch_no = frappe.db.get_value(
-                "Item",
-                item.item_code,
-                "has_batch_no"
-            )
+            # has_batch_no = frappe.db.get_value(
+            #     "Item",
+            #     item.item_code,
+            #     "has_batch_no"
+            # )
 
-            # Batch-tracked item must have an exact source batch
-            if has_batch_no and not item.batch_no:
-                frappe.throw(
-                    f"Batch No is mandatory for Item {item.item_code} "
-                    f"in Purchase Invoice row {item.idx}."
-                )
+            # # Batch-tracked item must have an exact source batch
+            # if has_batch_no and not item.batch_no:
+            #     frappe.throw(
+            #         f"Batch No is mandatory for Item {item.item_code} "
+            #         f"in Purchase Invoice row {item.idx}."
+            #     )
 
 
             se.append("items", {
                 "item_code": item.item_code,
                 "qty": issue_qty,
                 "s_warehouse": self.warehouse,
-                "batch_no": item.batch_no if has_batch_no else None,
+                "batch_no": item.batch_no,
                 "use_serial_batch_fields": 1,
                 "serial_and_batch_bundle": None,
             })
