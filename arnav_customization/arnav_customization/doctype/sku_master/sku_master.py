@@ -1521,16 +1521,85 @@ class SKUMaster(Document):
             if issue_qty <= 0:
                 continue
 
-            # PI source batch is authoritative. Never silently allocate
-            # another batch after the original SKU Master was cancelled.
+            # Resolve the exact source batch, without arbitrary stock allocation.
+            # On ERPNext v15+, PI item.batch_no may be empty because the batch
+            # is recorded in the PI item's Serial and Batch Bundle instead.
             batch_no = item.get("batch_no")
             if item_info.has_batch_no:
+                pi_bundle = item.get("serial_and_batch_bundle")
+
+                # Update Stock Purchase Invoices can record their generated
+                # Serial and Batch Bundle on the Stock Ledger Entry, while the
+                # Purchase Invoice child row's bundle field remains empty.
+                # Match the exact PI child row; never select another receipt's
+                # batch merely because its item code or warehouse matches.
+                if not pi_bundle:
+                    receipt_ledgers = frappe.get_all(
+                        "Stock Ledger Entry",
+                        filters={
+                            "voucher_type": "Purchase Invoice",
+                            "voucher_no": pi.name,
+                            "voucher_detail_no": item.name,
+                            "item_code": item.item_code,
+                            "warehouse": self.warehouse,
+                            "is_cancelled": 0,
+                        },
+                        fields=["actual_qty", "serial_and_batch_bundle"],
+                    )
+                    receipt_bundle_ids = {
+                        sle.serial_and_batch_bundle
+                        for sle in receipt_ledgers
+                        if flt(sle.actual_qty) > 0.000001
+                        and sle.serial_and_batch_bundle
+                    }
+                    if len(receipt_bundle_ids) == 1:
+                        pi_bundle = next(iter(receipt_bundle_ids))
+                    elif len(receipt_bundle_ids) > 1:
+                        frappe.throw(
+                            f"Multiple inward source bundles exist for Purchase "
+                            f"Invoice row {item.idx} (Item {item.item_code}). "
+                            f"An explicit source-batch allocation is required."
+                        )
+
+                bundle_batches = set()
+                if pi_bundle:
+                    bundle = frappe.get_doc("Serial and Batch Bundle", pi_bundle)
+                    bundle_batches = {
+                        d.batch_no for d in bundle.entries
+                        if d.batch_no and abs(flt(d.qty)) > 0.000001
+                    }
+
+                selected_batch = self.get("source_batch_no")
+                if batch_no and bundle_batches and batch_no not in bundle_batches:
+                    frappe.throw(
+                        f"Purchase Invoice row {item.idx} has inconsistent Batch No "
+                        f"and Serial and Batch Bundle. Please check the PI."
+                    )
+
+                if selected_batch:
+                    # User selection is explicit; validate against any known PI origin.
+                    if batch_no and selected_batch != batch_no:
+                        frappe.throw(
+                            f"Selected Source Batch {selected_batch} does not match "
+                            f"Purchase Invoice row {item.idx} batch {batch_no}."
+                        )
+                    if bundle_batches and selected_batch not in bundle_batches:
+                        frappe.throw(
+                            f"Selected Source Batch {selected_batch} is not in "
+                            f"the Purchase Invoice row {item.idx} bundle."
+                        )
+                    batch_no = selected_batch
+                elif not batch_no and len(bundle_batches) == 1:
+                    # A uniquely recorded PI batch is not an arbitrary allocation.
+                    batch_no = next(iter(bundle_batches))
+
                 if not batch_no:
                     frappe.throw(
-                        f"Source Batch No is mandatory for Purchase Invoice "
-                        f"row {item.idx} (Item {item.item_code}). "
-                        f"Select/record the exact source batch before submitting "
-                        f"this SKU Master; automatic batch allocation is disabled."
+                        f"Purchase Invoice row {item.idx} (Item {item.item_code}) "
+                        f"has no unambiguous source batch. Set Source Batch No on "
+                        f"SKU Master (custom field: source_batch_no), after verifying "
+                        f"the actual available batch in warehouse {self.warehouse}. "
+                        f"PI bundle batches: {', '.join(sorted(bundle_batches)) or 'none'}."
                     )
 
                 if not frappe.db.exists(
