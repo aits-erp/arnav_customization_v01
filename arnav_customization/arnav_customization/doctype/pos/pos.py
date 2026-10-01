@@ -498,10 +498,19 @@ def make_credit_note(source_name, target_doc=None):
 	# ===============================
 	# HEADER POST PROCESS
 	# ===============================
+	# def set_missing_values(source, target):
+	# 	target.is_return = 1
+	# 	target.update_stock = 1
+	# 	target.custom_pos = source.name
+
+	# 	client_name = (source.client_name or "").strip()
 	def set_missing_values(source, target):
 		target.is_return = 1
 		target.update_stock = 1
 		target.custom_pos = source.name
+
+		# Preserve the original POS rate for Sales Return
+		target.ignore_pricing_rule = 1
 
 		client_name = (source.client_name or "").strip()
 
@@ -548,6 +557,8 @@ def make_credit_note(source_name, target_doc=None):
 
 		target.batch_no = source.batch_no
 		target.gst_hsn_code = source.hsn
+
+
 
 	# ===============================
 	# PACKING MATERIALS MAPPING
