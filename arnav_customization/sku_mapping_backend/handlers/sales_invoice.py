@@ -38,13 +38,24 @@ def process(doc, method):
 
         row.item_code = sku.product
 
+        # Quantity
+        # Normal Sales Invoice -> SKU quantity
+        # Sales Return -> preserve the negative quantity
+        # already created by make_credit_note()
         if not doc.is_return:
             row.qty = sku.qty
 
+        # Weight
         row.custom_gross_weight = sku.gross_weight
         row.custom_net_weight = sku.net_weight
         row.custom_quantity = sku.qty
-        row.rate = sku.selling_price
+
+        # Rate
+        # Normal Sales Invoice -> current SKU selling price
+        # Sales Return -> preserve the original POS price
+        if not doc.is_return:
+            row.rate = sku.selling_price
+
         row.gst_hsn_code = sku.hsn
         row.warehouse = sku.warehouse
         row.batch_no = sku.batch_no or row.custom_sku
