@@ -511,9 +511,32 @@ def make_credit_note(source_name, target_doc=None):
 		target.qty = -1 * (source.gross_weight or 0)
 		target.custom_gross_weight = source.qty
 
+<<<<<<< Updated upstream
 		target.rate = source.price
 		target.amount = source.final_amount
 		target.discount_amount = source.discount
+=======
+		# ERPNext treats ``rate`` as the effective per-unit selling rate and
+		# derives the row amount from it.  POS stores discount as a row total,
+		# so convert it to a per-unit value before mapping it to Sales Invoice
+		# Item.  Sending the POS gross price as ``rate`` and the whole discount
+		# as ``discount_amount`` lets the standard asynchronous price lookup
+		# recalculate some rows to an invalid (including negative) rate.
+		qty = flt(source.qty) or 1
+		gross_rate = flt(source.price)
+		unit_discount = flt(source.discount) / qty
+		effective_rate = gross_rate - unit_discount
+
+		# Keep the POS-entered price visible/auditable in the existing custom
+		# field, while providing a complete, internally consistent standard
+		# pricing state for the Sales Invoice Item.
+		target.custom_custom_rate = gross_rate
+		target.price_list_rate = gross_rate
+		target.rate_with_margin = gross_rate
+		target.discount_amount = unit_discount
+		target.discount_percentage = (unit_discount / gross_rate * 100) if gross_rate else 0
+		target.rate = effective_rate
+>>>>>>> Stashed changes
 
 		target.custom_sku = source.sku
 		target.custom_net_weight = source.net_weight
@@ -540,10 +563,7 @@ def make_credit_note(source_name, target_doc=None):
 					"mobile_number": "contact_mobile",
 					"email": "contact_email",
 					"address": "address_display",
-					"branch": "set_warehouse",
-
-					"total_amount_with_gst": "grand_total",
-					"total_amount_wo_tax": "total"
+					"branch": "set_warehouse"
 				}
 			},
 

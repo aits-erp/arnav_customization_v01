@@ -48,6 +48,14 @@ frappe.ui.form.on("Sales Invoice Item", {
 
     custom_sku: function(frm, cdt, cdn) {
 
+        // A mapped POS return already contains the original item, quantity,
+        // warehouse, batch and historical price.  Fetching the current SKU
+        // again here is asynchronous and can overwrite those values after
+        // the return form first renders.
+        if (frm.doc.is_return && frm.doc.custom_pos) {
+            return;
+        }
+
         let row = locals[cdt][cdn];
 
         if (!row.custom_sku) return;
@@ -98,6 +106,14 @@ frappe.ui.form.on("Sales Invoice Item", {
 // =====================================================
 
 function calculate_custom_rate(frm, cdt, cdn) {
+
+    // POS returns already arrive with a historical, fully calculated price.
+    // Do not run the jewellery weight/purity formula on those mapped rows.
+    // This handler runs after the mapped document opens, which was replacing
+    // valid POS rates a moment later for only the rows with custom values.
+    if (frm.doc.is_return && frm.doc.custom_pos) {
+        return;
+    }
 
     let row = locals[cdt][cdn];
 

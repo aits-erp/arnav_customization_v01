@@ -18,4 +18,8 @@ def process(doc, method):
         row.rate = sku.selling_price
         row.gst_hsn_code = sku.hsn
         row.warehouse = sku.warehouse
+<<<<<<< Updated upstream
         row.batch_no = sku.batch_no or row.custom_sku
+=======
+        row.batch_no = sku.batch_no or row.custom_sku
+>>>>>>> Stashed changes
