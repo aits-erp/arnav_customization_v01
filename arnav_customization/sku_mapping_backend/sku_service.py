@@ -23,7 +23,8 @@ def get_sku_data(sku):
             "hsn",
             "barcode",
             "valuation_rate",
-            "old_sku_ref"
+            "old_sku_ref",
+            "design_code",
         ],
         as_dict=True
     )

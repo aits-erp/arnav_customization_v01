@@ -1,137 +1,31 @@
 frappe.ui.form.on("SKU", {
     refresh(frm) {
-        if (frm.doc.breakup_ref) {
-            frm.set_df_property("breakup_info", "label", "Edit Breakup");
-        } else {
-            frm.set_df_property("breakup_info", "label", "Add Breakup");
-        }
+        frm.set_df_property("breakup_info", "label", frm.doc.breakup_ref ? "Edit Breakup" : "Add Breakup");
     },
 
     async breakup_info(frm) {
-
-    // ✅ generate breakup_ref if missing editable field to link breakup rows to this SKU
-    if (!frm.doc.breakup_ref) {
-        await frm.set_value("breakup_ref", frappe.utils.get_random(12));
-    }
-
-    if (frm.is_dirty()) {
-        await frm.save();
-    }
-
-    frappe.call({
-        method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.get_breakup_rows",
-        args: {
-            sku_master: frm.doc.sku_master,
-            breakup_ref: frm.doc.breakup_ref
-        },
-        callback: function (r) {
-
-            let breakup_rows = r.message || [];
-
-            let dynamic_fields = [
-                {
-                    fieldname: "attribute_type",
-                    label: "Attribute Type",
-                    fieldtype: "Select",
-                    options: `
-ELEMENT_CODE
-PURITY
-STONE
-SET_CODE
-DESIGN
-VISUAL
-USAGE
-TARGET`,
-                    in_list_view: 1
-                },
-                {
-                    fieldname: "attribute_value",
-                    label: "Attribute Value",
-                    fieldtype: "Link",
-                    options: "",
-                    in_list_view: 1
-                },
-                {
-                    fieldname: "weight",
-                    label: "Weight",
-                    fieldtype: "Float",
-                    in_list_view: 1
-                },
-                {
-                    fieldname: "price",
-                    label: "Price",
-                    fieldtype: "Float",
-                    in_list_view: 1
-                },
-                {
-                    fieldname: "unit",
-                    label: "Unit",
-                    fieldtype: "Select",
-                    options: "\nGram\nCarat",
-                    in_list_view: 1
-                }
-            ];
-
-            let dialog = new frappe.ui.Dialog({
-                title: "Manage Breakup",
-                size: "extra-large",
-                fields: [
-                    {
-                        fieldname: "breakup_table",
-                        fieldtype: "Table",
-                        label: "Breakup Details",
-                        in_place_edit: true,
-                        cannot_add_rows: false,
-                        data: breakup_rows,
-                        get_data: () => breakup_rows,
-                        fields: dynamic_fields
-                    }
-                ],
-                primary_action_label: "Save",
-                primary_action(values) {
-
-                    frappe.call({
-                        method: "arnav_customization.arnav_customization.doctype.sku_master.sku_master.save_breakup_rows",
-                        args: {
-                            sku_master: frm.doc.sku_master,
-                            breakup_ref: frm.doc.breakup_ref,
-                            rows: JSON.stringify(values.breakup_table || [])
-                        },
-                        callback(r) {
-                            const saved_breakup = r.message || {};
-                            if (saved_breakup.breakup_ref && saved_breakup.breakup_ref !== frm.doc.breakup_ref) {
-                                frm.set_value("breakup_ref", saved_breakup.breakup_ref);
-                            }
-                            frappe.msgprint("Breakup updated successfully");
-                            dialog.hide();
-                            frm.reload_doc();
-                        }
-                    });
-                }
-            });
-
-            dialog.show();
-
-            // 🔥 same dynamic link logic as SKU Master
-            let grid = dialog.fields_dict.breakup_table.grid;
-
-            grid.wrapper.on("focus", "input[data-fieldname='attribute_value']", function () {
-
-                let grid_row = $(this).closest(".grid-row").data("grid_row");
-                if (!grid_row) return;
-
-                let row_doc = grid_row.doc;
-                if (!row_doc.attribute_type) return;
-
-                grid.update_docfield_property(
-                    "attribute_value",
-                    "options",
-                    row_doc.attribute_type
-                );
-            });
-
+        if (!frm.doc.breakup_ref) {
+            await frm.set_value("breakup_ref", frappe.utils.get_random(12));
         }
-    });
-}
 
+        if (frm.is_dirty()) {
+            await frm.save();
+        }
+
+        if (!arnav_customization.design_code || !arnav_customization.design_code.open_breakup_dialog) {
+            frappe.throw(__("Design Code breakup controls are not loaded. Please clear cache and reload the page."));
+        }
+
+        arnav_customization.design_code.open_breakup_dialog({
+            title: __("Breakup - {0}", [frm.doc.product || frm.doc.sku_code || ""]),
+            sku_master: frm.doc.sku_master,
+            breakup_ref: frm.doc.breakup_ref,
+            on_saved(saved_breakup) {
+                if (saved_breakup.breakup_ref && saved_breakup.breakup_ref !== frm.doc.breakup_ref) {
+                    frm.set_value("breakup_ref", saved_breakup.breakup_ref);
+                }
+                frm.reload_doc();
+            }
+        });
+    }
 });

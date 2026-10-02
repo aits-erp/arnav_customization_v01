@@ -327,6 +327,7 @@ def _get_sku_details_data(warehouse=None, sku=None):
             s.product AS sku_product,
             s.sku_master,
             s.breakup_ref,
+            s.design_code,
             s.old_sku_ref,
             s.image_url,
             s.selling_price,

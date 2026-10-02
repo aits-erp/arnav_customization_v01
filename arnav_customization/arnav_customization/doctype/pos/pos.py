@@ -7,11 +7,27 @@ def money(value):
 	return flt(value, 2)
 
 class POS(Document):
+
+	def get_data():
+		return {
+			"fieldname": "custom_pos",
+			"transactions": [
+				{
+					"label": "Sales Return",
+					"items": ["Sales Invoice"]
+				}
+			]
+		}
+	
 	def validate(self):
 		doc_before_save = self.get_doc_before_save()
 
 		if doc_before_save and doc_before_save.docstatus == 1:
 			return
+
+		# A date-only projection makes list filtering independent of the
+		# time stored in the operational POS DateTime field.
+		self.pos_date = get_datetime(self.date).date() if self.date else None
 
 		# self.calculate_gst_for_items()
 		self.apply_discount_and_calculate_totals()
@@ -22,7 +38,9 @@ class POS(Document):
 			frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
 
 		# 2️⃣ Cash limit validation
-		CASH_LIMIT = 195000
+		# CASH_LIMIT = 195000
+		CASH_LIMIT = 199900 
+
 		total_cash = 0
 
 		for row in self.payment_details:
@@ -480,9 +498,19 @@ def make_credit_note(source_name, target_doc=None):
 	# ===============================
 	# HEADER POST PROCESS
 	# ===============================
+	# def set_missing_values(source, target):
+	# 	target.is_return = 1
+	# 	target.update_stock = 1
+	# 	target.custom_pos = source.name
+
+	# 	client_name = (source.client_name or "").strip()
 	def set_missing_values(source, target):
 		target.is_return = 1
 		target.update_stock = 1
+		target.custom_pos = source.name
+
+		# Preserve the original POS rate for Sales Return
+		target.ignore_pricing_rule = 1
 
 		client_name = (source.client_name or "").strip()
 
@@ -508,12 +536,21 @@ def make_credit_note(source_name, target_doc=None):
 
 		target.item_code = source.product
 
-		target.qty = -1 * (source.gross_weight or 0)
-		target.custom_gross_weight = source.qty
+		item_doc = frappe.get_cached_doc(
+			"Item",
+			source.product
+		)
+
+		target.item_name = item_doc.item_name
+		target.uom = item_doc.stock_uom
+		target.stock_uom = item_doc.stock_uom
+
+		target.qty = -1 * (source.qty or 0)
+		target.custom_gross_weight = source.gross_weight
 
 <<<<<<< Updated upstream
 		target.rate = source.price
-		target.amount = source.final_amount
+		target.custom_custom_rate = source.price
 		target.discount_amount = source.discount
 =======
 		# ERPNext treats ``rate`` as the effective per-unit selling rate and
@@ -543,6 +580,8 @@ def make_credit_note(source_name, target_doc=None):
 
 		target.batch_no = source.batch_no
 		target.gst_hsn_code = source.hsn
+
+
 
 	# ===============================
 	# PACKING MATERIALS MAPPING

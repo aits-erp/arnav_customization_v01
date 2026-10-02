@@ -4,6 +4,11 @@ from frappe.model.document import Document
 
 class SKU(Document):
 
+    def validate(self):
+        previous = self.get_doc_before_save()
+        if previous and self.design_code != previous.design_code:
+            frappe.throw("Design Code is immutable. Use Replace Design Code from Breakup.")
+
     def on_update(self):
         if self.has_value_changed("d_no"):
             self.sync_d_no_to_sku_details()

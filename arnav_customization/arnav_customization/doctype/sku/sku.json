@@ -68,8 +68,10 @@
   },
   {
    "fieldname": "design_code",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Design Code",
+   "options": "Design Code",
    "read_only": 1
   },
   {
@@ -143,7 +145,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "\nAvailable\nSold"
+   "options": "\nAvailable\nSold\nCancelled"
   },
   {
    "fieldname": "barcode",

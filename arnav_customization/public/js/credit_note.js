@@ -42,7 +42,11 @@ frappe.ui.form.on('Sales Invoice Item', {
 
 function calculate_custom_rate(frm, cdt, cdn) {
 
-    // Run only inside Credit Note
+    // Skip calculation for POS-generated returns
+    if (frm.doc.custom_pos) {
+        return;
+    }
+
     if (frm.doctype !== "Credit Note") return;
 
     let row = locals[cdt][cdn];
@@ -55,12 +59,8 @@ function calculate_custom_rate(frm, cdt, cdn) {
 
         let calculated_rate = weight * rate * purity;
 
-        // Set qty = 1 (enforced)
         frappe.model.set_value(cdt, cdn, "qty", 1);
-
-        // Set calculated value into standard rate
         frappe.model.set_value(cdt, cdn, "rate", calculated_rate);
-
     }
 }
 

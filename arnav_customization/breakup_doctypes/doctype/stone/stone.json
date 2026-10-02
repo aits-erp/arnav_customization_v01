@@ -6,13 +6,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "stone"
+  "stone",
+  "abbreviation"
  ],
  "fields": [
   {
    "fieldname": "stone",
    "fieldtype": "Data",
    "label": "Stone",
+   "unique": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Abbreviation",
    "unique": 1
   }
  ],

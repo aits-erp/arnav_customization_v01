@@ -5,6 +5,8 @@ app_description = "many fields and doctypes with custom modifications"
 app_email = "nikhil@aitsind.com"
 app_license = "mit"
 
+app_include_js = "/assets/arnav_customization/js/design_code_breakup.js"
+
 doctype_js = {
     "Credit Note": "public/js/credit_note.js",
     "Debit Note": "public/js/debit_note.js",
