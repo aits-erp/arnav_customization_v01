@@ -24,6 +24,8 @@ frappe.ui.form.on('Sales Invoice', {
 
             frm.refresh_field("items");
         }
+
+        restore_pos_return_pricing(frm);
     }
 });
 
@@ -131,6 +133,50 @@ function calculate_custom_rate(frm, cdt, cdn) {
         // set calculated value
         frappe.model.set_value(cdt, cdn, "rate", calculated_rate);
     }
+}
+
+function restore_pos_return_pricing(frm) {
+    if (!frm.is_new() || !frm.doc.is_return || !frm.doc.custom_pos || frm.__restoring_pos_return_pricing) {
+        return;
+    }
+
+    frm.__restoring_pos_return_pricing = true;
+    frappe.call({
+        method: "arnav_customization.arnav_customization.doctype.pos.pos.get_pos_return_pricing",
+        args: { source_name: frm.doc.custom_pos },
+        callback(r) {
+            const pricingBySku = r.message || {};
+            const applyPricing = () => {
+                (frm.doc.items || []).forEach(row => {
+                    const pricing = pricingBySku[row.custom_sku];
+                    if (!pricing) return;
+
+                    const grossRate = flt(pricing.gross_rate);
+                    const unitDiscount = flt(pricing.discount) / (flt(pricing.qty) || 1);
+
+                    row.custom_custom_rate = grossRate;
+                    row.price_list_rate = grossRate;
+                    row.rate_with_margin = grossRate;
+                    row.discount_amount = unitDiscount;
+                    row.discount_percentage = grossRate ? (unitDiscount / grossRate) * 100 : 0;
+                    row.rate = flt(pricing.effective_rate);
+                });
+
+                if (frm.cscript.calculate_taxes_and_totals) {
+                    frm.cscript.calculate_taxes_and_totals();
+                }
+                frm.refresh_field("items");
+                frm.__restoring_pos_return_pricing = false;
+            };
+
+            // Let ERPNext's outstanding Item Price requests finish first, then
+            // restore the immutable transaction values from the POS record.
+            frappe.after_ajax(() => setTimeout(applyPricing, 0));
+        },
+        error() {
+            frm.__restoring_pos_return_pricing = false;
+        }
+    });
 }
 
 // frappe.ui.form.on('Sales Invoice', {

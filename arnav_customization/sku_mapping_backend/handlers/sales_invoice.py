@@ -22,6 +22,9 @@
 #         row.batch_no = sku.batch_no or row.custom_sku
 
 
+import frappe
+from frappe.utils import flt
+
 from arnav_customization.sku_mapping_backend.sku_service import get_sku_data
 
 
@@ -85,3 +88,38 @@ def process(doc, method):
         row.gst_hsn_code = sku.hsn
         row.warehouse = sku.warehouse
         row.batch_no = sku.batch_no or row.custom_sku
+
+    restore_pos_return_pricing(doc)
+
+
+def restore_pos_return_pricing(doc):
+    """Keep POS returns tied to the recorded POS amount, not today's Item Price."""
+    if not (doc.is_return and doc.custom_pos):
+        return
+
+    pos = frappe.get_doc("POS", doc.custom_pos)
+    pricing_by_sku = {row.sku: row for row in pos.sku_details if row.sku}
+    changed = False
+
+    for item in doc.items:
+        source = pricing_by_sku.get(item.custom_sku)
+        if not source:
+            continue
+
+        source_qty = flt(source.qty) or 1
+        gross_rate = flt(source.price)
+        unit_discount = flt(source.discount) / source_qty
+        effective_rate = flt(source.final_amount) / source_qty
+
+        # Price List Rate is retained only as the reference/MRP.  The
+        # transaction Rate is the POS's actual discounted unit price.
+        item.custom_custom_rate = gross_rate
+        item.price_list_rate = gross_rate
+        item.rate_with_margin = gross_rate
+        item.discount_amount = unit_discount
+        item.discount_percentage = (unit_discount / gross_rate * 100) if gross_rate else 0
+        item.rate = effective_rate
+        changed = True
+
+    if changed:
+        doc.calculate_taxes_and_totals()

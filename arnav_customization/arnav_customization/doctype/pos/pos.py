@@ -620,3 +620,30 @@ def make_credit_note(source_name, target_doc=None):
 	)
 
 	return doc
+
+
+@frappe.whitelist()
+def get_pos_return_pricing(source_name):
+	"""Return the immutable POS pricing used to create a Sales Return.
+
+	A Sales Invoice's Item Price lookup is asynchronous and can replace values
+	mapped into a new return.  The POS is therefore the authoritative source
+	for its return pricing rather than the Item Price master.
+	"""
+	if not source_name or not frappe.has_permission("POS", "read", source_name):
+		frappe.throw("You do not have permission to read this POS transaction.")
+
+	pos = frappe.get_doc("POS", source_name)
+	if pos.docstatus != 1:
+		frappe.throw("Sales Return pricing can only be fetched from a submitted POS transaction.")
+
+	return {
+		row.sku: {
+			"gross_rate": flt(row.price),
+			"qty": flt(row.qty),
+			"discount": flt(row.discount),
+			"effective_rate": flt(row.final_amount) / (flt(row.qty) or 1),
+		}
+		for row in pos.sku_details
+		if row.sku
+	}
