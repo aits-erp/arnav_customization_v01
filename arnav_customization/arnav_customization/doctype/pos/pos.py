@@ -548,11 +548,6 @@ def make_credit_note(source_name, target_doc=None):
 		target.qty = -1 * (source.qty or 0)
 		target.custom_gross_weight = source.gross_weight
 
-<<<<<<< Updated upstream
-		target.rate = source.price
-		target.custom_custom_rate = source.price
-		target.discount_amount = source.discount
-=======
 		# ERPNext treats ``rate`` as the effective per-unit selling rate and
 		# derives the row amount from it.  POS stores discount as a row total,
 		# so convert it to a per-unit value before mapping it to Sales Invoice
@@ -573,7 +568,6 @@ def make_credit_note(source_name, target_doc=None):
 		target.discount_amount = unit_discount
 		target.discount_percentage = (unit_discount / gross_rate * 100) if gross_rate else 0
 		target.rate = effective_rate
->>>>>>> Stashed changes
 
 		target.custom_sku = source.sku
 		target.custom_net_weight = source.net_weight
