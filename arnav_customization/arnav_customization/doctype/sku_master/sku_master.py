@@ -1522,8 +1522,10 @@ class SKUMaster(Document):
                 continue
 
             # Resolve the exact source batch, without arbitrary stock allocation.
-            # On ERPNext v15+, PI item.batch_no may be empty because the batch
-            # is recorded in the PI item's Serial and Batch Bundle instead.
+            # A Purchase Invoice with Update Stock enabled records its batch on
+            # the PI / PI Stock Ledger Entry.  In the normal Purchase Receipt ->
+            # Purchase Invoice flow, however, update_stock is disabled on the PI
+            # and the batch belongs to the linked Purchase Receipt instead.
             batch_no = item.get("batch_no")
             if item_info.has_batch_no:
                 pi_bundle = item.get("serial_and_batch_bundle")
@@ -1569,6 +1571,68 @@ class SKUMaster(Document):
                         if d.batch_no and abs(flt(d.qty)) > 0.000001
                     }
 
+                # A PI created against a Purchase Receipt normally has neither
+                # a batch nor an inward Stock Ledger Entry of its own.  Resolve
+                # the exact linked PR row before asking the user to select a
+                # batch manually.  Never search by item/warehouse alone: one
+                # item can legitimately have several receipt batches.
+                if not batch_no and not bundle_batches and item.get("purchase_receipt"):
+                    pr_item = None
+                    if item.get("pr_detail"):
+                        pr_item = frappe.db.get_value(
+                            "Purchase Receipt Item",
+                            item.pr_detail,
+                            ["batch_no", "serial_and_batch_bundle"],
+                            as_dict=True,
+                        )
+
+                    if pr_item:
+                        batch_no = pr_item.batch_no
+                        pr_bundle = pr_item.serial_and_batch_bundle
+                    else:
+                        pr_bundle = None
+
+                    # ERPNext v15 may keep the generated bundle only on the
+                    # Purchase Receipt Stock Ledger Entry, not on its item row.
+                    if not pr_bundle:
+                        pr_ledger_filters = {
+                            "voucher_type": "Purchase Receipt",
+                            "voucher_no": item.purchase_receipt,
+                            "item_code": item.item_code,
+                            "warehouse": self.warehouse,
+                            "is_cancelled": 0,
+                        }
+                        if item.get("pr_detail"):
+                            pr_ledger_filters["voucher_detail_no"] = item.pr_detail
+
+                        pr_ledgers = frappe.get_all(
+                            "Stock Ledger Entry",
+                            filters=pr_ledger_filters,
+                            fields=["actual_qty", "serial_and_batch_bundle"],
+                        )
+                        pr_bundle_ids = {
+                            sle.serial_and_batch_bundle
+                            for sle in pr_ledgers
+                            if flt(sle.actual_qty) > 0.000001
+                            and sle.serial_and_batch_bundle
+                        }
+                        if len(pr_bundle_ids) == 1:
+                            pr_bundle = next(iter(pr_bundle_ids))
+                        elif len(pr_bundle_ids) > 1:
+                            frappe.throw(
+                                f"Multiple inward source bundles exist for linked "
+                                f"Purchase Receipt {item.purchase_receipt}, row "
+                                f"{item.pr_detail or 'unknown'} (Item {item.item_code}). "
+                                f"An explicit source-batch allocation is required."
+                            )
+
+                    if pr_bundle:
+                        pr_bundle_doc = frappe.get_doc("Serial and Batch Bundle", pr_bundle)
+                        bundle_batches = {
+                            d.batch_no for d in pr_bundle_doc.entries
+                            if d.batch_no and abs(flt(d.qty)) > 0.000001
+                        }
+
                 selected_batch = self.get("source_batch_no")
                 if batch_no and bundle_batches and batch_no not in bundle_batches:
                     frappe.throw(
@@ -1577,7 +1641,8 @@ class SKUMaster(Document):
                     )
 
                 if selected_batch:
-                    # User selection is explicit; validate against any known PI origin.
+                    # User selection is explicit; validate against the known
+                    # PI or linked Purchase Receipt origin.
                     if batch_no and selected_batch != batch_no:
                         frappe.throw(
                             f"Selected Source Batch {selected_batch} does not match "
@@ -1599,7 +1664,8 @@ class SKUMaster(Document):
                         f"has no unambiguous source batch. Set Source Batch No on "
                         f"SKU Master (custom field: source_batch_no), after verifying "
                         f"the actual available batch in warehouse {self.warehouse}. "
-                        f"PI bundle batches: {', '.join(sorted(bundle_batches)) or 'none'}."
+                        f"PI/linked PR bundle batches: "
+                        f"{', '.join(sorted(bundle_batches)) or 'none'}."
                     )
 
                 if not frappe.db.exists(
