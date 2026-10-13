@@ -115,27 +115,7 @@ frappe.ui.form.on('POS', {
             });
         }
 
-        // IMPORTANT:
-        // preserve route value during initial load
-
-        if (
-            frm.is_new() &&
-            frappe.route_options &&
-            frappe.route_options.client_name &&
-            !frm.doc.client_name
-        ) {
-
-            frm.set_value(
-                "client_name",
-                frappe.route_options.client_name
-            );
-        }
-
         console.log("CLIENT AFTER:", frm.doc.client_name);
-    },
-
-    onload_post_render: function (frm) {
-        apply_opportunity_client_name(frm);
     },
 
     // =========================================
@@ -147,7 +127,6 @@ frappe.ui.form.on('POS', {
         console.log("POS REFRESH:", frm.doc.client_name);
 
         if (frm.is_new()) {
-            apply_opportunity_client_name(frm);
             return;
         }
 
@@ -525,69 +504,4 @@ function money(val) {
 
 function is_submitted_pos(frm) {
     return is_pos(frm) && frm.doc.docstatus === 1;
-}
-
-function apply_opportunity_client_name(frm) {
-
-    if (!frm.is_new()) {
-        return;
-    }
-
-    let pending_client_name = "";
-
-    try {
-        pending_client_name =
-            sessionStorage.getItem("pending_pos_client_name") || "";
-    } catch (e) {
-        pending_client_name = "";
-    }
-
-    pending_client_name =
-        pending_client_name ||
-        (frappe.route_options && frappe.route_options.client_name) ||
-        "";
-
-    if (!pending_client_name) {
-        return;
-    }
-
-    setTimeout(function () {
-        resolve_and_set_client_name(frm, pending_client_name);
-    }, 300);
-}
-
-/* =====================================================
-RESOLVE LEAD -> lead_name -> client_name
-
-Incoming value can be:
-  - a Lead ID (e.g. CRM-LEAD-2026-00026) -> fetch its lead_name
-  - the lead name directly (e.g. Dr Sunanda p) -> used as-is (fallback)
-===================================================== */
-function resolve_and_set_client_name(frm, value) {
-
-    let raw = (value || "").trim();
-
-    if (!frm.is_new() || !raw) {
-        return;
-    }
-
-    frappe.db.get_value("Lead", raw, "lead_name").then(function (r) {
-
-        let lead_name =
-            (r && r.message && r.message.lead_name)
-                ? r.message.lead_name
-                : "";
-
-        let final_name = lead_name || raw;
-
-        if (frm.is_new() && frm.doc.client_name !== final_name) {
-            frm.set_value("client_name", final_name);
-        }
-
-        try {
-            sessionStorage.removeItem("pending_pos_client_name");
-        } catch (e) {
-            // browser storage may be unavailable in private contexts
-        }
-    });
 }

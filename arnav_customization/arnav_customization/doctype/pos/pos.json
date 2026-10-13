@@ -67,9 +67,10 @@
   {
    "allow_on_submit": 1,
    "fieldname": "client_name",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Client Name",
+   "options": "Customer",
    "reqd": 1
   },
   {
