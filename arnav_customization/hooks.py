@@ -29,7 +29,8 @@ fixtures = [
 # Runs after fixtures are imported, so the custom_pos_detail column is present
 # before the historical Sales Return backfill queries it.
 after_migrate = [
-    "arnav_customization.patches.backfill_pos_return_detail_references.execute"
+    "arnav_customization.patches.backfill_pos_return_detail_references.execute",
+    "arnav_customization.opportunity_customer.backfill_customer_opportunity_links"
 ]
 
 # Frappe's orphan-DocType cleanup can misidentify newly introduced standard
@@ -51,7 +52,8 @@ doc_events = {
         "after_insert": "arnav_customization.shopify_order_patch.smart_sku_mapper"
     },
     "Customer": {
-        "after_insert": "arnav_customization.opportunity_customer.link_new_customer_to_opportunity"
+        "after_insert": "arnav_customization.opportunity_customer.link_new_customer_to_opportunity",
+        "on_update": "arnav_customization.opportunity_customer.link_new_customer_to_opportunity"
     },
         "Sales Invoice": {
         "validate": "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process",
