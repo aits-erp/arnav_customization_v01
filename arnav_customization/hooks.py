@@ -26,6 +26,12 @@ fixtures = [
     }
 ]
 
+# Runs after fixtures are imported, so the custom_pos_detail column is present
+# before the historical Sales Return backfill queries it.
+after_migrate = [
+    "arnav_customization.patches.backfill_pos_return_detail_references.execute"
+]
+
 # Frappe's orphan-DocType cleanup can misidentify newly introduced standard
 # DocTypes during migrate. Explicit controller registration keeps these source
 # backed DocTypes available after the cleanup phase.

@@ -4,7 +4,9 @@ import frappe
 
 
 def execute():
-	if not frappe.db.table_exists("Sales Invoice"):
+	if not frappe.db.table_exists("Sales Invoice") or not frappe.db.has_column(
+		"Sales Invoice Item", "custom_pos_detail"
+	):
 		return
 
 	returns = frappe.get_all(
