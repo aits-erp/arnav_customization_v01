@@ -98,11 +98,12 @@ def restore_pos_return_pricing(doc):
         return
 
     pos = frappe.get_doc("POS", doc.custom_pos)
+    pricing_by_detail = {row.name: row for row in pos.sku_details}
     pricing_by_sku = {row.sku: row for row in pos.sku_details if row.sku}
     changed = False
 
     for item in doc.items:
-        source = pricing_by_sku.get(item.custom_sku)
+        source = pricing_by_detail.get(item.custom_pos_detail) or pricing_by_sku.get(item.custom_sku)
         if not source:
             continue
 

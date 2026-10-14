@@ -1102,7 +1102,7 @@ from frappe.model.naming import make_autoname
 
 from frappe.utils import getdate
 
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 from frappe.utils import now_datetime
 
@@ -2195,7 +2195,30 @@ def _validate_breakup_rows(rows):
 
     _get_manual_design_code_from_rows(rows)
 
-def _get_classification_values(classification):
+def _is_abbreviation_validation_enabled():
+
+    """Return the global legacy-assignment validation setting.
+
+    Default to enabled so a missing Settings DocType during an incomplete
+    deployment can never silently relax Design Code validation.
+    """
+
+    if not frappe.db.exists("DocType", "Design Code Settings"):
+
+        return True
+
+    setting = frappe.db.get_single_value(
+
+        "Design Code Settings",
+
+        "require_classification_abbreviations",
+
+    )
+
+    return True if setting is None else bool(cint(setting))
+
+
+def _get_classification_values(classification, require_abbreviations=True):
 
     values = {}
 
@@ -2205,7 +2228,7 @@ def _get_classification_values(classification):
 
         value = frappe.db.get_value(attribute_type, document_name, fieldname)
 
-        if not value:
+        if not value and require_abbreviations:
 
             frappe.throw(
 
@@ -2213,7 +2236,15 @@ def _get_classification_values(classification):
 
             )
 
-        values[attribute_type] = _normalise_code(value, attribute_type.replace("_", " ").title())
+        values[attribute_type] = (
+
+            _normalise_code(value, attribute_type.replace("_", " ").title())
+
+            if value
+
+            else None
+
+        )
 
     return values
 
@@ -2319,21 +2350,23 @@ def _validate_design_code_matches_classification(design_code, classification):
 
         _validate_optional_manual_classification(classification)
 
-        values = _get_classification_values(classification)
-
         if design.set_code != classification["SET_CODE"] or design.element_code != classification["ELEMENT_CODE"]:
 
             frappe.throw(f"Design Code {design_code} does not match this breakup's Set Code and Element Code.")
 
-        if (
+        if _is_abbreviation_validation_enabled():
 
-            design.set_code_value != values["SET_CODE"]
+            values = _get_classification_values(classification, require_abbreviations=True)
 
-            or design.element_code_value != values["ELEMENT_CODE"]
+            if (
 
-        ):
+                design.set_code_value != values["SET_CODE"]
 
-            frappe.throw(f"Design Code {design_code} no longer matches the configured master-code values.")
+                or design.element_code_value != values["ELEMENT_CODE"]
+
+            ):
+
+                frappe.throw(f"Design Code {design_code} no longer matches the configured master-code values.")
 
     elif design.set_code or design.element_code:
 
@@ -2477,7 +2510,19 @@ def validate_design_codes_for_submission(sku_master_doc):
 
         breakup_rows = get_breakup_rows_for_reference(sku_master_doc.name, row.breakup_ref)
 
-        classification = _get_classification_from_rows(breakup_rows, require_complete=True)
+        manual_design_code = _get_manual_design_code_from_rows(breakup_rows)
+
+        classification = _get_classification_from_rows(
+
+            breakup_rows,
+
+            require_complete=not manual_design_code,
+
+        )
+
+        if manual_design_code:
+
+            _validate_optional_manual_classification(classification)
 
         _validate_design_code_matches_classification(design_code, classification)
 
@@ -2595,7 +2640,23 @@ def get_breakup_design_state(sku_master, breakup_ref):
 
     classification = _get_classification_from_rows(rows)
 
-    values = _get_classification_values(classification) if classification else {}
+    abbreviation_validation_enabled = _is_abbreviation_validation_enabled()
+
+    values = (
+
+        _get_classification_values(
+
+            classification,
+
+            require_abbreviations=abbreviation_validation_enabled,
+
+        )
+
+        if classification
+
+        else {}
+
+    )
 
     design_code = _get_design_code_for_breakup(sku_master, breakup_ref)
 
@@ -2616,6 +2677,8 @@ def get_breakup_design_state(sku_master, breakup_ref):
         "manual_design_code": manual_design_code,
 
         "generation_mode": generation_mode,
+
+        "abbreviation_validation_enabled": abbreviation_validation_enabled,
 
         "classification_locked": bool(design_code),
 
@@ -2725,13 +2788,22 @@ def generate_design_code(sku_master, breakup_ref):
 
         return {"design_code": assigned_design_code, "already_assigned": True}
 
-    classification = _validate_breakup_can_be_assigned(sku_master, breakup_ref)
-
-    values = _get_classification_values(classification)
-
     rows = get_breakup_rows_for_reference(sku_master, breakup_ref)
 
     manual_design_code = _get_manual_design_code_from_rows(rows)
+
+    classification = _validate_breakup_can_be_assigned(sku_master, breakup_ref)
+
+    # A manual code can be created without classification. If classification
+    # exists, the global switch governs legacy abbreviation validation. Auto
+    # generation always needs both abbreviations to build its series prefix.
+    values = _get_classification_values(
+
+        classification,
+
+        require_abbreviations=not manual_design_code or _is_abbreviation_validation_enabled(),
+
+    )
 
     if manual_design_code:
 

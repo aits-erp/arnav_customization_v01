@@ -44,8 +44,12 @@ doc_events = {
     "Sales Order": {
         "after_insert": "arnav_customization.shopify_order_patch.smart_sku_mapper"
     },
+    "Customer": {
+        "after_insert": "arnav_customization.opportunity_customer.link_new_customer_to_opportunity"
+    },
         "Sales Invoice": {
-        "validate": "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process"
+        "validate": "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process",
+        "before_submit": "arnav_customization.arnav_customization.doctype.pos.pos.validate_pos_return_quantities"
     },
 
     "Quotation": {

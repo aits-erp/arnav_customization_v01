@@ -145,10 +145,10 @@ function restore_pos_return_pricing(frm) {
         method: "arnav_customization.arnav_customization.doctype.pos.pos.get_pos_return_pricing",
         args: { source_name: frm.doc.custom_pos },
         callback(r) {
-            const pricingBySku = r.message || {};
+            const pricingByPosDetail = r.message || {};
             const applyPricing = () => {
                 (frm.doc.items || []).forEach(row => {
-                    const pricing = pricingBySku[row.custom_sku];
+                    const pricing = pricingByPosDetail[row.custom_pos_detail];
                     if (!pricing) return;
 
                     const grossRate = flt(pricing.gross_rate);

@@ -14,6 +14,25 @@ frappe.ui.form.on("Opportunity", {
         // =========================
         frm.remove_custom_button("POS");
         frm.remove_custom_button("Sales Invoice");
+        frm.remove_custom_button("Customer");
+
+        if (!frm.doc.custom_customer) {
+            frm.add_custom_button(__("Customer"), function () {
+                frappe.new_doc("Customer", {
+                    // The hidden Customer field is used by the server after
+                    // save to link this newly created Customer to the source
+                    // Opportunity.
+                    custom_source_opportunity: frm.doc.name,
+                    customer_name: frm.doc.party_name || frm.doc.title || "",
+                    mobile_no:
+                        frm.doc.whatsapp ||
+                        frm.doc.contact_mobile ||
+                        frm.doc.phone ||
+                        "",
+                    email_id: frm.doc.contact_email || ""
+                });
+            }, __("Create"));
+        }
 
         // =========================
         // SALES INVOICE BUTTON

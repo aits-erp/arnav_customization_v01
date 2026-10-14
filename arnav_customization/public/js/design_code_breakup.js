@@ -106,6 +106,9 @@ frappe.provide("arnav_customization.design_code");
 
     function create_dialog(options, breakup_rows, state) {
         const locked = Boolean(state.classification_locked);
+        const abbreviation_validation_note = state.abbreviation_validation_enabled === false
+            ? `<div class="text-warning small mt-2">${__("Set/Element abbreviation validation is currently disabled by Design Code Settings. Automatic generation still requires abbreviations.")}</div>`
+            : "";
         const dialog = new frappe.ui.Dialog({
             title: options.title,
             size: "extra-large",
@@ -121,11 +124,12 @@ frappe.provide("arnav_customization.design_code");
                 {
                     fieldname: "design_code_status",
                     fieldtype: "HTML",
-                    options: state.design_code
+                    options: (state.design_code
                         ? `<div class="text-muted">${__("{0} Design Code is assigned and classification is locked.", [state.generation_mode || ""] )}</div>`
                         : state.manual_design_code
                             ? `<div class="text-muted">${__("Manual Design Code {0} will be created or assigned when you select Generate Design Code.", [state.manual_design_code])}</div>`
                             : `<div class="text-muted">${__("No manual code entered. Generate Design Code will use the next automatic series.")}</div>`
+                    ) + abbreviation_validation_note
                 },
                 {
                     fieldname: "generate_design_code",

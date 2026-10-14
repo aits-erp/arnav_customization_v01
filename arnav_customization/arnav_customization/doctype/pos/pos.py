@@ -494,6 +494,11 @@ def get_sku_details(sku):
 
 @frappe.whitelist()
 def make_credit_note(source_name, target_doc=None):
+	pos = frappe.get_doc("POS", source_name)
+	if pos.docstatus != 1:
+		frappe.throw("Sales Return can only be created from a submitted POS transaction.")
+
+	remaining_qty_by_detail = get_remaining_pos_return_qty(pos)
 
 	# ===============================
 	# HEADER POST PROCESS
@@ -545,7 +550,10 @@ def make_credit_note(source_name, target_doc=None):
 		target.uom = item_doc.stock_uom
 		target.stock_uom = item_doc.stock_uom
 
-		target.qty = -1 * (source.qty or 0)
+		# Map only the quantity which has not already been returned from this
+		# exact POS row. This remains correct when one SKU appears more than once.
+		target.qty = -1 * remaining_qty_by_detail.get(source.name, 0)
+		target.custom_pos_detail = source.name
 		target.custom_gross_weight = source.gross_weight
 
 		# ERPNext treats ``rate`` as the effective per-unit selling rate and
@@ -602,6 +610,7 @@ def make_credit_note(source_name, target_doc=None):
 
 			"POS SKU Details": {
 				"doctype": "Sales Invoice Item",
+				"condition": lambda source: remaining_qty_by_detail.get(source.name, 0) > 0,
 				"postprocess": map_items
 			},
 
@@ -618,8 +627,77 @@ def make_credit_note(source_name, target_doc=None):
 		target_doc,
 		set_missing_values
 	)
+	if not doc.items:
+		frappe.throw("All items in this POS have already been fully returned.")
 
 	return doc
+
+
+def get_remaining_pos_return_qty(pos):
+	"""Return remaining returnable quantity keyed by POS SKU Details row ID."""
+	return_qty_by_detail = get_submitted_pos_return_qty(pos.name)
+	return {
+		row.name: max(flt(row.qty) - return_qty_by_detail.get(row.name, 0), 0)
+		for row in pos.sku_details
+	}
+
+
+def get_submitted_pos_return_qty(pos_name):
+	"""Sum submitted Sales Return quantities per originating POS child row."""
+	rows = frappe.db.sql(
+		"""
+		SELECT
+			sii.custom_pos_detail,
+			SUM(ABS(sii.qty)) AS returned_qty
+		FROM `tabSales Invoice Item` AS sii
+		INNER JOIN `tabSales Invoice` AS si ON si.name = sii.parent
+		WHERE si.docstatus = 1
+			AND si.is_return = 1
+			AND si.custom_pos = %s
+			AND COALESCE(sii.custom_pos_detail, '') != ''
+		GROUP BY sii.custom_pos_detail
+		""",
+		pos_name,
+		as_dict=True,
+	)
+	return {row.custom_pos_detail: flt(row.returned_qty) for row in rows}
+
+
+def validate_pos_return_quantities(doc, method=None):
+	"""Prevent a POS row from being returned more than its sold quantity."""
+	if not (doc.is_return and doc.custom_pos):
+		return
+
+	pos = frappe.get_doc("POS", doc.custom_pos)
+	if pos.docstatus != 1:
+		frappe.throw("Sales Return must reference a submitted POS transaction.")
+
+	sold_qty_by_detail = {row.name: flt(row.qty) for row in pos.sku_details}
+	already_returned = get_submitted_pos_return_qty(pos.name)
+	current_returned = {}
+
+	for item in doc.items:
+		detail_name = item.custom_pos_detail
+		if not detail_name:
+			frappe.throw(
+				"Each POS Sales Return item must keep its original POS item reference."
+			)
+		if detail_name not in sold_qty_by_detail:
+			frappe.throw("A Sales Return item does not belong to the selected POS transaction.")
+		if flt(item.qty) >= 0:
+			frappe.throw("Sales Return quantities must be negative.")
+
+		current_returned[detail_name] = current_returned.get(detail_name, 0) + abs(flt(item.qty))
+
+	for detail_name, current_qty in current_returned.items():
+		available_qty = sold_qty_by_detail[detail_name] - already_returned.get(detail_name, 0)
+		if current_qty > available_qty + 0.000001:
+			frappe.throw(
+				"Return quantity exceeds the remaining quantity for POS item {0}. "
+				"Available: {1}, requested: {2}.".format(
+					detail_name, available_qty, current_qty
+				)
+			)
 
 
 @frappe.whitelist()
@@ -638,12 +716,11 @@ def get_pos_return_pricing(source_name):
 		frappe.throw("Sales Return pricing can only be fetched from a submitted POS transaction.")
 
 	return {
-		row.sku: {
+		row.name: {
 			"gross_rate": flt(row.price),
 			"qty": flt(row.qty),
 			"discount": flt(row.discount),
 			"effective_rate": flt(row.final_amount) / (flt(row.qty) or 1),
 		}
 		for row in pos.sku_details
-		if row.sku
 	}
