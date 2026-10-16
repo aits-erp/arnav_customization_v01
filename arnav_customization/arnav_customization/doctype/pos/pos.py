@@ -389,9 +389,10 @@ class POS(Document):
 			total_gst += row.gst_amount
 
 		packing = self.handling_and_packaging_charges or 0
+		huid_charges = self.custom_huid_charges or 0
 
 		self.total_amount_wo_tax = money(
-			total_amount + packing
+			total_amount + packing + huid_charges
 		)
 
 		# ================================
@@ -672,6 +673,10 @@ def validate_pos_return_quantities(doc, method=None):
 	if pos.docstatus != 1:
 		frappe.throw("Sales Return must reference a submitted POS transaction.")
 
+	# Serialize return submissions for this POS. Without this lock, two users
+	# can open return drafts together and both pass the availability check.
+	lock_pos_return_rows(pos.name)
+
 	sold_qty_by_detail = {row.name: flt(row.qty) for row in pos.sku_details}
 	already_returned = get_submitted_pos_return_qty(pos.name)
 	current_returned = {}
@@ -698,6 +703,50 @@ def validate_pos_return_quantities(doc, method=None):
 					detail_name, available_qty, current_qty
 				)
 			)
+
+
+def lock_pos_return_rows(pos_name):
+	"""Lock a POS's item rows until the current return submission completes."""
+	frappe.db.sql(
+		"SELECT name FROM `tabPOS SKU Details` WHERE parent = %s FOR UPDATE",
+		pos_name,
+	)
+
+
+def sync_sku_status_for_pos_return(doc, method=None):
+	"""Synchronize only the SKUs affected by a POS-linked Sales Return.
+
+	The POS itself marks every sold SKU as ``Sold``.  A submitted Sales Return
+	makes its exact source SKU available again only after that POS row has been
+	fully returned.  On cancellation, the status is recalculated from the
+	remaining submitted returns.  Other SKU rows in the same POS are untouched.
+	"""
+	if not (doc.is_return and doc.custom_pos):
+		return
+
+	pos = frappe.get_doc("POS", doc.custom_pos)
+	if pos.docstatus != 1:
+		return
+
+	pos_row_by_name = {row.name: row for row in pos.sku_details}
+	returned_qty_by_detail = get_submitted_pos_return_qty(pos.name)
+	affected_details = {item.custom_pos_detail for item in doc.items if item.custom_pos_detail}
+
+	for detail_name in affected_details:
+		pos_row = pos_row_by_name.get(detail_name)
+		if not pos_row or not pos_row.sku or not frappe.db.exists("SKU", pos_row.sku):
+			continue
+
+		fully_returned = (
+			returned_qty_by_detail.get(detail_name, 0) >= flt(pos_row.qty) - 0.000001
+		)
+		frappe.db.set_value(
+			"SKU",
+			pos_row.sku,
+			"status",
+			"Available" if fully_returned else "Sold",
+			update_modified=False,
+		)
 
 
 @frappe.whitelist()

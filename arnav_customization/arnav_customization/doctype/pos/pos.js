@@ -180,6 +180,10 @@ frappe.ui.form.on('POS', {
         calculate_parent_totals(frm);
     },
 
+    custom_huid_charges: function (frm) {
+        calculate_parent_totals(frm);
+    },
+
     total_discount_in_rs: function (frm) {
         apply_global_discount(frm);
     }
@@ -409,11 +413,12 @@ function calculate_parent_totals(frm) {
     });
 
     let packing = flt(frm.doc.handling_and_packaging_charges);
+    let huidCharges = flt(frm.doc.custom_huid_charges);
 
     set_parent_if_changed(
         frm,
         "total_amount_wo_tax",
-        money(total_amount + packing),
+        money(total_amount + packing + huidCharges),
         2
     );
 

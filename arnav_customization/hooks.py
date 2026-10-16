@@ -57,7 +57,9 @@ doc_events = {
     },
         "Sales Invoice": {
         "validate": "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process",
-        "before_submit": "arnav_customization.arnav_customization.doctype.pos.pos.validate_pos_return_quantities"
+        "before_submit": "arnav_customization.arnav_customization.doctype.pos.pos.validate_pos_return_quantities",
+        "on_submit": "arnav_customization.arnav_customization.doctype.pos.pos.sync_sku_status_for_pos_return",
+        "on_cancel": "arnav_customization.arnav_customization.doctype.pos.pos.sync_sku_status_for_pos_return"
     },
 
     "Quotation": {
