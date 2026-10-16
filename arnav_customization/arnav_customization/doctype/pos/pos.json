@@ -41,7 +41,8 @@
   "add_payments_section",
   "payment_details",
   "paid_amount",
-  "balance_amount"
+  "balance_amount",
+  "connections_tab"
  ],
  "fields": [
   {
@@ -260,6 +261,12 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Naming Series"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
   }
  ],
  "grid_page_length": 50,

@@ -41,6 +41,12 @@ override_doctype_class = {
     "SET_CODE": "arnav_customization.breakup_doctypes.doctype.set_code.set_code.SetCode",
 }
 
+# Preserve the standard Sales Invoice dashboard and add the one-to-one source
+# POS reference used by Sales Returns.
+override_doctype_dashboards = {
+    "Sales Invoice": "arnav_customization.sales_invoice_dashboard.get_data",
+}
+
 
 
 doc_events = {
