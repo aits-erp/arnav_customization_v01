@@ -773,3 +773,205 @@ def get_pos_return_pricing(source_name):
 		}
 		for row in pos.sku_details
 	}
+
+
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name, target_doc=None):
+    """Create a draft Sales Invoice from a submitted POS."""
+
+    if not source_name:
+        frappe.throw("POS reference is required.")
+
+    if not frappe.has_permission("POS", "read", source_name):
+        frappe.throw("You do not have permission to access this POS.")
+
+    if not frappe.has_permission("Sales Invoice", "create"):
+        frappe.throw("You do not have permission to create Sales Invoices.")
+
+    if not frappe.db.exists("POS", source_name):
+        frappe.throw(f"POS {source_name} does not exist.")
+
+    pos = frappe.get_doc("POS", source_name)
+
+    if pos.docstatus != 1:
+        frappe.throw(
+            "A Sales Invoice can only be created from a submitted POS."
+        )
+
+    if not pos.sku_details:
+        frappe.throw("No product details found in this POS.")
+
+    # Ensure that the POS has not already been invoiced.
+    # Cancelled invoices do not block a new draft.
+    existing_invoice = frappe.db.get_value(
+        "Sales Invoice",
+        {
+            "custom_pos": source_name,
+            "is_return": 0,
+            "docstatus": ["!=", 2],
+        },
+        "name",
+    )
+
+    if existing_invoice:
+        frappe.throw(
+            f"Sales Invoice {existing_invoice} is already linked "
+            f"to POS {source_name}. Please open the existing invoice."
+        )
+
+    customer = pos.client_name
+
+    if not customer or not frappe.db.exists("Customer", customer):
+        frappe.throw(
+            "Please select a valid Customer in the POS before "
+            "creating a Sales Invoice."
+        )
+
+    def map_pos_item(source, target, source_parent):
+        """Map POS SKU Details to Sales Invoice Item."""
+
+        if not source.product:
+            frappe.throw(
+                f"Product is missing in POS row {source.idx}."
+            )
+
+        if not frappe.db.exists("Item", source.product):
+            frappe.throw(
+                f"Item {source.product} does not exist."
+            )
+
+        qty = flt(source.qty)
+        gross_rate = flt(source.price)
+
+        if qty <= 0:
+            frappe.throw(
+                f"Quantity must be greater than zero in POS row "
+                f"{source.idx}."
+            )
+
+        item = frappe.get_cached_doc("Item", source.product)
+
+        # Standard ERPNext item fields
+        target.item_code = source.product
+        target.item_name = item.item_name
+        target.uom = item.stock_uom
+        target.stock_uom = item.stock_uom
+        target.conversion_factor = 1
+
+        # POS stores the discount as a row total.
+        unit_discount = flt(source.discount) / qty
+        effective_rate = gross_rate - unit_discount
+
+        if effective_rate < 0:
+            frappe.throw(
+                f"Discount exceeds the item price in POS row {source.idx}."
+            )
+
+        target.price_list_rate = gross_rate
+        target.rate_with_margin = gross_rate
+        target.discount_amount = unit_discount
+        target.discount_percentage = (
+            (unit_discount / gross_rate * 100)
+            if gross_rate else 0
+        )
+        target.rate = effective_rate
+        target.qty = qty
+
+        # Preserve existing custom item fields where available.
+        if target.meta.has_field("custom_sku"):
+            target.custom_sku = source.sku
+
+        if target.meta.has_field("custom_pos_detail"):
+            target.custom_pos_detail = source.name
+
+        if target.meta.has_field("custom_custom_rate"):
+            target.custom_custom_rate = gross_rate
+
+        if target.meta.has_field("custom_gross_weight"):
+            target.custom_gross_weight = source.gross_weight
+
+        if target.meta.has_field("custom_net_weight"):
+            target.custom_net_weight = source.net_weight
+
+        if target.meta.has_field("batch_no"):
+            target.batch_no = source.batch_no
+
+        if target.meta.has_field("gst_hsn_code"):
+            target.gst_hsn_code = source.hsn
+
+        # Preserve the Item's first configured tax template, if present.
+        if item.taxes:
+            for tax in item.taxes:
+                if tax.item_tax_template:
+                    if target.meta.has_field("item_tax_template"):
+                        target.item_tax_template = tax.item_tax_template
+                    break
+
+    def set_invoice_values(source, target):
+        # Set the customer before initializing invoice defaults.
+        target.customer = customer
+        target.is_return = 0
+
+        # POS already issues stock through Stock Entry.
+        # Do not issue stock a second time from the invoice.
+        target.update_stock = 0
+        target.ignore_pricing_rule = 1
+
+        if target.meta.has_field("custom_pos"):
+            target.custom_pos = source.name
+        else:
+            frappe.throw(
+                "The custom_pos field is missing from Sales Invoice. "
+                "Add a Link field to POS before using this functionality."
+            )
+
+        if source.branch and frappe.db.exists("Warehouse", source.branch):
+            target.set_warehouse = source.branch
+
+        if source.mobile_number and target.meta.has_field("contact_mobile"):
+            target.contact_mobile = source.mobile_number
+
+        if source.email and target.meta.has_field("contact_email"):
+            target.contact_email = source.email
+
+        # Set the POS date without copying the time component.
+        invoice_date = source.pos_date or source.date
+        if invoice_date:
+            target.posting_date = get_datetime(invoice_date).date()
+
+        # Populate standard ERPNext defaults and totals.
+        target.run_method("set_missing_values")
+        target.run_method("calculate_taxes_and_totals")
+
+    doc = get_mapped_doc(
+        "POS",
+        source_name,
+        {
+            "POS": {
+                "doctype": "Sales Invoice",
+                "field_map": {
+                    "mobile_number": "contact_mobile",
+                    "email": "contact_email",
+                    "address": "address_display",
+                },
+                "validation": {
+                    "docstatus": ["=", 1],
+                },
+            },
+            "POS SKU Details": {
+                "doctype": "Sales Invoice Item",
+                "postprocess": map_pos_item,
+            },
+        },
+        target_doc,
+        set_invoice_values,
+    )
+
+    if not doc.items:
+        frappe.throw("No invoice items were created from the POS.")
+
+    # Return the mapped document as a draft.
+    # Do not insert or submit it here.
+    return doc

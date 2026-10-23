@@ -122,6 +122,37 @@ frappe.ui.form.on('POS', {
     // REFRESH
     // =========================================
 
+    // refresh: function (frm) {
+
+    //     console.log("POS REFRESH:", frm.doc.client_name);
+
+    //     if (frm.is_new()) {
+    //         return;
+    //     }
+
+    //     if (frm.doc.docstatus === 1) {
+
+    //         frm.add_custom_button(__('Sales Return'), function () {
+
+    //             frappe.model.open_mapped_doc({
+    //                 method: "arnav_customization.arnav_customization.doctype.pos.pos.make_credit_note",
+    //                 frm: frm
+    //             });
+
+    //         }, __("Create"));
+
+    //         return;
+    //     }
+
+    //     // Do not recalculate on refresh for saved draft docs.
+    //     // Recalculation here makes the form dirty again after Save.
+    // },
+
+    
+    // =========================================
+    // REFRESH
+    // =========================================
+
     refresh: function (frm) {
 
         console.log("POS REFRESH:", frm.doc.client_name);
@@ -132,10 +163,21 @@ frappe.ui.form.on('POS', {
 
         if (frm.doc.docstatus === 1) {
 
+            // Existing Sales Return option
             frm.add_custom_button(__('Sales Return'), function () {
 
                 frappe.model.open_mapped_doc({
                     method: "arnav_customization.arnav_customization.doctype.pos.pos.make_credit_note",
+                    frm: frm
+                });
+
+            }, __("Create"));
+
+            // NEW: Create Sales Invoice option
+            frm.add_custom_button(__('Create Sales Invoice'), function () {
+
+                frappe.model.open_mapped_doc({
+                    method: "arnav_customization.arnav_customization.doctype.pos.pos.make_sales_invoice",
                     frm: frm
                 });
 
