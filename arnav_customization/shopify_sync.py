@@ -9,6 +9,13 @@ TOKEN = "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"   # ⚠️ Replace
 API_VERSION = "2024-01"
 LOCATION_ID = 52386005145
 
+
+def shopify_sync_is_enabled():
+    """Return whether this site has explicitly enabled Shopify SKU syncing."""
+    # Sync is opt-in: an external Shopify error must never block ERPNext submit.
+    return bool(frappe.utils.cint(frappe.conf.get("shopify_sync_enabled", 0)))
+
+
 HEADERS = {
     "X-Shopify-Access-Token": TOKEN,
     "Content-Type": "application/json"
@@ -229,22 +236,51 @@ def update_inventory(inventory_item_id, qty):
 # ===============================
 def sync_each_sku_as_product(doc, method=None):
 
+    # This hook runs on every SKU Master submission. Shopify is disabled unless
+    # the site administrator explicitly enables it in site_config.json.
+    if not shopify_sync_is_enabled():
+        return
+
     validate_sku_change(doc)
 
     if not doc.sku_details:
-        frappe.throw("No SKU Details found")
+        frappe.log_error(
+            f"SKU Master {doc.name} has no SKU Details to sync.",
+            "Shopify sync skipped"
+        )
+        return
 
+    failed_skus = []
     for d in doc.sku_details:
 
-        if not getattr(d, "shopify_product_id", None):
-            product_id, variant_id, inventory_item_id = create_product(d)
+        try:
+            if not getattr(d, "shopify_product_id", None):
+                product_id, variant_id, inventory_item_id = create_product(d)
 
-            d.shopify_product_id = product_id
-            d.shopify_variant_id = variant_id
-        else:
-            inventory_item_id = update_product(d)
+                d.shopify_product_id = product_id
+                d.shopify_variant_id = variant_id
+            else:
+                inventory_item_id = update_product(d)
 
-        update_inventory(inventory_item_id, d.qty)
+            update_inventory(inventory_item_id, d.qty)
+        except Exception:
+            # Do not re-raise from an on_submit hook. The ERP transaction must
+            # complete even when Shopify is unavailable or misconfigured.
+            failed_skus.append(d.sku or f"row {d.idx}")
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Shopify sync failed for SKU Master {doc.name}, SKU {d.sku or d.idx}"
+            )
+
+    if failed_skus:
+        frappe.msgprint(
+            "SKU Master was submitted, but Shopify sync failed for: "
+            + ", ".join(failed_skus)
+            + ". Review the Error Log when the integration is re-enabled.",
+            indicator="orange",
+            alert=True,
+        )
+        return
 
     frappe.msgprint("🔥 Shopify Sync Complete (Draft → Active)")
 
