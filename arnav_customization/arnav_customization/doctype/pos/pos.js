@@ -47,7 +47,32 @@ frappe.ui.form.on('POS', {
                 }
             };
         });
+        
+        // =========================================
+        // PAYMENT ENTRY FILTER - ALL PAYMENT TYPES
+        // =========================================
+        frm.set_query(
+            "custom_payment_entry",
+            "payment_details",
+            function (doc) {
 
+                if (!doc.client_name) {
+                    return {
+                        filters: {
+                            name: ["=", ""]
+                        }
+                    };
+                }
+
+                return {
+                    query: "arnav_customization.advance_payment.get_eligible_payment_entries",
+                    filters: {
+                        customer: doc.client_name,
+                        company: frappe.defaults.get_user_default("Company")
+                    }
+                };
+            }
+        );
         // =========================================
         // PACKING MATERIAL FILTER
         // =========================================

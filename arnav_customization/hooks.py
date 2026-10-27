@@ -61,8 +61,12 @@ doc_events = {
         "after_insert": "arnav_customization.opportunity_customer.link_new_customer_to_opportunity",
         "on_update": "arnav_customization.opportunity_customer.link_new_customer_to_opportunity"
     },
+    
         "Sales Invoice": {
-        "validate": "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process",
+        "validate": [
+            "arnav_customization.sku_mapping_backend.handlers.sales_invoice.process",
+            "arnav_customization.advance_payment.validate_sales_invoice_advances"
+        ],
         "before_submit": "arnav_customization.arnav_customization.doctype.pos.pos.validate_pos_return_quantities",
         "on_submit": "arnav_customization.arnav_customization.doctype.pos.pos.sync_sku_status_for_pos_return",
         "on_cancel": "arnav_customization.arnav_customization.doctype.pos.pos.sync_sku_status_for_pos_return"

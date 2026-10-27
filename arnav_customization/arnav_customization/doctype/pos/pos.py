@@ -2,6 +2,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_datetime
 from frappe.model.mapper import get_mapped_doc
+from arnav_customization.advance_payment import get_available_advance_amount
 
 def money(value):
 	return flt(value, 2)
@@ -944,6 +945,55 @@ def make_sales_invoice(source_name, target_doc=None):
         # Populate standard ERPNext defaults and totals.
         target.run_method("set_missing_values")
         target.run_method("calculate_taxes_and_totals")
+
+		
+        # Map selected POS Payment Entries to Sales Invoice Advances.
+        remaining_invoice_amount = flt(target.grand_total)
+        selected_entries = set()
+
+        for payment_row in source.get("payment_details") or []:
+            payment_entry = payment_row.get("custom_payment_entry")
+
+            if not payment_entry:
+                continue
+
+            if payment_entry in selected_entries:
+                frappe.throw(
+                    f"Payment Entry {payment_entry} is selected more than once."
+                )
+
+            selected_entries.add(payment_entry)
+
+            if remaining_invoice_amount <= 0:
+                break
+
+            available_amount = get_available_advance_amount(
+                payment_entry=payment_entry,
+                customer=target.customer,
+                company=target.company,
+                exclude_invoice=target.name,
+            )
+
+            allocation = min(
+                flt(payment_row.amount),
+                flt(available_amount),
+                remaining_invoice_amount,
+            )
+
+            if allocation <= 0:
+                continue
+
+            target.append("advances", {
+                "reference_type": "Payment Entry",
+                "reference_name": payment_entry,
+                "remarks": f"Selected from POS {source.name}",
+                "advance_amount": flt(available_amount),
+                "allocated_amount": allocation,
+                "difference_posting_date": target.posting_date,
+            })
+
+            remaining_invoice_amount -= allocation
+
 
     doc = get_mapped_doc(
         "POS",
