@@ -532,7 +532,6 @@ PAYMENT
 //     calculate_balance(frm);
 // }
 
-
 frappe.ui.form.on('POS Payment Details', {
 
     custom_payment_entry: async function (frm, cdt, cdn) {
@@ -547,7 +546,8 @@ frappe.ui.form.on('POS Payment Details', {
             const response = await frappe.call({
                 method: "arnav_customization.advance_payment.fetch_advance_amount",
                 args: {
-                    payment_entry: row.custom_payment_entry
+                    payment_entry: row.custom_payment_entry,
+                    customer: frm.doc.client_name
                 }
             });
 
@@ -559,28 +559,23 @@ frappe.ui.form.on('POS Payment Details', {
                 return;
             }
 
-            if (response.message) {
-                const payment_amount = flt(
-                    response.message.payment_amount
-                );
+            const payment_amount = flt(
+                response.message?.payment_amount
+            );
 
-                await frappe.model.set_value(
-                    cdt,
-                    cdn,
-                    "amount",
-                    money(payment_amount)
-                );
-            } else {
-                frappe.msgprint(
-                    __("Could not fetch the amount for this Payment Entry.")
-                );
-            }
+            await frappe.model.set_value(
+                cdt,
+                cdn,
+                "amount",
+                money(payment_amount)
+            );
 
         } catch (error) {
+            console.error("Payment Entry amount fetch failed:", error);
+
             frappe.msgprint(
-                __("Error fetching Payment Entry amount. Please check the server method.")
+                __("Unable to fetch the Payment Entry amount. Please check the server error.")
             );
-            console.error(error);
         }
     },
 

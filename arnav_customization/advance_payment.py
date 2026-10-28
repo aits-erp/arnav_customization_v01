@@ -60,16 +60,55 @@ def get_available_advance_amount(
 
     return max(flt(pe.unallocated_amount) - flt(reserved), 0)
 
+# @frappe.whitelist()
+# def fetch_advance_amount(payment_entry, customer):
+#     if not frappe.has_permission("Payment Entry", "read"):
+#         frappe.throw(_("You do not have permission to read Payment Entries."))
+
+#     amount = get_available_advance_amount(
+#         payment_entry=payment_entry,
+#         customer=customer,
+#         company=get_company(),
+#     )
+
+#     payment_rows = frappe.get_all(
+#         "POS Payment Details",
+#         filters={
+#             "parent": payment_entry,
+#             "parenttype": "Payment Entry",
+#             "parentfield": "custom_payment_details_table",
+#         },
+#         fields=["amount"],
+#     )
+
+#     payment_amount = sum(flt(row.amount) for row in payment_rows)
+
+#     return {
+#         "payment_entry": payment_entry,
+#         "payment_amount": payment_amount,
+#         "available_amount": amount,
+#     }
+
+
 @frappe.whitelist()
 def fetch_advance_amount(payment_entry, customer):
     if not frappe.has_permission("Payment Entry", "read"):
         frappe.throw(_("You do not have permission to read Payment Entries."))
 
-    amount = get_available_advance_amount(
-        payment_entry=payment_entry,
-        customer=customer,
-        company=get_company(),
+    pe = frappe.db.get_value(
+        "Payment Entry",
+        payment_entry,
+        ["name", "party", "party_type"],
+        as_dict=True,
     )
+
+    if not pe:
+        frappe.throw(_("Payment Entry does not exist."))
+
+    if pe.party_type != "Customer" or pe.party != customer:
+        frappe.throw(
+            _("This Payment Entry does not belong to the selected customer.")
+        )
 
     payment_rows = frappe.get_all(
         "POS Payment Details",
@@ -86,7 +125,6 @@ def fetch_advance_amount(payment_entry, customer):
     return {
         "payment_entry": payment_entry,
         "payment_amount": payment_amount,
-        "available_amount": amount,
     }
 
 
