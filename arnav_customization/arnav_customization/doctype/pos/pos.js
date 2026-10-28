@@ -573,21 +573,47 @@ frappe.ui.form.on('POS Payment Details', {
         } catch (error) {
             console.error("Payment Entry amount fetch failed:", error);
 
-            frappe.msgprint(
-                __("Unable to fetch the Payment Entry amount. Please check the server error.")
-            );
+            // frappe.msgprint(
+            //     __("Unable to fetch the Payment Entry amount. Please check the server error.")
+            // );
         }
     },
 
+    // amount: function (frm) {
+    //     calculate_payments(frm);
+    // },
+
+    // payment_details_remove: function (frm) {
+    //     calculate_payments(frm);
+    // }
     amount: function (frm) {
-        calculate_payments(frm);
+        if (typeof calculate_payments === "function") {
+            calculate_payments(frm);
+        }
     },
 
     payment_details_remove: function (frm) {
-        calculate_payments(frm);
+        if (typeof calculate_payments === "function") {
+            calculate_payments(frm);
+        }
     }
 
 });
+
+function calculate_payments(frm) {
+    if (frm.doc.docstatus === 1) {
+        return;
+    }
+
+    let paid = 0;
+
+    (frm.doc.payment_details || []).forEach(row => {
+        paid += flt(row.amount);
+    });
+
+    set_parent_if_changed(frm, "paid_amount", money(paid), 2);
+    calculate_balance(frm);
+}
 
 /* =====================================================
 BALANCE
