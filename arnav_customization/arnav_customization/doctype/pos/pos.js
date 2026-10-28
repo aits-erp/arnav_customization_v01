@@ -503,7 +503,86 @@ function calculate_parent_totals(frm) {
 PAYMENT
 ===================================================== */
 
+// frappe.ui.form.on('POS Payment Details', {
+
+//     amount: function (frm) {
+//         calculate_payments(frm);
+//     },
+
+//     payment_details_remove: function (frm) {
+//         calculate_payments(frm);
+//     }
+
+// });
+
+// function calculate_payments(frm) {
+
+//     if (is_submitted_pos(frm)) {
+//         return;
+//     }
+
+//     let paid = 0;
+
+//     (frm.doc.payment_details || []).forEach(row => {
+//         paid += flt(row.amount);
+//     });
+
+//     set_parent_if_changed(frm, "paid_amount", money(paid), 2);
+
+//     calculate_balance(frm);
+// }
+
+
 frappe.ui.form.on('POS Payment Details', {
+
+    custom_payment_entry: async function (frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+
+        if (!row.custom_payment_entry) {
+            await frappe.model.set_value(cdt, cdn, "amount", 0);
+            return;
+        }
+
+        try {
+            const response = await frappe.call({
+                method: "arnav_customization.advance_payment.fetch_advance_amount",
+                args: {
+                    payment_entry: row.custom_payment_entry
+                }
+            });
+
+            // Ignore the response if the selected Payment Entry changed
+            if (
+                !locals[cdt][cdn] ||
+                locals[cdt][cdn].custom_payment_entry !== row.custom_payment_entry
+            ) {
+                return;
+            }
+
+            if (response.message) {
+                const payment_amount = flt(
+                    response.message.payment_amount
+                );
+
+                await frappe.model.set_value(
+                    cdt,
+                    cdn,
+                    "amount",
+                    money(payment_amount)
+                );
+            } else {
+                frappe.msgprint(
+                    __("Could not fetch the amount for this Payment Entry.")
+                );
+            }
+
+        } catch (error) {
+            frappe.msgprint(
+                __("Error fetching Payment Entry amount. Please check the server method.")
+            );
+            console.error(error);
+        }
+    },
 
     amount: function (frm) {
         calculate_payments(frm);
@@ -514,23 +593,6 @@ frappe.ui.form.on('POS Payment Details', {
     }
 
 });
-
-function calculate_payments(frm) {
-
-    if (is_submitted_pos(frm)) {
-        return;
-    }
-
-    let paid = 0;
-
-    (frm.doc.payment_details || []).forEach(row => {
-        paid += flt(row.amount);
-    });
-
-    set_parent_if_changed(frm, "paid_amount", money(paid), 2);
-
-    calculate_balance(frm);
-}
 
 /* =====================================================
 BALANCE

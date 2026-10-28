@@ -60,7 +60,6 @@ def get_available_advance_amount(
 
     return max(flt(pe.unallocated_amount) - flt(reserved), 0)
 
-
 @frappe.whitelist()
 def fetch_advance_amount(payment_entry, customer):
     if not frappe.has_permission("Payment Entry", "read"):
@@ -72,8 +71,21 @@ def fetch_advance_amount(payment_entry, customer):
         company=get_company(),
     )
 
+    payment_rows = frappe.get_all(
+        "POS Payment Details",
+        filters={
+            "parent": payment_entry,
+            "parenttype": "Payment Entry",
+            "parentfield": "custom_payment_details_table",
+        },
+        fields=["amount"],
+    )
+
+    payment_amount = sum(flt(row.amount) for row in payment_rows)
+
     return {
         "payment_entry": payment_entry,
+        "payment_amount": payment_amount,
         "available_amount": amount,
     }
 

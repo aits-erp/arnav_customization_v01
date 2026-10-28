@@ -35,8 +35,8 @@ class POS(Document):
 
 	def before_submit(self):
 		# 1️⃣ Balance validation
-		if abs(flt(self.balance_amount, self.precision("balance_amount"))) > 0.01:
-			frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
+		# if abs(flt(self.balance_amount, self.precision("balance_amount"))) > 0.01:
+		# 	frappe.throw("Cannot submit POS because Balance Amount must be 0.00")
 
 		# 2️⃣ Cash limit validation
 		# CASH_LIMIT = 195000
